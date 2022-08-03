@@ -27,6 +27,9 @@ object WasmAnyRef : WasmType("anyref", -0x12)
 object WasmEqRef : WasmType("eqref", -0x13)
 object WasmRefNullNoneType : WasmType("nullnone", -0x1b)
 object WasmRefNullExternrefType : WasmType("nullexternref", -0x17)
+object WasmStringRef : WasmType("stringref", -0x1c)
+object WasmStringViewWTF16 : WasmType("stringview_wtf16", -0x1e)
+object WasmStringViewIter : WasmType("stringview_iter", -0x1f)
 
 data class WasmRefNullType(val heapType: WasmHeapType) : WasmType("ref null", -0x14)
 data class WasmRefType(val heapType: WasmHeapType) : WasmType("ref", -0x15)
@@ -49,6 +52,12 @@ sealed class WasmHeapType {
         object Extern : Simple("extern", -0x11)
         object Any : Simple("any", -0x12)
         object Eq : Simple("eq", -0x13)
+        object StringRef : Simple("string", -0x1c)
+        object StringViewWtf16 : Simple("stringview", -0x1e)
+
+        @Suppress("unused")
+        object ExnH : Simple("exn", -0x18)
+
         object Struct : Simple("struct", -0x19)
         object NullNone : Simple("nullref", -0x1b)
         object NullNoExtern : Simple("nullexternref", -0x17)

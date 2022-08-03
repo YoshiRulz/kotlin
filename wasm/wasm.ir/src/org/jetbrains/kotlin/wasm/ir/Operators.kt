@@ -385,6 +385,29 @@ enum class WasmOp(
     EXTERN_INTERNALIZE("extern.internalize", 0xfb70), // externref -> anyref
     EXTERN_EXTERNALIZE("extern.externalize", 0xfb71), // anyref -> externref
 
+    // stringref proposal
+    STRING_CONST("string.const", 0xFB_82, CONST_I32),
+    STRING_CONCAT("string.concat", 0xFB_88),
+    STRING_EQ("string.eq", 0xFB_89),
+    STRING_AS_ITER("string.as_iter", 0xFB_A0),
+
+    STRING_NEW_WTF16_ARRAY("string.new_wtf16_array", 0xFB_B1),
+    STRING_MEASURE_UTF8("string.measure_utf8", 0xFB_83),
+    STRING_MEASURE_WTF8("string.measure_wtf8", 0xFB_84),
+    STRING_MEASURE_WTF16("string.measure_wtf16", 0xFB_85),
+    STRING_ENCODE_WTF16_ARRAY("encode_wtf16_array", 0xFB_B3),
+    STRING_NEW_LOSSY_UTF8_ARRAY("string.new_lossy_utf8_array", 0xFB_B4),
+    STRING_ENCODE_LOSSY_UTF8_ARRAY("string.encode_lossy_utf8_array", 0xFB_B6),
+
+    STRINGVIEW_ITER_NEXT("stringview_iter.next", 0xFB_A1),
+    STRINGVIEW_ITER_ADVANCE("stringview_iter.advance", 0xFB_A2),
+    STRINGVIEW_ITER_REWIND("stringview_iter.rewind", 0xFB_A3),
+    STRINGVIEW_ITER_SLICE("stringview_iter.slice", 0xFB_A4),
+    STRINGVIEW_AS_WTF16("string.as_wtf16", 0xFB_98),
+    STRINGVIEW_WTF16_LENGTH("stringview_wtf16.length", 0xFB_99),
+    STRINGVIEW_WTF16_GET_CODEUNIT("stringview_wtf16.get_codeunit", 0xFB_9A),
+    STRINGVIEW_WTF16_SLICE("stringview_wtf16.slice", 0xFB_9C),
+
     // ============================================================
     // Pseudo-instruction, just alias for a normal call. It's used to easily spot get_unit on the wasm level.
     GET_UNIT("call", 0x10, FUNC_IDX),

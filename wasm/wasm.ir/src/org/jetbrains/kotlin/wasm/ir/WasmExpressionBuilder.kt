@@ -47,6 +47,10 @@ abstract class WasmExpressionBuilder {
         buildInstr(WasmOp.UNREACHABLE, location)
     }
 
+    fun buildConstStringSymbol(value: WasmSymbol<Int>, location: SourceLocation) {
+        buildInstr(WasmOp.STRING_CONST, location, WasmImmediate.SymbolI32(value))
+    }
+
     @Suppress("UNUSED_PARAMETER")
     inline fun buildBlock(label: String?, resultType: WasmType? = null, body: (Int) -> Unit) {
         numberOfNestedBlocks++

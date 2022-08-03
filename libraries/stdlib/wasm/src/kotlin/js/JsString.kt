@@ -6,11 +6,13 @@
 package kotlin.js
 
 import kotlin.wasm.internal.JsPrimitive
-import kotlin.wasm.internal.kotlinToJsStringAdapter
+import kotlin.wasm.internal.reftypes.stringref
 
-/** JavaScript primitive string */
+///** JavaScript primitive string */
 @JsPrimitive("string")
 public external class JsString internal constructor() : JsAny
 
+private fun unsafeCastToJsString(@Suppress("UNUSED_PARAMETER") ref: stringref): JsString = js("ref")
+
 public fun String.toJsString(): JsString =
-    kotlinToJsStringAdapter(this)!!
+    unsafeCastToJsString(reference)

@@ -5,10 +5,6 @@
 
 package kotlin
 
-import kotlin.wasm.internal.ExternalInterfaceType
-import kotlin.wasm.internal.getSimpleName
-import kotlin.wasm.internal.jsToKotlinStringAdapter
-
 /**
  * The base class for all errors and exceptions. Only instances of this class can be thrown or caught.
  *
@@ -22,19 +18,7 @@ public open class Throwable(open val message: String?, open val cause: kotlin.Th
 
     constructor() : this(null, null)
 
-    internal val jsStack: ExternalInterfaceType = captureStackTrace()
-
-    private var _stack: String? = null
-    internal val stack: String
-        get() {
-            var value = _stack
-            if (value == null) {
-                value = jsToKotlinStringAdapter(jsStack).removePrefix("Error\n")
-                _stack = value
-            }
-
-            return value
-        }
+    internal val stack: String = captureStackTrace()
 
     internal var suppressedExceptionsList: MutableList<Throwable>? = null
 
@@ -43,10 +27,11 @@ public open class Throwable(open val message: String?, open val cause: kotlin.Th
      * followed by the exception message if it is not null.
      */
     public override fun toString(): String {
-        val s = getSimpleName(this.typeInfo)
+        val kClass = this::class
+        val s = kClass.simpleName ?: "Throwable"
         return if (message != null) s + ": " + message.toString() else s
     }
 }
 
-private fun captureStackTrace(): ExternalInterfaceType =
-    js("new Error().stack")
+private fun captureStackTrace(): String =
+    js("new Error().stack.replace(/^Error\\n/, '')")

@@ -1,32 +1,28 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2022 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
 package kotlin
 
 import kotlin.wasm.internal.*
-import kotlin.math.min
+import kotlin.wasm.internal.reftypes.*
 
-/**
- * The `String` class represents character strings. All string literals in Kotlin programs, such as `"abc"`, are
- * implemented as instances of this class.
- */
-public class String internal @WasmPrimitiveConstructor constructor(
-    private var leftIfInSum: String?,
-    @kotlin.internal.IntrinsicConstEvaluation
-    public override val length: Int,
-    private var _chars: WasmCharArray,
-) : Comparable<String>, CharSequence {
+public class String internal @WasmPrimitiveConstructor constructor(internal val reference: stringref) : Comparable<String>, CharSequence {
     public companion object {}
 
-    /**
-     * Returns a string obtained by concatenating this string with the string representation of the given [other] object.
-     */
-    @kotlin.internal.IntrinsicConstEvaluation
-    public operator fun plus(other: Any?): String {
-        val right = other.toString()
-        return String(this, this.length + right.length, right.chars)
+    public override val length: Int get() =
+        wasm_stringview_wtf16_length(wasm_string_as_wtf16(reference))
+
+    public override fun get(index: Int): Char =
+        wasm_stringview_wtf16_get_codeunit(wasm_string_as_wtf16(reference), index).toChar()
+
+    public override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
+        val view = wasm_string_as_wtf16(reference)
+        val length = wasm_stringview_wtf16_length(view)
+        val actualStartIndex = startIndex.coerceAtLeast(0)
+        val actualEndIndex = endIndex.coerceAtMost(length)
+        return String(wasm_stringview_wtf16_slice(view, actualStartIndex, actualEndIndex))
     }
 
     /**
@@ -35,99 +31,42 @@ public class String internal @WasmPrimitiveConstructor constructor(
      * If the [index] is out of bounds of this string, throws an [IndexOutOfBoundsException] except in Kotlin/JS
      * where the behavior is unspecified.
      */
-    @kotlin.internal.IntrinsicConstEvaluation
-    public override fun get(index: Int): Char {
-        rangeCheck(index, this.length)
-        return chars.get(index)
-    }
-
-    internal fun foldChars() {
-        val stringLength = this.length
-        val newArray = WasmCharArray(stringLength)
-
-        var currentStartIndex = stringLength
-        var currentLeftString: String? = this
-        while (currentLeftString != null) {
-            val currentLeftStringChars = currentLeftString._chars
-            val currentLeftStringLen = currentLeftStringChars.len()
-            currentStartIndex -= currentLeftStringLen
-            copyWasmArray(currentLeftStringChars, newArray, 0, currentStartIndex, currentLeftStringLen)
-            currentLeftString = currentLeftString.leftIfInSum
+    public operator fun plus(other: Any?): String {
+        val otherReference = when (other) {
+            is String -> other.reference
+            else -> other.toString().reference
         }
-        check(currentStartIndex == 0)
-        _chars = newArray
-        leftIfInSum = null
+        return String(wasm_string_concat(reference, otherReference))
     }
 
-    internal inline val chars: WasmCharArray get() {
-        if (leftIfInSum != null) {
-            foldChars()
-        }
-        return _chars
-    }
-
-    public override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
-        val actualStartIndex = startIndex.coerceAtLeast(0)
-        val actualEndIndex = endIndex.coerceAtMost(this.length)
-        val newLength = actualEndIndex - actualStartIndex
-        if (newLength <= 0) return ""
-        val newChars = WasmCharArray(newLength)
-        copyWasmArray(chars, newChars, actualStartIndex, 0, newLength)
-        return newChars.createString()
-    }
-
-    @kotlin.internal.IntrinsicConstEvaluation
     public override fun compareTo(other: String): Int {
-        if (this === other) return 0
-        val thisChars = this.chars
-        val otherChars = other.chars
-        val thisLength = thisChars.len()
-        val otherLength = otherChars.len()
-        val minimumLength = if (thisLength < otherLength) thisLength else otherLength
+        val thisIterator = wasm_string_as_iter(this.reference)
+        val otherIterator = wasm_string_as_iter(other.reference)
 
-        repeat(minimumLength) {
-            val l = thisChars.get(it)
-            val r = otherChars.get(it)
-            if (l != r) return l - r
+        var thisCode = wasm_stringview_iter_next(thisIterator)
+        var otherCode = wasm_stringview_iter_next(otherIterator)
+        while (thisCode != -1 && otherCode != -1) {
+            val diff = thisCode - otherCode
+            if (diff != 0) return diff
+            thisCode = wasm_stringview_iter_next(thisIterator)
+            otherCode = wasm_stringview_iter_next(otherIterator)
         }
-        return thisLength - otherLength
+        return if (thisCode == -1 && otherCode == -1) 0 else this.length - other.length
     }
 
-    @kotlin.internal.IntrinsicConstEvaluation
     public override fun equals(other: Any?): Boolean {
-        if (other == null) return false
-        if (other === this) return true
-        val otherString = other as? String ?: return false
-
-        val thisLength = this.length
-        val otherLength = otherString.length
-        if (thisLength != otherLength) return false
-
-        val thisHash = this._hashCode
-        val otherHash = other._hashCode
-        if (thisHash != otherHash && thisHash != 0 && otherHash != 0) return false
-
-        val thisChars = this.chars
-        val otherChars = other.chars
-        repeat(thisLength) {
-            if (thisChars.get(it) != otherChars.get(it)) return false
-        }
-        return true
+        if (other === null) return false
+        if (this === other) return true
+        return other is String && wasm_string_eq(reference, other.reference)
     }
 
-    @kotlin.internal.IntrinsicConstEvaluation
     public override fun toString(): String = this
 
     public override fun hashCode(): Int {
         if (_hashCode != 0) return _hashCode
-        val thisLength = this.length
-        if (thisLength == 0) return 0
 
-        val thisChars = chars
         var hash = 0
-        repeat(thisLength) {
-            hash = (hash shl 5) - hash + thisChars.get(it).toInt()
-        }
+        forEachCodePoint { hash = 31 * hash + it }
         _hashCode = hash
         return _hashCode
     }
@@ -135,7 +74,16 @@ public class String internal @WasmPrimitiveConstructor constructor(
 
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun WasmCharArray.createString(): String =
-    String(null, this.len(), this)
+    String(wasm_string_new_wtf16_array(this, 0, len()))
+
+internal inline fun String.forEachCodePoint(body: (Int) -> Unit) {
+    val iter = wasm_string_as_iter(reference)
+    var codePoint = wasm_stringview_iter_next(iter)
+    while (codePoint != -1) {
+        body(codePoint)
+        codePoint = wasm_stringview_iter_next(iter)
+    }
+}
 
 internal fun stringLiteral(poolId: Int, startAddress: Int, length: Int): String {
     val cached = stringPool[poolId]
@@ -144,7 +92,7 @@ internal fun stringLiteral(poolId: Int, startAddress: Int, length: Int): String 
     }
 
     val chars = array_new_data0<WasmCharArray>(startAddress, length)
-    val newString = String(null, length, chars)
+    val newString = chars.createString()
     stringPool[poolId] = newString
     return newString
 }

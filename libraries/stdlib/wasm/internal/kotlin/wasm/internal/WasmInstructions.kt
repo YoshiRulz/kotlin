@@ -9,6 +9,7 @@
 
 package kotlin.wasm.internal
 
+import kotlin.wasm.internal.reftypes.*
 import kotlin.wasm.internal.ExternalInterfaceType
 
 @WasmOp(WasmOp.UNREACHABLE)
@@ -390,3 +391,80 @@ internal external fun wasm_i64_ctz(a: Long): Long
 
 @WasmOp(WasmOp.REF_IS_NULL)
 internal external fun wasm_externref_is_null(a: ExternalInterfaceType?): Boolean
+
+// stringref proposal
+
+internal fun wasm_string_new_wtf16(address: Int, codeunits: Int): stringref =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_NEW_WTF16_ARRAY)
+internal fun wasm_string_new_wtf16_array(codeunits: WasmCharArray, start: Int, end: Int): stringref =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_MEASURE_WTF16)
+internal fun wasm_string_measure_wtf16(string: stringref): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_MEASURE_UTF8)
+internal fun wasm_string_measure_utf8(string: stringref): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_MEASURE_WTF8)
+internal fun wasm_string_measure_wtf8(string: stringref): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_ENCODE_WTF16_ARRAY)
+internal fun wasm_string_encode_wtf16_array(string: stringref, array: WasmCharArray, start: Int): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_NEW_LOSSY_UTF8_ARRAY)
+internal fun wasm_string_new_lossy_utf8_array(codeunits: WasmByteArray, start: Int, end: Int): stringref =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_ENCODE_LOSSY_UTF8_ARRAY)
+internal fun wasm_string_encode_lossy_utf8_array(string: stringref, array: WasmByteArray, start: Int): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_CONCAT)
+internal fun wasm_string_concat(string1: stringref, string2: stringref): stringref =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_EQ)
+internal fun wasm_string_eq(string1: stringref, string2: stringref): Boolean =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRINGVIEW_AS_WTF16)
+internal fun wasm_string_as_wtf16(string: stringref): stringview_wtf16 =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRINGVIEW_WTF16_LENGTH)
+internal fun wasm_stringview_wtf16_length(stringView: stringview_wtf16): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRINGVIEW_WTF16_GET_CODEUNIT)
+internal fun wasm_stringview_wtf16_get_codeunit(stringView: stringview_wtf16, pos: Int): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRINGVIEW_WTF16_SLICE)
+internal fun wasm_stringview_wtf16_slice(stringView: stringview_wtf16, start: Int, end: Int): stringref =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRING_AS_ITER)
+internal fun wasm_string_as_iter(string: stringref): stringview_iter =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRINGVIEW_ITER_NEXT)
+internal fun wasm_stringview_iter_next(view: stringview_iter): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRINGVIEW_ITER_ADVANCE)
+internal fun wasm_stringview_iter_advance(view: stringview_iter, codepoints: Int): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRINGVIEW_ITER_REWIND)
+internal fun wasm_stringview_iter_rewind(view: stringview_iter, codepoints: Int): Int =
+    implementedAsIntrinsic
+
+@WasmOp(WasmOp.STRINGVIEW_ITER_SLICE)
+internal fun wasm_stringview_iter_slice(view: stringview_iter, codepoints: Int): Int =
+    implementedAsIntrinsic

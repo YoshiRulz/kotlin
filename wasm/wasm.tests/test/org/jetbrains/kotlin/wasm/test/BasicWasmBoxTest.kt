@@ -299,7 +299,7 @@ abstract class BasicWasmBoxTest(
 
                 val failsIn = InTextDirectivesUtils.findListWithPrefixes(testFile, "// WASM_FAILS_IN: ")
 
-                val exceptions = listOf(WasmVM.V8, WasmVM.SpiderMonkey).mapNotNull map@{ vm ->
+                val exceptions = listOf(WasmVM.V8/*, WasmVM.SpiderMonkey*/).mapNotNull map@{ vm ->
                     try {
                         if (debugMode >= DebugMode.DEBUG) {
                             println(" ------ Run in ${vm.name}" + if (vm.shortName in failsIn) " (expected to fail)" else "")

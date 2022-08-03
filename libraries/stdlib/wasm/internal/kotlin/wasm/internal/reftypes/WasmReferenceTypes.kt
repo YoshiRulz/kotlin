@@ -24,3 +24,6 @@ internal interface eqref : anyref
 internal interface structref : eqref
 internal interface i31ref : eqref
 internal interface funcref : anyref
+internal interface stringref
+internal interface stringview_wtf16
+internal interface stringview_iter

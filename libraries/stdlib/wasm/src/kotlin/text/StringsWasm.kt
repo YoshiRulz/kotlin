@@ -118,11 +118,10 @@ public actual fun CharArray.concatToString(startIndex: Int = 0, endIndex: Int = 
 @SinceKotlin("1.4")
 @WasExperimental(ExperimentalStdlibApi::class)
 public actual fun String.toCharArray(): CharArray {
-    val thisChars = this.chars
-    val thisLength = thisChars.len()
-    val newArray = CharArray(thisLength)
-    copyWasmArray(thisChars, newArray.storage, 0, 0, thisLength)
-    return newArray
+    val thisLength = length
+    val newArray = WasmCharArray(thisLength)
+    wasm_string_encode_wtf16_array(reference, newArray, 0)
+    return CharArray(newArray)
 }
 
 /**
@@ -141,7 +140,11 @@ public actual fun String.toCharArray(startIndex: Int = 0, endIndex: Int = this.l
     AbstractList.checkBoundsIndexes(startIndex, endIndex, length)
     val newLength = endIndex - startIndex
     val newArray = CharArray(newLength)
-    copyWasmArray(this.chars, newArray.storage, startIndex, 0, newLength)
+
+    val thisArray = WasmCharArray(length)
+    wasm_string_encode_wtf16_array(reference, thisArray, 0)
+
+    copyWasmArray(thisArray, newArray.storage, startIndex, 0, newLength)
     return newArray
 }
 

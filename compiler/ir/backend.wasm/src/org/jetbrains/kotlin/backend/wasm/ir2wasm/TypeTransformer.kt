@@ -104,6 +104,9 @@ class WasmTypeTransformer(
                         "structref" -> WasmRefNullType(WasmHeapType.Simple.Struct)
                         "i31ref" -> WasmI31Ref
                         "funcref" -> WasmRefNullType(WasmHeapType.Simple.Func)
+                        "stringref" -> WasmStringRef
+                        "stringview_wtf16" -> WasmStringViewWTF16
+                        "stringview_iter" -> WasmStringViewIter
                         else -> error("Unknown reference type $name")
                     }
                 } else if (ic != null) {

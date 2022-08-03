@@ -142,7 +142,7 @@ class WasmSymbols(
         context.irBuiltIns.floatType to getInternalFunction("consumeFloatIntoVoid"),
         context.irBuiltIns.doubleType to getInternalFunction("consumeDoubleIntoVoid")
     )
-    
+
     fun findVoidConsumer(type: IrType): IrSimpleFunctionSymbol =
         consumePrimitiveIntoVoid[type] ?: consumeAnyIntoVoid
 
@@ -224,6 +224,7 @@ class WasmSymbols(
 
     val newJsArray = getInternalFunction("newJsArray")
     val jsArrayPush = getInternalFunction("jsArrayPush")
+    val jsArrayPushString = getInternalFunction("jsArrayPushString")
 
     val startCoroutineUninterceptedOrReturnIntrinsics =
         (0..2).map { getInternalFunction("startCoroutineUninterceptedOrReturnIntrinsic$it") }
@@ -291,6 +292,9 @@ class WasmSymbols(
 
     private val wasmStructRefClass = getIrClass(FqName("kotlin.wasm.internal.reftypes.structref"))
     val wasmStructRefType by lazy { wasmStructRefClass.defaultType }
+
+    private val wasmStringRefClass = getIrClass(FqName("kotlin.wasm.internal.reftypes.stringref"))
+    val wasmStringRefType by lazy { wasmStringRefClass.defaultType }
 
     val wasmAnyRefClass = getIrClass(FqName("kotlin.wasm.internal.reftypes.anyref"))
 

@@ -8,7 +8,9 @@ package kotlin.text
 import kotlin.wasm.internal.*
 
 internal fun insertString(array: CharArray, destinationIndex: Int, value: String, sourceIndex: Int, count: Int): Int {
-    copyWasmArray(value.chars, array.storage, sourceIndex, destinationIndex, count)
+    val valueArray = WasmCharArray(value.length)
+    wasm_string_encode_wtf16_array(value.reference, valueArray, 0)
+    copyWasmArray(valueArray, array.storage, sourceIndex, destinationIndex, count)
     return count
 }
 

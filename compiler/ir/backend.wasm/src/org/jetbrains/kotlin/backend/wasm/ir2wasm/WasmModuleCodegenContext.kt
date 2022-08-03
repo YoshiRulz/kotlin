@@ -196,4 +196,3 @@ class WasmModuleCodegenContext(
         wasmFragment.jsModuleImports += module
     }
 }
-

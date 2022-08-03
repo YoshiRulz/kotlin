@@ -25,6 +25,7 @@ class WasmModule(
     val exports: List<WasmExport<*>> = emptyList(),
     val elements: List<WasmElement> = emptyList(),
     val tags: List<WasmTag> = emptyList(),
+    val constantStrings: List<String> = emptyList(),
 
     val startFunction: WasmFunction? = null,
 

@@ -90,6 +90,12 @@ class WasmIrToBinary(
                 tags.forEach { appendTag(it) }
             }
 
+            appendSection(14u) {
+                b.writeByte(0)
+                appendVectorSize(constantStrings.size)
+                constantStrings.forEach { appendConstString(it) }
+            }
+
             appendSection(6u) {
                 appendVectorSize(globals.size)
                 globals.forEach { appendGlobal(it) }
@@ -216,8 +222,13 @@ class WasmIrToBinary(
             return
 
         if (opcode > 0xFF) {
-            b.writeByte((opcode ushr 8).toByte())
-            b.writeByte((opcode and 0xFF).toByte())
+            val prefix = opcode ushr 8
+            b.writeByte(prefix.toByte())
+            if (prefix == 0xFB) { //stringref proposal encodes instruction with uleb
+                b.writeVarUInt32((opcode and 0xFF).toUInt())
+            } else {
+                b.writeByte((opcode and 0xFF).toByte())
+            }
         } else {
             b.writeByte(opcode.toByte())
         }
@@ -391,6 +402,12 @@ class WasmIrToBinary(
         appendType(c.type)
         b.writeVarUInt1(c.isMutable)
         appendExpr(c.init)
+    }
+
+    private fun appendConstString(s: String) {
+        val utf8Array = s.toByteArray(Charsets.UTF_8)
+        appendVectorSize(utf8Array.size)
+        b.writeBytes(utf8Array)
     }
 
     private fun appendTag(t: WasmTag) {

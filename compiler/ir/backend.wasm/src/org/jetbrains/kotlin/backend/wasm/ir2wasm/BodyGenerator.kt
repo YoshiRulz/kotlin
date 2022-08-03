@@ -137,7 +137,7 @@ class BodyGenerator(
         check(wasmArrayType != null)
 
         val location = expression.getSourceLocation()
-        generateAnyParameters(arrayClass.symbol, location)
+        generateAnyParameters(context, body, arrayClass.symbol, location)
         if (!tryGenerateConstVarargArray(expression, wasmArrayType)) tryGenerateVarargArray(expression, wasmArrayType)
         body.buildStructNew(context.referenceGcType(expression.type.getRuntimeClass(irBuiltIns).symbol), location)
     }
@@ -294,7 +294,7 @@ class BodyGenerator(
         }
 
         if (expression.symbol.owner.hasWasmPrimitiveConstructorAnnotation()) {
-            generateAnyParameters(klassSymbol, location)
+            generateAnyParameters(context, body, klassSymbol, location)
             for (i in 0 until expression.valueArgumentsCount) {
                 generateExpression(expression.getValueArgument(i)!!)
             }
@@ -307,21 +307,6 @@ class BodyGenerator(
         generateCall(expression)
     }
 
-    private fun generateAnyParameters(klassSymbol: IrClassSymbol, location: SourceLocation) {
-        //ClassITable and VTable load
-        body.commentGroupStart { "Any parameters" }
-        body.buildGetGlobal(context.referenceGlobalVTable(klassSymbol), location)
-        if (klassSymbol.owner.hasInterfaceSuperClass()) {
-            body.buildGetGlobal(context.referenceGlobalClassITable(klassSymbol), location)
-        } else {
-            body.buildRefNull(WasmHeapType.Simple.Struct, location)
-        }
-
-        body.buildConstI32Symbol(context.referenceTypeId(klassSymbol), location)
-        body.buildConstI32(0, location) // Any::_hashCode
-        body.commentGroupEnd()
-    }
-
     fun generateObjectCreationPrefixIfNeeded(constructor: IrConstructor) {
         val parentClass = constructor.parentAsClass
         if (constructor.origin == PrimaryConstructorLowering.SYNTHETIC_PRIMARY_CONSTRUCTOR) return
@@ -332,7 +317,7 @@ class BodyGenerator(
             body.buildGetLocal(thisParameter, location)
             body.buildInstr(WasmOp.REF_IS_NULL, location)
             body.buildIf("this_init")
-            generateAnyParameters(parentClass.symbol, location)
+            generateAnyParameters(context, body, parentClass.symbol, location)
             val irFields: List<IrField> = parentClass.allFields(backendContext.irBuiltIns)
             irFields.forEachIndexed { index, field ->
                 if (index > 1) {
@@ -362,7 +347,7 @@ class BodyGenerator(
     private fun generateBox(expression: IrExpression, type: IrType) {
         val klassSymbol = type.getRuntimeClass(irBuiltIns).symbol
         val location = expression.getSourceLocation()
-        generateAnyParameters(klassSymbol, location)
+        generateAnyParameters(context, body, klassSymbol, location)
         generateExpression(expression)
         body.buildStructNew(context.referenceGcType(klassSymbol), location)
         body.commentPreviousInstr { "box" }
@@ -963,4 +948,21 @@ class BodyGenerator(
     }
 
     private fun IrElement.getSourceLocation() = getSourceLocation(functionContext.irFunction.fileOrNull?.fileEntry)
+
+    companion object {
+        fun generateAnyParameters(context: WasmModuleCodegenContext, body: WasmExpressionBuilder, klassSymbol: IrClassSymbol, location: SourceLocation) {
+            //ClassITable and VTable load
+            body.commentGroupStart { "Any parameters" }
+            body.buildGetGlobal(context.referenceGlobalVTable(klassSymbol), location)
+            if (klassSymbol.owner.hasInterfaceSuperClass()) {
+                body.buildGetGlobal(context.referenceGlobalClassITable(klassSymbol), location)
+            } else {
+                body.buildRefNull(WasmHeapType.Simple.Struct, location)
+            }
+
+            body.buildConstI32Symbol(context.referenceTypeId(klassSymbol), location)
+            body.buildConstI32(0, location) // Any::_hashCode
+            body.commentGroupEnd()
+        }
+    }
 }
