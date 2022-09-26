@@ -5,20 +5,27 @@
 
 package org.jetbrains.kotlinx.atomicfu.compiler.backend.jvm
 
+import org.jetbrains.kotlin.descriptors.ClassKind
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.builders.*
+import org.jetbrains.kotlin.ir.builders.declarations.addGetter
+import org.jetbrains.kotlin.ir.builders.declarations.buildField
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
+import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlinx.atomicfu.compiler.backend.common.AbstractAtomicfuIrBuilder
 
 // An IR builder with access to AtomicSymbols and convenience methods to build IR constructions for atomicfu JVM/IR transformation.
-class AtomicfuIrBuilder internal constructor(
-    val atomicSymbols: AtomicSymbols,
+class JvmAtomicfuIrBuilder internal constructor(
+    override val atomicSymbols: JvmAtomicSymbols,
     symbol: IrSymbol,
     startOffset: Int,
     endOffset: Int
-) : IrBuilderWithScope(IrGeneratorContextBase(atomicSymbols.irBuiltIns), Scope(symbol), startOffset, endOffset) {
+) : AbstractAtomicfuIrBuilder(atomicSymbols.irBuiltIns, symbol, startOffset, endOffset) {
 
     fun getProperty(property: IrProperty, dispatchReceiver: IrExpression?) =
         irCall(property.getter?.symbol ?: error("Getter is not defined for the property ${property.render()}")).apply {
@@ -39,13 +46,48 @@ class AtomicfuIrBuilder internal constructor(
             putValueArgument(0, index)
         }
 
-    fun irCallWithArgs(symbol: IrSimpleFunctionSymbol, dispatchReceiver: IrExpression?, valueArguments: List<IrExpression?>) =
-        irCall(symbol).apply {
-            this.dispatchReceiver = dispatchReceiver
-            valueArguments.forEachIndexed { i, arg ->
-                putValueArgument(i, arg)
-            }
+    fun irJavaAtomicArrayField(
+        name: Name,
+        arrayClass: IrClassSymbol,
+        isFinal: Boolean,
+        isStatic: Boolean,
+        annotations: List<IrConstructorCall>,
+        size: IrExpression,
+        dispatchReceiver: IrExpression?,
+        parentContainer: IrDeclarationContainer
+    ): IrField =
+        context.irFactory.buildField {
+            this.name = name
+            type = arrayClass.defaultType
+            this.isFinal = isFinal
+            this.isStatic = isStatic
+            visibility = DescriptorVisibilities.PRIVATE
+        }.apply {
+            this.initializer = IrExpressionBodyImpl(
+                newJavaAtomicArray(arrayClass, size, dispatchReceiver)
+            )
+            this.annotations = annotations
+            this.parent = parentContainer
         }
+
+    fun irJavaAtomicFieldUpdater(volatileField: IrField, parentClass: IrClass): IrField {
+        // Generate an atomic field updater for the volatile backing field of the given property:
+        // val a = atomic(0)
+        // volatile var a: Int = 0
+        // val a$FU = AtomicIntegerFieldUpdater.newUpdater(parentClass, "a")
+        val fuClass = atomicSymbols.getJucaAFUClass(volatileField.type)
+        val fieldName = volatileField.name.asString()
+        return context.irFactory.buildField {
+            name = Name.identifier("$fieldName\$FU")
+            type = fuClass.defaultType
+            isFinal = true
+            isStatic = true
+            visibility = DescriptorVisibilities.PRIVATE
+        }.apply {
+            initializer = irExprBody(newJavaAtomicFieldUpdater(fuClass, parentClass, atomicSymbols.irBuiltIns.anyNType, fieldName))
+            parent = parentClass
+        }
+    }
 
     // atomicArr.compareAndSet(index, expect, update)
     fun callAtomicArray(
@@ -91,8 +133,6 @@ class AtomicfuIrBuilder internal constructor(
         return if (isBooleanReceiver && irCall.type.isInt()) irCall.toBoolean() else irCall
     }
 
-    private fun IrExpression.toBoolean() = irNotEquals(this, irInt(0)) as IrCall
-
     fun callAtomicExtension(
         symbol: IrSimpleFunctionSymbol,
         dispatchReceiver: IrExpression?,
@@ -101,7 +141,7 @@ class AtomicfuIrBuilder internal constructor(
     ) = irCallWithArgs(symbol, dispatchReceiver, syntheticValueArguments + valueArguments)
 
     // val a$FU = j.u.c.a.AtomicIntegerFieldUpdater.newUpdater(A::class, "a")
-    fun newUpdater(
+    private fun newJavaAtomicFieldUpdater(
         fieldUpdaterClass: IrClassSymbol,
         parentClass: IrClass,
         valueType: IrType,
@@ -117,7 +157,7 @@ class AtomicfuIrBuilder internal constructor(
     }
 
     // val atomicArr = j.u.c.a.AtomicIntegerArray(size)
-    fun newJucaAtomicArray(
+    fun newJavaAtomicArray(
         atomicArrayClass: IrClassSymbol,
         size: IrExpression,
         dispatchReceiver: IrExpression?

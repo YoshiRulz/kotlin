@@ -1,6 +1,12 @@
 // FREE_COMPILER_ARGS: -Xprint-files -verbose
 
 import kotlin.test.*
+import kotlin.jvm.*
+
+@Test
+fun volatileTest() {
+
+}
 
 @Test
 fun addition() {

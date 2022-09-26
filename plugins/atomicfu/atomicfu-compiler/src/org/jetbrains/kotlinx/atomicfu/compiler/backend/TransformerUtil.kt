@@ -21,6 +21,8 @@ import org.jetbrains.kotlin.name.*
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.util.capitalizeDecapitalize.*
 
+// TODO: get rid of TransformerUtils at all
+
 private const val KOTLIN = "kotlin"
 private const val GET = "get"
 private const val SET = "set"
@@ -123,9 +125,6 @@ internal fun IrExpression.isConstNull() = this is IrConst<*> && this.kind.asStri
 
 internal fun IrField.getterName() = "<get-${name.asString()}>"
 internal fun IrField.setterName() = "<set-${name.asString()}>"
-
-internal fun String.getFieldName() = "<get-(\\w+)>".toRegex().find(this)?.groupValues?.get(1)
-    ?: error("Getter name $this does not match special name pattern <get-fieldName>")
 
 internal fun IrFunctionAccessExpression.getValueArguments() =
     (0 until valueArgumentsCount).map { i ->
@@ -230,6 +229,7 @@ internal fun IrPluginContext.buildFieldAccessor(
     isSetter: Boolean
 ): IrExpression {
     val valueType = field.type
+    require(valueType.isPrimitiveType())
     val functionType = if (isSetter) buildSetterType(valueType) else buildGetterType(valueType)
     val returnType = if (isSetter) irBuiltIns.unitType else valueType
     val name = if (isSetter) field.setterName() else field.getterName()
@@ -308,33 +308,37 @@ internal fun IrPluginContext.buildPropertyForBackingField(
     field: IrField,
     parent: IrDeclarationContainer,
     visibility: DescriptorVisibility,
+    isVar: Boolean,
     isStatic: Boolean
-): IrProperty =
-    irFactory.buildProperty {
+): IrProperty {
+    return irFactory.buildProperty {
         name = field.name
         this.visibility = visibility // equal to the atomic property visibility
+        this.isVar = isVar
     }.apply {
         backingField = field
         this.parent = parent
         if (!isStatic) {
-            addDefaultGetter(this, field.parent as IrClass)
+            updateGetter(field.parent as IrClass, irBuiltIns)
         } else {
-            addStaticGetter(this)
+            addStaticGetter(irBuiltIns)
         }
         parent.declarations.add(this)
     }
+}
 
-internal fun IrPluginContext.addDefaultGetter(property: IrProperty, parentClass: IrDeclarationContainer) {
-    val field = property.backingField!!
-    property.addGetter {
+internal fun IrProperty.updateGetter(parentContainer: IrDeclarationContainer, irBuiltIns: IrBuiltIns) {
+    val property = this
+    val field = requireNotNull(backingField) { "BackingField of the property $property should not be null"}
+    addGetter {
         origin = IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR
         visibility = property.visibility
         returnType = field.type
     }.apply {
-        dispatchReceiverParameter = if (parentClass is IrClass && parentClass.kind == ClassKind.OBJECT) {
+        dispatchReceiverParameter = if (parentContainer is IrClass && parentContainer.kind == ClassKind.OBJECT) {
             null
         } else {
-            (parentClass as? IrClass)?.thisReceiver?.deepCopyWithSymbols(this)
+            (parentContainer as? IrClass)?.thisReceiver?.deepCopyWithSymbols(this)
         }
         body = factory.createBlockBody(
             UNDEFINED_OFFSET, UNDEFINED_OFFSET, listOf(
@@ -360,11 +364,50 @@ internal fun IrPluginContext.addDefaultGetter(property: IrProperty, parentClass:
     }
 }
 
-internal fun IrPluginContext.addStaticGetter(property: IrProperty) {
-    val field = property.backingField!!
-    property.addGetter {
+internal fun IrProperty.updateSetter(parentClass: IrDeclarationContainer, irBuiltIns: IrBuiltIns) {
+    val property = this
+    val field = requireNotNull(property.backingField) { "BackingField of the property $property should not be null"}
+    addSetter {
         origin = IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR
         visibility = property.visibility
+        returnType = irBuiltIns.unitType
+    }.apply {
+        dispatchReceiverParameter = if (parentClass is IrClass && parentClass.kind == ClassKind.OBJECT) {
+            null
+        } else {
+            (parentClass as? IrClass)?.thisReceiver?.deepCopyWithSymbols(this)
+        }
+        addValueParameter("value", field.type)
+        body = factory.createBlockBody(
+            UNDEFINED_OFFSET, UNDEFINED_OFFSET, listOf(
+                IrReturnImpl(
+                    UNDEFINED_OFFSET, UNDEFINED_OFFSET,
+                    irBuiltIns.unitType,
+                    symbol,
+                    IrSetFieldImpl(
+                        UNDEFINED_OFFSET, UNDEFINED_OFFSET,
+                        field.symbol,
+                        dispatchReceiverParameter?.let {
+                            IrGetValueImpl(
+                                UNDEFINED_OFFSET, UNDEFINED_OFFSET,
+                                it.type,
+                                it.symbol
+                            )
+                        },
+                        this.valueParameters[0].capture(),
+                        field.type
+                    )
+                )
+            )
+        )
+    }
+}
+
+internal fun IrProperty.addStaticGetter(irBuiltIns: IrBuiltIns) {
+    val field = requireNotNull(backingField) { "BackingField of the property $this should not be null"}
+    addGetter {
+        origin = IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR
+        visibility = this@addStaticGetter.visibility
         returnType = field.type
     }.apply {
         dispatchReceiverParameter = null
@@ -396,6 +439,7 @@ internal fun IrPluginContext.buildClassInstance(
         field = buildClassInstanceField(irClass, parent),
         parent = parent,
         visibility = visibility,
+        isVar = false,
         isStatic = isStatic
     )
 
@@ -430,4 +474,3 @@ internal fun IdSignature.getDeclarationNameBySignature(): String? {
     val commonSignature = if (this is IdSignature.AccessorSignature) accessorSignature else asPublic()
     return commonSignature?.declarationFqName
 }
-
