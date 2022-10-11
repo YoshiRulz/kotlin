@@ -53,7 +53,13 @@ val jsMainSources by task<Sync> {
     val sources = listOf(
         "core/builtins/src/kotlin/",
         "libraries/stdlib/js/src/",
-        "libraries/stdlib/js/runtime/"
+        "libraries/stdlib/js/runtime/",
+
+        "libraries/stdlib/native-wasm/src/kotlin/collections/HashMap.kt",
+        "libraries/stdlib/native-wasm/src/kotlin/collections/HashSet.kt",
+        "libraries/stdlib/native-wasm/src/kotlin/native/FreezingIsDeprecated.kt",
+
+        "libraries/stdlib/wasm/stubs/native"
     ) + unimplementedNativeBuiltIns
 
     val excluded = listOf(
@@ -65,7 +71,15 @@ val jsMainSources by task<Sync> {
         "libraries/stdlib/js/src/kotlinx",
 
         // JS-specific optimized version of emptyArray() already defined
-        "core/builtins/src/kotlin/ArrayIntrinsics.kt"
+        "core/builtins/src/kotlin/ArrayIntrinsics.kt",
+
+        "libraries/stdlib/src/kotlin/annotations/NativeAnnotations.kt",
+        "libraries/stdlib/src/kotlin/annotations/NativeConcurrentAnnotations.kt",
+
+        "libraries/stdlib/js/src/kotlin/collections/HashMap.kt",
+        "libraries/stdlib/js/src/kotlin/collections/LinkedHashMap.kt",
+        "libraries/stdlib/js/src/kotlin/collections/HashSet.kt",
+        "libraries/stdlib/js/src/kotlin/collections/LinkedHashSet.kt"
     )
 
     sources.forEach { path ->
