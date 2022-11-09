@@ -11,8 +11,7 @@ import org.jetbrains.kotlin.fir.FirSessionComponent
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
-import org.jetbrains.kotlin.fir.declarations.utils.delegateFields
-import org.jetbrains.kotlin.fir.declarations.utils.isExpect
+import org.jetbrains.kotlin.fir.declarations.utils.*
 import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeRawScopeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
@@ -64,13 +63,19 @@ class FirKotlinScopeProvider(
             ).mapNotNull { useSiteSuperType ->
                 useSiteSuperType.scopeForSupertype(useSiteSession, scopeSession, klass, memberRequiredPhase = memberRequiredPhase)
             }
-
-            FirClassUseSiteMemberScope(
+            val useSiteMemberScope = FirClassUseSiteMemberScope(
                 klass,
                 useSiteSession,
                 scopes,
                 decoratedDeclaredMemberScope,
             )
+            if (klass is FirRegularClass && !klass.isExpect && (klass.isData || klass.isInline)) {
+                FirClassAnySynthesizedMemberScope(
+                    useSiteMemberScope, klass.symbol.toLookupTag(), klass.moduleData, klass.defaultType(), klass.source
+                )
+            } else {
+                useSiteMemberScope
+            }
         }
     }
 
