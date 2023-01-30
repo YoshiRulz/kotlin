@@ -13,11 +13,11 @@ import org.jetbrains.kotlin.cli.common.isWindows
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.backend.js.*
-import org.jetbrains.kotlin.ir.backend.js.codegen.JsGenerationGranularity
 import org.jetbrains.kotlin.ir.backend.js.ic.JsExecutableProducer
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerDesc
 import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.*
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.backend.js.SourceMapsInfo
 import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImplForJsIC
 import org.jetbrains.kotlin.ir.linkage.partial.PartialLinkageConfig
 import org.jetbrains.kotlin.ir.linkage.partial.PartialLinkageLogLevel
@@ -115,7 +115,7 @@ class JsIrBackendFacade(
                         caches = testServices.jsIrIncrementalDataProvider.getCaches(),
                         relativeRequirePath = false
                     )
-                    jsExecutableProducer.buildExecutable(it.perModule, true).compilationOut
+                    jsExecutableProducer.buildExecutable(it.granularity, true).compilationOut
                 }
             )
             return BinaryArtifacts.Js.JsIrArtifact(
@@ -140,10 +140,10 @@ class JsIrBackendFacade(
 
 
         val loweredIr = compileIr(
-            irModuleFragment.apply { resolveTestPaths() },
+            irModuleFragment,
             MainModule.Klib(inputArtifact.outputFile.absolutePath),
             configuration,
-            dependencyModules.onEach { it.resolveTestPaths() },
+            dependencyModules,
             emptyMap(),
             irModuleFragment.irBuiltins,
             symbolTable,
@@ -189,17 +189,11 @@ class JsIrBackendFacade(
         // If perModuleOnly then skip whole program
         // (it.dce => runIrDce) && (perModuleOnly => it.perModule)
         val translationModes = TranslationMode.values()
-            .filter { (it.production || !onlyIrDce) && (!it.production || runIrDce) && (!perModuleOnly || it.perModule) }
+            .filter { (it.production || !onlyIrDce) && (!it.production || runIrDce) && (!perModuleOnly || it.granularity == JsGenerationGranularity.PER_MODULE) }
             .filter { it.production == it.minimizedMemberNames }
             .toSet()
-        val compilationOut = transformer.generateModule(loweredIr.allModules, translationModes, false)
+        val compilationOut = transformer.generateModule(loweredIr.allModules, translationModes, isEsModules)
         return BinaryArtifacts.Js.JsIrArtifact(outputFile, compilationOut).dump(module)
-    }
-
-    private fun IrModuleFragment.resolveTestPaths() {
-        JsIrPathReplacer(testServices).let {
-            files.forEach(it::lower)
-        }
     }
 
     private fun loadIrFromKlib(module: TestModule, configuration: CompilerConfiguration): IrModuleInfo {

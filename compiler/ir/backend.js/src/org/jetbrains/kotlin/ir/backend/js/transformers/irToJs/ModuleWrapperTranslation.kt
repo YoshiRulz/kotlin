@@ -132,6 +132,7 @@ object ModuleWrapperTranslation {
         val (alreadyPresentedImportStatements, restStatements) = function.body.statements
             .flatMap { if (it is JsCompositeBlock) it.statements else listOf(it) }
             .partitionIsInstance<JsStatement, JsImport>()
+
         val (multipleElementsImport, defaultImports) = alreadyPresentedImportStatements.partition { it.target is JsImport.Target.Elements }
 
         val mergedImports = multipleElementsImport

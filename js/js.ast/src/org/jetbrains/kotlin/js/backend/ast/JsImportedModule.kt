@@ -16,7 +16,6 @@
 
 package org.jetbrains.kotlin.js.backend.ast
 
-
 class JsImportedModule @JvmOverloads constructor(
     val externalName: String,
     var internalName: JsName,

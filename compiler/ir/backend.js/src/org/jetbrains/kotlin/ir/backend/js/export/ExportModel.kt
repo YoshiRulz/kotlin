@@ -18,6 +18,10 @@ sealed class ExportedAttribute {
     class DeprecatedAttribute(val message: String): ExportedAttribute()
 }
 
+sealed class NamedExportedDeclaration : ExportedDeclaration() {
+    abstract val name: String
+}
+
 data class ExportedModule(
     val name: String,
     val moduleKind: ModuleKind,
@@ -25,12 +29,12 @@ data class ExportedModule(
 )
 
 class ExportedNamespace(
-    val name: String,
+    override val name: String,
     val declarations: List<ExportedDeclaration>,
-) : ExportedDeclaration()
+) : NamedExportedDeclaration()
 
 data class ExportedFunction(
-    val name: String,
+    override val name: String,
     val returnType: ExportedType,
     val parameters: List<ExportedParameter>,
     val typeParameters: List<ExportedType.TypeParameter> = emptyList(),
@@ -39,7 +43,7 @@ data class ExportedFunction(
     val isAbstract: Boolean = false,
     val isProtected: Boolean,
     val ir: IrSimpleFunction
-) : ExportedDeclaration()
+) : NamedExportedDeclaration()
 
 data class ExportedConstructor(
     val parameters: List<ExportedParameter>,
@@ -55,7 +59,7 @@ data class ExportedConstructSignature(
 ) : ExportedDeclaration()
 
 data class ExportedProperty(
-    val name: String,
+    override val name: String,
     val type: ExportedType,
     val mutable: Boolean = true,
     val isMember: Boolean = false,
@@ -66,14 +70,15 @@ data class ExportedProperty(
     val irGetter: IrFunction? = null,
     val irSetter: IrFunction? = null,
     val isOptional: Boolean = false
-) : ExportedDeclaration()
+) : NamedExportedDeclaration()
 
 // TODO: Cover all cases with frontend and disable error declarations
-class ErrorDeclaration(val message: String) : ExportedDeclaration()
+class ErrorDeclaration(val message: String) : NamedExportedDeclaration() {
+    override val name = message
+}
 
 
-sealed class ExportedClass : ExportedDeclaration() {
-    abstract val name: String
+sealed class ExportedClass : NamedExportedDeclaration() {
     abstract val ir: IrClass
     abstract val members: List<ExportedDeclaration>
     abstract val superClasses: List<ExportedType>
