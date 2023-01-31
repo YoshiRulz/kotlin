@@ -30,7 +30,7 @@ class JsMultiModuleCache(private val moduleArtifacts: List<ModuleArtifact>) {
         val optionalCrossModuleImports = hashSetOf<String>()
 
         val crossModuleReferencesHash = ICHash.fromProtoStream(this)
-        val hasJsExports = readBool()
+        val reexportedInModuleWithName = readString()
         repeat(readInt32()) {
             val tag = readString()
             val mask = readInt32()
@@ -52,7 +52,7 @@ class JsMultiModuleCache(private val moduleArtifacts: List<ModuleArtifact>) {
                 definitions = definitions,
                 nameBindings = nameBindings,
                 optionalCrossModuleImports = optionalCrossModuleImports,
-                hasJsExports = hasJsExports,
+                reexportedInModuleWithName = reexportedInModuleWithName,
                 associatedModule = null
             ),
             crossModuleReferencesHash = crossModuleReferencesHash
@@ -74,8 +74,9 @@ class JsMultiModuleCache(private val moduleArtifacts: List<ModuleArtifact>) {
                 names[tag] = ((maskAndName?.first ?: 0) or NameType.DEFINITIONS.typeMask) to maskAndName?.second
             }
             crossModuleReferencesHash.toProtoStream(this)
-            writeBoolNoTag(jsIrHeader.hasJsExports)
+            writeStringNoTag(jsIrHeader.reexportedInModuleWithName)
             writeInt32NoTag(names.size)
+
             for ((tag, maskAndName) in names) {
                 writeStringNoTag(tag)
                 writeInt32NoTag(maskAndName.first)

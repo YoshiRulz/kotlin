@@ -1387,6 +1387,7 @@ public class JsToStringGenerationVisitor extends JsVisitor {
             for (JsImport.Element element : elements) {
                 nameDef(element.getName());
                 JsNameRef alias = element.getAlias();
+
                 if (alias != null) {
                     p.print(" as ");
                     visitNameRef(alias);

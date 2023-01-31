@@ -735,7 +735,7 @@ private fun getExportCandidate(declaration: IrDeclaration): IrDeclarationWithNam
 }
 
 private fun shouldDeclarationBeExportedImplicitlyOrExplicitly(declaration: IrDeclarationWithName, context: JsIrBackendContext): Boolean {
-   return declaration.isJsImplicitExport() || shouldDeclarationBeExported(declaration, context)
+    return declaration.isJsImplicitExport() || shouldDeclarationBeExported(declaration, context)
 }
 
 private fun shouldDeclarationBeExported(declaration: IrDeclarationWithName, context: JsIrBackendContext): Boolean {

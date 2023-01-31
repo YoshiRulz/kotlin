@@ -18,26 +18,18 @@ class ModuleFragmentToExternalName(private val jsOutputNamesMapping: Map<IrModul
     }
 
     fun getSafeNameFor(file: IrFile): String {
-        return "${file.module.safeName}${file.stableFileName.replace('-', '_')}"
+        return "${file.module.safeName}${file.stableFileName}"
     }
 
-    fun getExternalNameFor(module: IrModuleFragment, granularity: JsGenerationGranularity): String {
-        return with(module.getJsOutputName()) {
-            when (granularity) {
-                JsGenerationGranularity.WHOLE_PROGRAM -> getExternalModuleNameForWholeProgram()
-                JsGenerationGranularity.PER_MODULE -> getExternalModuleNameForPerModule()
-                JsGenerationGranularity.PER_FILE -> throw AssertionError("This method should be used only for PER_MODULE and WHOLE_PROGRAM granularities")
-            }
-        }
+    fun getExternalNameFor(module: IrModuleFragment): String {
+        return module.getJsOutputName()
     }
 
     private fun IrModuleFragment.getJsOutputName(): String {
         return jsOutputNamesMapping[this] ?: sanitizeName(safeName)
     }
 
-    private fun String.getExternalModuleNameForWholeProgram() = this
-    private fun String.getExternalModuleNameForPerModule() = this
     private fun String.getExternalModuleNameForPerFile(file: IrFile) = "$this/${file.stableFileName}"
 
-    private val IrFile.stableFileName: String get() = path.cityHash64().toString()
+    private val IrFile.stableFileName: String get() = path.cityHash64().toULong().toString(16)
 }

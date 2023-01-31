@@ -18,10 +18,7 @@ class JsExport(
         object All : Subject()
     }
 
-    class Element(
-        val name: JsNameRef,
-        val alias: JsName?
-    )
+    class Element(val name: JsNameRef, val alias: JsName?)
 
     override fun accept(visitor: JsVisitor) {
         visitor.visitExport(this)
