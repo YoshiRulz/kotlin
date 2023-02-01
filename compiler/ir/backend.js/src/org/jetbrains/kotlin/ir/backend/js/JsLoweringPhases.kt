@@ -830,11 +830,8 @@ private val cleanupLoweringPhase = makeBodyLoweringPhase(
     description = "Clean up IR before codegen"
 )
 
-private val moveOpenClassesToSeparatePlaceLowering = makeCustomJsModulePhase(
-    { context, module ->
-        if (context.granularity == JsGenerationGranularity.PER_FILE)
-            moveOpenClassesToSeparateFiles(module)
-    },
+private val moveAllClassesToSeparatePlaceLowering = makeCustomJsModulePhase(
+    { _, module -> moveAllClassesToSeparateFiles(module) },
     name = "MoveOpenClassesToSeparateFiles",
     description = "Move open classes to separate files"
 ).toModuleLowering()
@@ -891,6 +888,14 @@ val loweringList = listOf<Lowering>(
     initializersCleanupLoweringPhase,
     kotlinNothingValueExceptionPhase,
     // Common prefix ends
+    suspendFunctionsLoweringPhase,
+    propertyReferenceLoweringPhase,
+    interopCallableReferenceLoweringPhase,
+    jsSuspendArityStorePhase,
+    addContinuationToNonLocalSuspendFunctionsLoweringPhase,
+    addContinuationToLocalSuspendFunctionsLoweringPhase,
+    addContinuationToFunctionCallsLoweringPhase,
+    moveAllClassesToSeparatePlaceLowering,
     enumWhenPhase,
     enumEntryInstancesLoweringPhase,
     enumEntryInstancesBodyLoweringPhase,
@@ -900,13 +905,6 @@ val loweringList = listOf<Lowering>(
     enumUsageLoweringPhase,
     externalEnumUsageLoweringPhase,
     enumEntryRemovalLoweringPhase,
-    suspendFunctionsLoweringPhase,
-    propertyReferenceLoweringPhase,
-    interopCallableReferenceLoweringPhase,
-    jsSuspendArityStorePhase,
-    addContinuationToNonLocalSuspendFunctionsLoweringPhase,
-    addContinuationToLocalSuspendFunctionsLoweringPhase,
-    addContinuationToFunctionCallsLoweringPhase,
     returnableBlockLoweringPhase,
     rangeContainsLoweringPhase,
     forLoopsLoweringPhase,
@@ -952,7 +950,7 @@ val loweringList = listOf<Lowering>(
     cleanupLoweringPhase,
     // Currently broken due to static members lowering making single-open-class
     // files non-recognizable as single-class files
-    // moveOpenClassesToSeparatePlaceLowering,
+    // moveAllClassesToSeparatePlaceLowering,
     validateIrAfterLowering,
 )
 

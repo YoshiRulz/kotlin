@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.utils.addToStdlib.partitionIsInstance
 class Merger(
     private val moduleName: String,
     private val moduleKind: ModuleKind,
+    private val granularity: JsGenerationGranularity,
     private val fragments: List<JsIrProgramFragment>,
     private val crossModuleReferences: CrossModuleReferences,
     private val generateRegionComments: Boolean,
@@ -98,7 +99,7 @@ class Merger(
         val result = mutableMapOf<JsName, JsName>()
 
         this.importedModules.forEach { module ->
-            val existingModule = importedModulesMap.getOrPut(module.key) { module }
+            val existingModule = importedModulesMap.getOrPut(module.key) { module.withFixedDependencyRelativePath(granularity) }
             if (existingModule !== module) {
                 result[module.internalName] = existingModule.internalName
             }

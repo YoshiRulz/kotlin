@@ -415,12 +415,6 @@ class IrModuleToJsTransformer(
         return result
     }
 
-    private fun generateProgramFragmentForReexport(module: IrAndExportedDeclarations): JsIrProgramFragment {
-        return JsIrProgramFragment(module.fragment.safeName).apply {
-
-        }
-    }
-
     private fun generateMainArguments(
         generateArgv: Boolean,
         generateContinuation: Boolean,
@@ -456,6 +450,7 @@ private fun generateWrappedModuleBody(
         JsGenerationGranularity.WHOLE_PROGRAM -> generateSingleWrappedModuleBody(
             mainModuleName,
             moduleKind,
+            granularity,
             program.asFragments(),
             sourceMapsInfo,
             generateCallToMain = true,
@@ -471,6 +466,7 @@ private fun generateWrappedModuleBody(
                 generateSingleWrappedModuleBody(
                     mainModuleName,
                     moduleKind,
+                    granularity,
                     main.fragments,
                     sourceMapsInfo,
                     generateCallToMain = true,
@@ -486,6 +482,7 @@ private fun generateWrappedModuleBody(
                         val moduleCompilationOutput = generateSingleWrappedModuleBody(
                             moduleName,
                             moduleKind,
+                            granularity,
                             module.fragments,
                             sourceMapsInfo,
                             generateCallToMain = false,
@@ -505,6 +502,7 @@ private fun generateWrappedModuleBody(
 fun generateSingleWrappedModuleBody(
     moduleName: String,
     moduleKind: ModuleKind,
+    granularity: JsGenerationGranularity,
     fragments: List<JsIrProgramFragment>,
     sourceMapsInfo: SourceMapsInfo?,
     generateCallToMain: Boolean,
@@ -514,6 +512,7 @@ fun generateSingleWrappedModuleBody(
     val program = Merger(
         moduleName,
         moduleKind,
+        granularity,
         fragments,
         crossModuleReferences,
         generateRegionComments = true,

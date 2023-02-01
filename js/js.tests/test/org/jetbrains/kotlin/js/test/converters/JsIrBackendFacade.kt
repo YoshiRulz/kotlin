@@ -140,10 +140,10 @@ class JsIrBackendFacade(
 
 
         val loweredIr = compileIr(
-            irModuleFragment,
+            irModuleFragment.apply { resolveTestPaths() },
             MainModule.Klib(inputArtifact.outputFile.absolutePath),
             configuration,
-            dependencyModules,
+            dependencyModules.onEach { it.resolveTestPaths() },
             emptyMap(),
             irModuleFragment.irBuiltins,
             symbolTable,
@@ -194,6 +194,12 @@ class JsIrBackendFacade(
             .toSet()
         val compilationOut = transformer.generateModule(loweredIr.allModules, translationModes, isEsModules)
         return BinaryArtifacts.Js.JsIrArtifact(outputFile, compilationOut).dump(module)
+    }
+
+    private fun IrModuleFragment.resolveTestPaths() {
+        JsIrPathReplacer(testServices).let {
+            files.forEach(it::lower)
+        }
     }
 
     private fun loadIrFromKlib(module: TestModule, configuration: CompilerConfiguration): IrModuleInfo {
