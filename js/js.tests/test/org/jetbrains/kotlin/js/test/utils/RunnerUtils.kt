@@ -100,7 +100,7 @@ fun getAdditionalFiles(
     return additionalFiles
 }
 
-fun getAdditionalMainFilePathes(testServices: TestServices, mode: TranslationMode = TranslationMode.FULL_DEV): List<String> {
+fun getAdditionalMainFilePaths(testServices: TestServices, mode: TranslationMode = TranslationMode.FULL_DEV): List<String> {
     return getAdditionalMainFiles(testServices, mode, shouldCopyFiles = true).map { it.absolutePath }
 }
 
@@ -158,11 +158,12 @@ fun getAllFilesForRunner(
             val outputFile = getModeOutputFilePath(testServices, module, mode)
             val (inputJsFilesBefore, inputJsFilesAfter) = extractJsFiles(testServices, testServices.moduleStructure.modules, mode)
             val additionalFiles = getAdditionalFilePaths(testServices, mode)
-            val additionalMainFiles = getAdditionalMainFilePathes(testServices, mode)
+            val additionalMainFiles = getAdditionalMainFilePaths(testServices, mode)
 
             outputs.dependencies.forEach { (moduleId, _) ->
                 paths += outputFile.augmentWithModuleName(moduleId)
             }
+
             paths += outputFile
 
             result[mode] = additionalFiles + inputJsFilesBefore + paths + commonFiles + additionalMainFiles + inputJsFilesAfter
@@ -172,7 +173,7 @@ fun getAllFilesForRunner(
     } else {
         val (inputJsFilesBefore, inputJsFilesAfter) = extractJsFiles(testServices, testServices.moduleStructure.modules)
         val additionalFiles = getAdditionalFilePaths(testServices)
-        val additionalMainFiles = getAdditionalMainFilePathes(testServices)
+        val additionalMainFiles = getAdditionalMainFilePaths(testServices)
         // Old BE
         val outputDir = JsEnvironmentConfigurator.getJsArtifactsOutputDir(testServices)
         val dceOutputDir = JsEnvironmentConfigurator.getJsArtifactsOutputDir(testServices, TranslationMode.FULL_PROD_MINIMIZED_NAMES)
