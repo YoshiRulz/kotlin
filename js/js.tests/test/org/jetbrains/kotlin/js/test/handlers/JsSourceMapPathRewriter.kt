@@ -20,15 +20,12 @@ import java.io.File
  * This handler rewrites the sourcemaps to contain the correct absolute paths.
  */
 class JsSourceMapPathRewriter(testServices: TestServices) : AbstractJsArtifactsCollector(testServices) {
-
     override fun processAfterAllModules(someAssertionWasFailed: Boolean) {
         val supportedTranslationModes = arrayOf(
             TranslationMode.FULL_DEV,
             TranslationMode.FULL_PROD_MINIMIZED_NAMES,
             TranslationMode.PER_MODULE_DEV,
             TranslationMode.PER_MODULE_PROD_MINIMIZED_NAMES,
-            TranslationMode.PER_FILE_DEV,
-            TranslationMode.PER_FILE_PROD_MINIMIZED_NAMES,
         )
         val testModules = testServices.moduleStructure.modules
         val allTestFiles = testModules.flatMap { it.files }

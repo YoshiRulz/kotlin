@@ -191,6 +191,7 @@ class JsIrBackendFacade(
         val translationModes = TranslationMode.values()
             .filter { (it.production || !onlyIrDce) && (!it.production || runIrDce) && (!perModuleOnly || it.granularity == JsGenerationGranularity.PER_MODULE) }
             .filter { it.production == it.minimizedMemberNames }
+            .filter { isEsModules || it.granularity != JsGenerationGranularity.PER_FILE }
             .toSet()
         val compilationOut = transformer.generateModule(loweredIr.allModules, translationModes, isEsModules)
         return BinaryArtifacts.Js.JsIrArtifact(outputFile, compilationOut).dump(module)
