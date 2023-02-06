@@ -31,5 +31,6 @@ class ModuleFragmentToExternalName(private val jsOutputNamesMapping: Map<IrModul
 
     private fun String.getExternalModuleNameForPerFile(file: IrFile) = "$this/${file.stableFileName}"
 
-    private val IrFile.stableFileName: String get() = path.cityHash64().toULong().toString(16)
+    private val IrFile.stableFileName: String get() =
+        path.takeLastWhile { it != '/' }.dropLast(3) + path.cityHash64().toULong().toString(16)
 }

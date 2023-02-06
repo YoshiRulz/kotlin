@@ -831,7 +831,7 @@ private val cleanupLoweringPhase = makeBodyLoweringPhase(
 )
 
 private val moveAllClassesToSeparatePlaceLowering = makeCustomJsModulePhase(
-    { _, module -> moveAllClassesToSeparateFiles(module) },
+    ::moveAllClassesToSeparateFiles,
     name = "MoveOpenClassesToSeparateFiles",
     description = "Move open classes to separate files"
 ).toModuleLowering()
@@ -895,7 +895,7 @@ val loweringList = listOf<Lowering>(
     addContinuationToNonLocalSuspendFunctionsLoweringPhase,
     addContinuationToLocalSuspendFunctionsLoweringPhase,
     addContinuationToFunctionCallsLoweringPhase,
-    moveAllClassesToSeparatePlaceLowering,
+//    moveAllClassesToSeparatePlaceLowering,
     enumWhenPhase,
     enumEntryInstancesLoweringPhase,
     enumEntryInstancesBodyLoweringPhase,

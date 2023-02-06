@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.ir.backend.js.lower
 
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrFileSymbolImpl
@@ -14,7 +15,7 @@ import org.jetbrains.kotlin.ir.util.NaiveSourceBasedFileEntryImpl
 import org.jetbrains.kotlin.ir.util.transformDeclarationsFlat
 import org.jetbrains.kotlin.ir.util.transformFlat
 
-fun moveAllClassesToSeparateFiles(moduleFragment: IrModuleFragment) {
+fun moveAllClassesToSeparateFiles(context: JsIrBackendContext, moduleFragment: IrModuleFragment) {
     fun createFile(file: IrFile, klass: IrClass): IrFile =
         IrFileImpl(
             fileEntry = NaiveSourceBasedFileEntryImpl(file.generatePathFor(klass)),
@@ -44,7 +45,9 @@ fun moveAllClassesToSeparateFiles(moduleFragment: IrModuleFragment) {
 
         when {
             classesToMoveOut.isEmpty() -> null
-            else -> listOf(file) + classesToMoveOut.map { createFile(file, it) }
+            else -> listOf(file) + classesToMoveOut.map { klass ->
+                createFile(file, klass).also { context.mapping.chunkToOriginalFile[it] = file }
+            }
         }
     }
 }

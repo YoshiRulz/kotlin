@@ -133,7 +133,12 @@ class IrModuleToJsTransformer(
 
     private val moduleFragmentToNameMapper = ModuleFragmentToExternalName(moduleToName)
 
-    private class IrFileExports(val file: IrFile, val exports: List<ExportedDeclaration>, val tsDeclarations: TypeScriptFragment?)
+    private class IrFileExports(
+        val file: IrFile,
+        val exports: List<ExportedDeclaration>,
+        val tsDeclarations: TypeScriptFragment?,
+        val generatedFrom: IrFile? = null
+    )
 
     private class IrAndExportedDeclarations(val fragment: IrModuleFragment, val files: List<IrFileExports>)
 
@@ -192,15 +197,21 @@ class IrModuleToJsTransformer(
         return makeJsCodeGeneratorFromIr(exportData, mode)
     }
 
-    fun makeIrFragmentsGenerators(files: Collection<IrFile>, allModules: Collection<IrModuleFragment>): List<() -> JsIrProgramFragment> {
+    fun makeIrFragmentsGenerators(
+        dirtyFiles: Collection<IrFile>,
+        allModules: Collection<IrModuleFragment>
+    ): List<() -> List<JsIrProgramFragment>> {
+        val files = dirtyFiles + backendContext.mapping.chunkToOriginalFile.keys
         val exportModelGenerator = ExportModelGenerator(backendContext, generateNamespacesForPackages = !isEsModules)
         val exportData = exportModelGenerator.generateExportWithExternals(files)
 
         doStaticMembersLowering(allModules)
 
-        return exportData.map {
-            { generateProgramFragment(it, minimizedMemberNames = false) }
-        }
+        return exportData
+            .groupBy { it.generatedFrom ?: it.file }
+            .map {
+                { it.value.map { generateProgramFragment(it, minimizedMemberNames = false) } }
+            }
     }
 
     private fun ExportModelGenerator.generateExportWithExternals(irFiles: Collection<IrFile>): List<IrFileExports> {
@@ -211,7 +222,7 @@ class IrModuleToJsTransformer(
             val tsDeclarations = runIf(shouldGenerateTypeScriptDefinitions) {
                 allExports.ifNotEmpty { toTypeScriptFragment(moduleKind) }
             }
-            IrFileExports(irFile, allExports, tsDeclarations)
+            IrFileExports(irFile, allExports, tsDeclarations, context.mapping.chunkToOriginalFile[irFile])
         }
     }
 
@@ -238,7 +249,7 @@ class IrModuleToJsTransformer(
                     data.fragment.safeName,
                     moduleFragmentToNameMapper.getExternalNameFor(data.fragment),
                     data.files.map { generateProgramFragment(it, mode.minimizedMemberNames) },
-                    mainModuleName.takeIf { moduleKind != ModuleKind.ES && data != mainModule }
+                    mainModule.fragment.safeName.takeIf { moduleKind != ModuleKind.ES && data != mainModule }
                 )
             }
         )

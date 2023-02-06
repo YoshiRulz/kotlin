@@ -14,8 +14,8 @@ import org.jetbrains.kotlin.js.backend.ast.metadata.*
 import java.nio.ByteBuffer
 import java.util.*
 
-fun deserializeJsIrProgramFragment(input: ByteArray): JsIrProgramFragment {
-    return JsIrAstDeserializer(input).readFragment()
+fun deserializeJsIrProgramFragment(input: ByteArray): List<JsIrProgramFragment> {
+    return JsIrAstDeserializer(input).readFragments()
 }
 
 private class JsIrAstDeserializer(private val source: ByteArray) {
@@ -74,6 +74,10 @@ private class JsIrAstDeserializer(private val source: ByteArray) {
 
     private inline fun <T> ifTrue(then: () -> T): T? {
         return if (readBoolean()) then() else null
+    }
+
+    fun readFragments(): List<JsIrProgramFragment> {
+        return readList { readFragment() }
     }
 
     fun readFragment(): JsIrProgramFragment {

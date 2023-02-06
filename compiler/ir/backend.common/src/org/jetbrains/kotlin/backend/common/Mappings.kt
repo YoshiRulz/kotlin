@@ -47,7 +47,6 @@ object DefaultDelegateFactory : DelegateFactory {
     fun <K : IrDeclaration, V> newDeclarationToValueMapping(): Mapping.Delegate<K, V> = newMappingImpl()
 
     override fun <K : IrDeclaration, V : IrDeclaration> newDeclarationToDeclarationMapping(): Mapping.Delegate<K, V> = newMappingImpl()
-
     override fun <K : IrDeclaration, V : Collection<IrDeclaration>> newDeclarationToDeclarationCollectionMapping(): Mapping.Delegate<K, V> = newMappingImpl()
 
     private fun <K : IrDeclaration, V> newMappingImpl() = object : Mapping.Delegate<K, V>() {
