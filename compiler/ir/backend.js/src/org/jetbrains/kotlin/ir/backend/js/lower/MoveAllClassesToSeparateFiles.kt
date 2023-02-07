@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.ir.backend.js.lower
 
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
+import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.JsGenerationGranularity
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrFileSymbolImpl
@@ -16,6 +17,8 @@ import org.jetbrains.kotlin.ir.util.transformDeclarationsFlat
 import org.jetbrains.kotlin.ir.util.transformFlat
 
 fun moveAllClassesToSeparateFiles(context: JsIrBackendContext, moduleFragment: IrModuleFragment) {
+    if (context.granularity != JsGenerationGranularity.PER_FILE) return
+
     fun createFile(file: IrFile, klass: IrClass): IrFile =
         IrFileImpl(
             fileEntry = NaiveSourceBasedFileEntryImpl(file.generatePathFor(klass)),
