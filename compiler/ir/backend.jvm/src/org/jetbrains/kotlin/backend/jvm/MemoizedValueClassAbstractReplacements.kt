@@ -137,4 +137,7 @@ abstract class MemoizedValueClassAbstractReplacements(
         getReplacementFunction(function) ?: function.also {
             function.overriddenSymbols = replaceOverriddenSymbols(function)
         }
+
+    protected fun IrSimpleFunction.overridesOnlyMethodsFromJava(): Boolean =
+        overriddenSymbols.all { it.owner.isFromJava() && it.owner.overridesOnlyMethodsFromJava() }
 }

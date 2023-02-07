@@ -346,6 +346,7 @@ enum class LanguageFeature(
     IntrinsicConstEvaluation(sinceVersion = null, kind = UNSTABLE_FEATURE), // KT-49303
     NoSourceCodeInNotNullAssertionExceptions(sinceVersion = null, sinceApiVersion = ApiVersion.KOTLIN_1_4, kind = OTHER), // KT-57570
     DisableCheckingChangedProgressionsResolve(sinceVersion = null, kind = OTHER), // KT-49276
+    OldFunctionInvocationMangling(sinceVersion = null, kind = OTHER), // KT-55945
     ;
 
     init {
