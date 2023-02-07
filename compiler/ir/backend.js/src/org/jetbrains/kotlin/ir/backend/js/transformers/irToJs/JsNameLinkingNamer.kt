@@ -21,7 +21,6 @@ class JsNameLinkingNamer(
     private val minimizedMemberNames: Boolean,
     private val isEsModules: Boolean
 ) : IrNamerBase() {
-
     val nameMap = mutableMapOf<IrDeclaration, JsName>()
 
     private fun IrDeclarationWithName.getName(prefix: String = ""): JsName {

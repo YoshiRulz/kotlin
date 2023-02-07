@@ -9,10 +9,10 @@ class JsImport(
     val module: String,
     val target: Target,
 ) : SourceInfoAwareJsNode(), JsStatement {
-    constructor(module: String, vararg elements: Element) : this(module, Target.Elements(elements.toMutableList()))
-
     val elements: MutableList<Element>
         get() = (target as Target.Elements).elements
+
+    constructor(module: String, vararg elements: Element) : this(module, Target.Elements(elements.toMutableList()))
 
     sealed class Target {
         class Elements(val elements: MutableList<Element>) : Target()
