@@ -10,21 +10,33 @@ import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.util.containers.CollectionFactory
+import org.jetbrains.kotlin.analysis.low.level.api.fir.LLFirGlobalResolveComponents
+import org.jetbrains.kotlin.analysis.low.level.api.fir.LLFirLazyDeclarationResolver
+import org.jetbrains.kotlin.analysis.low.level.api.fir.LLFirModuleResolveComponents
 import org.jetbrains.kotlin.analysis.low.level.api.fir.project.structure.*
 import org.jetbrains.kotlin.analysis.low.level.api.fir.providers.*
 import org.jetbrains.kotlin.analysis.low.level.api.fir.util.checkCanceled
 import org.jetbrains.kotlin.analysis.project.structure.*
+import org.jetbrains.kotlin.analysis.providers.createAnnotationResolver
+import org.jetbrains.kotlin.analysis.providers.createDeclarationProvider
+import org.jetbrains.kotlin.analysis.providers.createPackageProvider
+import org.jetbrains.kotlin.config.LanguageVersionSettingsImpl
 import org.jetbrains.kotlin.fir.FirModuleDataImpl
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.PrivateSessionConstructor
 import org.jetbrains.kotlin.fir.extensions.*
+import org.jetbrains.kotlin.fir.java.JavaSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.providers.*
+import org.jetbrains.kotlin.fir.resolve.scopes.wrapScopeWithJvmMapped
+import org.jetbrains.kotlin.fir.scopes.FirKotlinScopeProvider
 import org.jetbrains.kotlin.fir.session.*
+import org.jetbrains.kotlin.fir.symbols.FirLazyDeclarationResolver
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.JsPlatform
 import org.jetbrains.kotlin.platform.jvm.JvmPlatform
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
 import org.jetbrains.kotlin.platform.konan.NativePlatform
+import org.jetbrains.kotlin.resolve.jvm.modules.JavaModuleResolver
 import org.jetbrains.kotlin.resolve.jvm.platform.JvmPlatformAnalyzerServices
 import java.util.concurrent.ConcurrentMap
 
@@ -82,6 +94,7 @@ internal class LLFirSessionCache(private val project: Project) {
             is KtLibraryModule, is KtLibrarySourceModule -> sessionFactory.createLibrarySession(module)
             is KtSdkModule -> sessionFactory.createBinaryLibrarySession(module)
             is KtScriptModule -> sessionFactory.createScriptSession(module)
+            is KtCodeFragmentModule -> createCodeFragmentResolvableSession(module)
             is KtNotUnderContentRootModule -> sessionFactory.createNotUnderContentRootResolvableSession(module)
             else -> error("Unexpected module kind: ${module::class.simpleName}")
         }
@@ -123,5 +136,88 @@ fun createEmptySession(): FirSession {
         )
         registerModuleData(moduleData)
         moduleData.bindSession(this)
+    }
+}
+
+private fun createCodeFragmentResolvableSession(
+    module: KtCodeFragmentModule
+): LLFirCodeFragmentResolvableModuleSession {
+    val builtinsSession = LLFirBuiltinsSessionFactory.getInstance(project).getBuiltinsSession(JvmPlatforms.unspecifiedJvmPlatform)
+    //val platform = module.platform
+    //val languageVersionSettings = LanguageVersionSettingsImpl.DEFAULT
+    val scopeProvider = FirKotlinScopeProvider(::wrapScopeWithJvmMapped)
+    val globalResolveComponents = LLFirGlobalResolveComponents(project)
+    val components = LLFirModuleResolveComponents(
+        module.directDependsOnDependencies.first(),
+        globalResolveComponents,
+        scopeProvider
+    )
+
+    val dependencies = collectSourceModuleDependencies(module)
+    val dependencyTracker = createSourceModuleDependencyTracker(module, dependencies)
+    //val contentScope = module.contentScope
+    return LLFirCodeFragmentResolvableModuleSession(
+        builtinsSession.ktModule,
+        dependencyTracker,
+        builtinsSession.builtinTypes,
+        components
+    ).apply session@{
+        components.session = this
+        val moduleData = LLFirModuleData(module).apply { bindSession(this@session) }
+        register(FirKotlinScopeProvider::class, scopeProvider)
+        registerIdeComponents(project)
+        registerCommonComponents(LanguageVersionSettingsImpl.DEFAULT)
+        registerCommonJavaComponents(JavaModuleResolver.getInstance(project))
+        registerCommonComponentsAfterExtensionsAreConfigured()
+        registerJavaSpecificResolveComponents()
+        registerResolveComponents()
+        registerModuleData(moduleData)
+        register(FirLazyDeclarationResolver::class, LLFirLazyDeclarationResolver())
+        val annotationsResolver = project.createAnnotationResolver(module.contentScope)
+        register(FirRegisteredPluginAnnotations::class, LLFirIdeRegisteredPluginAnnotations(this@session, annotationsResolver))
+        register(FirPredicateBasedProvider::class, FirEmptyPredicateBasedProvider)
+        val provider = LLFirProvider(
+            this,
+            components,
+            project.createDeclarationProvider(module.contentScope),
+            project.createPackageProvider(module.contentScope),
+            canContainKotlinPackage = true,
+        )
+        register(FirProvider::class, provider)
+        /*val dependencyProvider = LLFirModuleWithDependenciesSymbolProvider(this) {
+            // <all libraries scope> - <current library scope>
+            val librariesSearchScope = module.directRegularDependencies.fold(module.contentScope) { acc, it ->
+                acc.union(it.contentScope)
+            }
+            add(LLFirBuiltinsSessionFactory.getInstance(project).getBuiltinsSession(JvmPlatforms.unspecifiedJvmPlatform).symbolProvider)
+            add(provider.symbolProvider)
+            addAll(
+                LLFirLibraryProviderFactory.createLibraryProvidersForAllProjectLibraries(
+                    this@session, moduleData, scopeProvider, project, builtinTypes, librariesSearchScope
+                )
+            )
+        }*/
+        val dependencyProvider = LLFirDependenciesSymbolProvider(this, buildList {
+            addDependencySymbolProvidersTo(this@session, dependencies, this)
+            add(builtinsSession.symbolProvider)
+        })
+        val javaSymbolProvider = createJavaSymbolProvider(this, moduleData, project, module.contentScope)
+        val codeFragmentSymbolProvider = LLFirCodeFragmentSymbolProvider(this)
+        register(
+            FirSymbolProvider::class,
+            LLFirModuleWithDependenciesSymbolProvider(
+                this,
+                providers = listOf(
+                    codeFragmentSymbolProvider,
+                    //provider.symbolProvider,
+                    javaSymbolProvider,
+                ),
+                dependencyProvider,
+            )
+        )
+        register(LLFirCodeFragmentSymbolProvider::class, codeFragmentSymbolProvider)
+        register(JavaSymbolProvider::class, javaSymbolProvider)
+        register(DEPENDENCIES_SYMBOL_PROVIDER_QUALIFIED_KEY, dependencyProvider)
+        LLFirSessionConfigurator.configure(this)
     }
 }
