@@ -92,4 +92,3 @@ internal external interface Metadata {
 
     var errorInfo: Int? // Bits set for overridden properties: "message" => 0x1, "cause" => 0x2
 }
-

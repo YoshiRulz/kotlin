@@ -42,7 +42,11 @@ internal fun implement(interfaces: Array<dynamic>): BitMask {
 
     for (i in interfaces) {
         var currentSize = maxSize
-        val imask: BitMask? = i.prototype.`$imask$` ?: i.`$imask$`
+        val imask: BitMask? = when {
+            i.prototype.`$get_imask$` != null -> i.prototype.`$get_imask$`()
+            i.`$get_imask$` != null -> i.`$get_imask$`()
+            else -> null
+        }
 
         if (imask != null) {
             masks.push(imask)
