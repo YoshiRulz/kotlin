@@ -187,7 +187,7 @@ class Merger(
             val internalModuleName = ReservedJsNames.makeInternalModuleName()
             val exporterName = ReservedJsNames.makeJsExporterName()
 
-            crossModuleReferences.transitiveJsExportFrom.map {
+            crossModuleReferences.transitiveExportFrom.map {
                 JsInvocation(
                     JsNameRef(exporterName, it.internalName.makeRef()),
                     internalModuleName.makeRef()
