@@ -11,18 +11,21 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
+import org.jetbrains.kotlin.ir.symbols.IrValueParameterSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
-import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
+import org.jetbrains.kotlinx.atomicfu.compiler.backend.buildGetValue
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.capture
-import org.jetbrains.kotlinx.atomicfu.compiler.backend.getValueArguments
 
+private const val ATOMICFU = "atomicfu"
+private const val ATOMIC_ARRAY_RECEIVER_SUFFIX = "\$array"
 private const val AFU_PKG = "kotlinx.atomicfu"
 private const val TRACE_BASE_TYPE = "TraceBase"
 private const val ATOMIC_VALUE_FACTORY = "atomic"
@@ -112,7 +115,7 @@ abstract class AbstractAtomicfuTransformer(
             // Generate a new backing field for the given property: a volatile variable of the atomic value type
             // val a = atomic(0)
             // volatile var a: Int = 0
-            val atomicField = requireNotNull(property.backingField) { "BackingField of atomic property $property is null" }
+            val atomicField = requireNotNull(property.backingField) { "BackingField of atomic property $property should not be null" }
             val fieldType = atomicField.type.atomicToValueType()
             val initValue =
                 (atomicField.initializer?.expression ?: atomicField.getFieldInitializerFromInitBlock(parentContainer)?.value)?.let {
@@ -121,7 +124,8 @@ abstract class AbstractAtomicfuTransformer(
             return with(atomicSymbols.createBuilder(atomicField.symbol)) {
                 irVolatileField(
                     property.name,
-                    if (fieldType.isBoolean()) irBuiltIns.intType else fieldType,
+                    fieldType,
+                    //if (fieldType.isBoolean()) irBuiltIns.intType else fieldType,
                     initValue,
                     atomicField.annotations,
                     parentContainer
@@ -165,19 +169,7 @@ abstract class AbstractAtomicfuTransformer(
             return super.visitClass(declaration)
         }
 
-        private fun IrDeclarationContainer.transformAllAtomicExtensions() {
-            declarations.filter { it is IrFunction && it.isAtomicExtension() }.forEach { atomicExtension ->
-                atomicExtension as IrFunction
-                declarations.add(atomicExtension.transformAtomicExtension(this, false))
-                declarations.add(atomicExtension.transformAtomicExtension(this, true))
-                declarations.remove(atomicExtension)
-            }
-        }
-
-        abstract fun IrFunction.transformAtomicExtension(
-            parent: IrDeclarationContainer,
-            isArrayReceiver: Boolean
-        ): IrFunction
+        abstract fun IrDeclarationContainer.transformAllAtomicExtensions()
     }
 
     protected abstract inner class AtomicFunctionCallTransformer : IrElementTransformer<IrFunction?> {
@@ -188,18 +180,18 @@ abstract class AbstractAtomicfuTransformer(
 
         override fun visitCall(expression: IrCall, data: IrFunction?): IrElement {
             (expression.extensionReceiver ?: expression.dispatchReceiver)?.transform(this, data)?.let {
-                val receiver = if (it is IrTypeOperatorCallImpl) it.argument else it
-                if (receiver.type.isAtomicValueType()) {
+                val propertyGetterCall = if (it is IrTypeOperatorCallImpl) it.argument else it
+                if (propertyGetterCall.type.isAtomicValueType()) {
                     val valueType = if (it is IrTypeOperatorCallImpl) {
                         // If receiverExpression is a cast `s as AtomicRef<String>`
                         // then valueType is the type argument of Atomic* class `String`
                         (it.type as IrSimpleType).arguments[0] as IrSimpleType
                     } else {
-                        receiver.type.atomicToValueType()
+                        propertyGetterCall.type.atomicToValueType()
                     }
                     // this maybe AtomicInt.loop { CAS }
                     // called on intArray[0].loop { CAS } -> then CAS receiver
-                    val isArrayReceiver = receiver.isArrayElementReceiver(data)
+                    val isArrayReceiver = propertyGetterCall.isArrayElementReceiver(data)
                     if (expression.symbol.fromKotlinxAtomicfuPackage()) {
                         // Transform invocations of atomic functions on atomics or atomic array elements
                         val functionName = expression.symbol.owner.name.asString()
@@ -208,7 +200,7 @@ abstract class AbstractAtomicfuTransformer(
                                 expression = expression,
                                 functionName = functionName,
                                 valueType = valueType,
-                                receiver = receiver,
+                                getPropertyReceiver = propertyGetterCall,
                                 isArrayReceiver = isArrayReceiver,
                                 parentFunction = data
                             )
@@ -219,7 +211,7 @@ abstract class AbstractAtomicfuTransformer(
                                 expression = expression,
                                 functionName = functionName,
                                 valueType = valueType,
-                                receiver = receiver,
+                                getPropertyReceiver = propertyGetterCall,
                                 parentFunction = data
                             )
                         } else {
@@ -228,7 +220,7 @@ abstract class AbstractAtomicfuTransformer(
                                 functionName = functionName,
                                 valueType = valueType,
                                 castType = if (it is IrTypeOperatorCall) valueType else null,
-                                receiver = receiver,
+                                getPropertyReceiver = propertyGetterCall,
                                 parentFunction = data
                             )
                         }
@@ -242,7 +234,7 @@ abstract class AbstractAtomicfuTransformer(
                         val irCall = transformedAtomicExtensionCall(
                             expression = expression,
                             transformedAtomicExtension = transformedAtomicExtension,
-                            receiver = receiver,
+                            getPropertyReceiver = propertyGetterCall,
                             isArrayReceiver = isArrayReceiver,
                             parentFunction = data
                         )
@@ -280,7 +272,7 @@ abstract class AbstractAtomicfuTransformer(
             functionName: String,
             valueType: IrType,
             castType: IrType?,
-            receiver: IrExpression,
+            getPropertyReceiver: IrExpression,
             parentFunction: IrFunction?
         ): IrExpression
 
@@ -288,7 +280,7 @@ abstract class AbstractAtomicfuTransformer(
             expression: IrCall,
             functionName: String,
             valueType: IrType,
-            receiver: IrExpression,
+            getPropertyReceiver: IrExpression,
             parentFunction: IrFunction?
         ): IrExpression
 
@@ -296,7 +288,7 @@ abstract class AbstractAtomicfuTransformer(
             expression: IrCall,
             functionName: String,
             valueType: IrType,
-            receiver: IrExpression,
+            getPropertyReceiver: IrExpression,
             isArrayReceiver: Boolean,
             parentFunction: IrFunction?
         ): IrCall
@@ -304,15 +296,21 @@ abstract class AbstractAtomicfuTransformer(
         abstract fun transformedAtomicExtensionCall(
             expression: IrCall,
             transformedAtomicExtension: IrSimpleFunction,
-            receiver: IrExpression,
+            getPropertyReceiver: IrExpression,
             isArrayReceiver: Boolean,
             parentFunction: IrFunction?
         ): IrCall
 
-        abstract fun IrDeclarationContainer.getTransformedAtomicExtension(
+        private fun IrDeclarationContainer.getTransformedAtomicExtension(
             declaration: IrSimpleFunction,
             isArrayReceiver: Boolean
-        ): IrSimpleFunction
+        ): IrSimpleFunction =
+            findDeclaration {
+                it.name.asString() == mangleAtomicExtensionName(declaration.name.asString(), isArrayReceiver) &&
+                        it.isTransformedAtomicExtension()
+            } ?: error("Could not find corresponding transformed declaration for the atomic extension ${declaration.render()}")
+
+        abstract fun IrFunction.isTransformedAtomicExtension(): Boolean
 
         abstract fun IrExpression.isArrayElementReceiver(
             parentFunction: IrFunction?
@@ -391,4 +389,14 @@ abstract class AbstractAtomicfuTransformer(
 
     protected fun IrFunction.isAtomicExtension(): Boolean =
         extensionReceiverParameter?.let { it.type.isAtomicValueType() && this.isInline } ?: false
+
+    protected fun IrCall.getCorrespondingProperty(): IrProperty =
+        symbol.owner.correspondingPropertySymbol?.owner
+            ?: error("Atomic property accessor ${this.render()} expected to have non-null correspondingPropertySymbol")
+
+    protected fun mangleAtomicExtensionName(name: String, isArrayReceiver: Boolean) =
+        if (isArrayReceiver) "$name$$ATOMICFU$ATOMIC_ARRAY_RECEIVER_SUFFIX" else "$name$$ATOMICFU"
+
+    protected fun IrExpression.isThisReceiver() =
+        this is IrGetValue && symbol.owner.name.asString() == "<this>"
 }

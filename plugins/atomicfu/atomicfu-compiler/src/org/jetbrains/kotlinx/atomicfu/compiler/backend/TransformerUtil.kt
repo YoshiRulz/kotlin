@@ -96,7 +96,7 @@ internal fun buildGetField(
         superQualifierSymbol
     )
 
-internal fun buildFunctionSimpleType(
+internal fun buildSimpleType(
     symbol: IrClassifierSymbol,
     typeParameters: List<IrType>
 ): IrSimpleType =
@@ -134,13 +134,13 @@ internal fun IrFunctionAccessExpression.getValueArguments() =
 internal fun IrValueParameter.capture() = buildGetValue(UNDEFINED_OFFSET, UNDEFINED_OFFSET, symbol)
 
 internal fun IrPluginContext.buildGetterType(valueType: IrType): IrSimpleType =
-    buildFunctionSimpleType(
+    buildSimpleType(
         irBuiltIns.functionN(0).symbol,
         listOf(valueType)
     )
 
 internal fun IrPluginContext.buildSetterType(valueType: IrType): IrSimpleType =
-    buildFunctionSimpleType(
+    buildSimpleType(
         irBuiltIns.functionN(1).symbol,
         listOf(valueType, irBuiltIns.unitType)
     )
@@ -259,10 +259,6 @@ internal fun IrCall.getBackingField(): IrField =
     symbol.owner.correspondingPropertySymbol?.let { propertySymbol ->
         propertySymbol.owner.backingField ?: error("Property expected to have backing field")
     } ?: error("Atomic property accessor ${this.render()} expected to have non-null correspondingPropertySymbol")
-
-internal fun IrCall.getCorrespondingProperty(): IrProperty =
-    symbol.owner.correspondingPropertySymbol?.owner
-        ?: error("Atomic property accessor ${this.render()} expected to have non-null correspondingPropertySymbol")
 
 @OptIn(FirIncompatiblePluginAPI::class)
 internal fun IrPluginContext.referencePackageFunction(

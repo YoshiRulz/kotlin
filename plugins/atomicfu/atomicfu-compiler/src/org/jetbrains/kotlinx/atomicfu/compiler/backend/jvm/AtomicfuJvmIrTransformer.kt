@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.backend.common.extensions.*
 import org.jetbrains.kotlin.backend.common.lower.parents
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
-import org.jetbrains.kotlin.ir.*
 import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.*
@@ -223,7 +222,7 @@ class AtomicfuJvmIrTransformer(
             property: IrProperty,
             parentContainer: IrDeclarationContainer
         ): IrField {
-            val atomicArrayField = requireNotNull(property.backingField) { "BackingField of atomic array $property is null" }
+            val atomicArrayField = requireNotNull(property.backingField) { "BackingField of atomic array $property should not be null" }
             val atomicArrayClass = atomicSymbols.getAtomicArrayClassByAtomicfuArrayType(atomicArrayField.type)
             val consCall =
                 (atomicArrayField.initializer?.expression ?: atomicArrayField.getFieldInitializerFromInitBlock(parentContainer)?.value)
@@ -269,9 +268,17 @@ class AtomicfuJvmIrTransformer(
 
     private inner class JvmAtomicExtensionTransformer : AtomicExtensionTransformer() {
 
-        override fun IrFunction.transformAtomicExtension(parent: IrDeclarationContainer, isArrayReceiver: Boolean): IrFunction {
-            val atomicExtension = this
-            val mangledName = mangleFunctionName(atomicExtension.name.asString(), isArrayReceiver)
+        override fun IrDeclarationContainer.transformAllAtomicExtensions() {
+            declarations.filter { it is IrFunction && it.isAtomicExtension() }.forEach { atomicExtension ->
+                atomicExtension as IrFunction
+                declarations.add(transformAtomicExtension(atomicExtension, this, false))
+                declarations.add(transformAtomicExtension(atomicExtension, this, true))
+                declarations.remove(atomicExtension)
+            }
+        }
+
+        private fun transformAtomicExtension(atomicExtension: IrFunction, parent: IrDeclarationContainer, isArrayReceiver: Boolean): IrFunction {
+            val mangledName = mangleAtomicExtensionName(atomicExtension.name.asString(), isArrayReceiver)
             val valueType = atomicExtension.extensionReceiverParameter!!.type.atomicToValueType()
             return pluginContext.irFactory.buildFun {
                 name = Name.identifier(mangledName)
@@ -320,11 +327,11 @@ class AtomicfuJvmIrTransformer(
             functionName: String,
             valueType: IrType,
             castType: IrType?,
-            receiver: IrExpression,
+            getPropertyReceiver: IrExpression,
             parentFunction: IrFunction?
         ): IrExpression {
             with(atomicSymbols.createBuilder(expression.symbol)) {
-                getAtomicFieldInfo(receiver, parentFunction)?.let { (dispatchReceiver, atomicHandler) ->
+                getAtomicFieldInfo(getPropertyReceiver, parentFunction)?.let { (dispatchReceiver, atomicHandler) ->
                     // aClass.<get-a>().CAS(expected, updated) -> a$FU.CAS(aClass, expected, updated)
                     return callFieldUpdater(
                         fieldUpdaterSymbol = atomicSymbols.getJucaAFUClass(valueType),
@@ -343,17 +350,17 @@ class AtomicfuJvmIrTransformer(
             expression: IrCall,
             functionName: String,
             valueType: IrType,
-            receiver: IrExpression,
+            getPropertyReceiver: IrExpression,
             parentFunction: IrFunction?
         ): IrCall {
             with(atomicSymbols.createBuilder(expression.symbol)) {
-                getAtomicFieldInfo(receiver, parentFunction)?.let { (_, atomicHandler) ->
+                getAtomicFieldInfo(getPropertyReceiver, parentFunction)?.let { (_, atomicHandler) ->
                     // aClass.intArr[4].CAS(expected, updated) -> aClass.javaIntArr.CAS(4, expected, updated)
                     return callAtomicArray(
                         arrayClassSymbol = atomicHandler.type.classOrNull!!,
                         functionName = functionName,
                         dispatchReceiver = atomicHandler,
-                        index = receiver.getArrayElementIndex(parentFunction),
+                        index = getPropertyReceiver.getArrayElementIndex(parentFunction),
                         valueArguments = expression.getValueArguments(),
                         isBooleanReceiver = valueType.isBoolean()
                     )
@@ -365,12 +372,12 @@ class AtomicfuJvmIrTransformer(
             expression: IrCall,
             functionName: String,
             valueType: IrType,
-            receiver: IrExpression,
+            getPropertyReceiver: IrExpression,
             isArrayReceiver: Boolean,
             parentFunction: IrFunction?
         ): IrCall {
             with(atomicSymbols.createBuilder(expression.symbol)) {
-                getAtomicFieldInfo(receiver, parentFunction)?.let { (dispatchReceiver, atomicHandler) ->
+                getAtomicFieldInfo(getPropertyReceiver, parentFunction)?.let { (dispatchReceiver, atomicHandler) ->
                     // If the inline atomicfu loop function was invoked
                     // a.loop { value -> a.compareAndSet(value, 777) }
                     // then loop function is generated to replace this declaration.
@@ -400,7 +407,7 @@ class AtomicfuJvmIrTransformer(
                         symbol = loopFunc.symbol,
                         dispatchReceiver = parentFunction.containingFunction.dispatchReceiverParameter?.capture(),
                         valueArguments = if (isArrayReceiver) {
-                            val index = receiver.getArrayElementIndex(parentFunction)
+                            val index = getPropertyReceiver.getArrayElementIndex(parentFunction)
                             listOf(atomicHandler, index, action)
                         } else {
                             listOf(atomicHandler, action, dispatchReceiver)
@@ -413,12 +420,12 @@ class AtomicfuJvmIrTransformer(
         override fun transformedAtomicExtensionCall(
             expression: IrCall,
             transformedAtomicExtension: IrSimpleFunction,
-            receiver: IrExpression,
+            getPropertyReceiver: IrExpression,
             isArrayReceiver: Boolean,
             parentFunction: IrFunction?
         ): IrCall {
             with(atomicSymbols.createBuilder(expression.symbol)) {
-                getAtomicFieldInfo(receiver, parentFunction)?.let { (dispatchReceiver, atomicHandler) ->
+                getAtomicFieldInfo(getPropertyReceiver, parentFunction)?.let { (dispatchReceiver, atomicHandler) ->
                     // Transform invocation of the kotlinx.atomicfu.Atomic* class extension functions,
                     // delegating them to the corresponding transformed atomic extensions:
                     // for atomic property recevers:
@@ -434,7 +441,7 @@ class AtomicfuJvmIrTransformer(
                         symbol = transformedAtomicExtension.symbol,
                         dispatchReceiver = expression.dispatchReceiver,
                         syntheticValueArguments = if (isArrayReceiver) {
-                            listOf(dispatchReceiver, atomicHandler, receiver.getArrayElementIndex(parentFunction))
+                            listOf(dispatchReceiver, atomicHandler, getPropertyReceiver.getArrayElementIndex(parentFunction))
                         } else {
                             listOf(dispatchReceiver, atomicHandler)
                         },
@@ -444,31 +451,8 @@ class AtomicfuJvmIrTransformer(
             }
         }
 
-        override fun IrDeclarationContainer.getTransformedAtomicExtension(
-            declaration: IrSimpleFunction,
-            isArrayReceiver: Boolean
-        ): IrSimpleFunction = findDeclaration {
-            it.name.asString() == mangleFunctionName(declaration.name.asString(), isArrayReceiver) &&
-                    it.isTransformedAtomicExtension()
-        } ?: error("Could not find corresponding transformed declaration for the atomic extension ${declaration.render()}")
-
-        override fun IrExpression.isArrayElementReceiver(parentFunction: IrFunction?): Boolean {
-            val receiver = this
-            return when {
-                receiver is IrCall -> {
-                    receiver.isArrayElementGetter()
-                }
-                receiver.isThisReceiver() -> {
-                    if (parentFunction != null && parentFunction.isTransformedAtomicExtension()) {
-                        val atomicHandler = parentFunction.valueParameters[1].capture()
-                        atomicSymbols.isAtomicArrayHandlerType(atomicHandler.type)
-                    } else false
-                }
-                else -> false
-            }
-        }
-
         override fun visitGetValue(expression: IrGetValue, data: IrFunction?): IrExpression {
+            // TODO: abstract out or leave like this: needs refactor and verification!!!!!
             // For transformed atomic extension functions
             // replace old value parameters with the new parameters of the transformed declaration:
             // inline fun foo$atomicfu(dispatchReceiver: Any?, handler: j.u.c.a.AtomicIntegerFieldUpdater, arg': Int) {
@@ -498,6 +482,27 @@ class AtomicfuJvmIrTransformer(
                 }
             }
             return super.visitGetValue(expression, data)
+        }
+
+        override fun IrExpression.isArrayElementReceiver(parentFunction: IrFunction?): Boolean {
+            val receiver = this
+            return when {
+                receiver is IrCall -> {
+                    receiver.isArrayElementGetter()
+                }
+                receiver.isThisReceiver() -> {
+                    if (parentFunction != null && parentFunction.isTransformedAtomicExtension()) {
+                        val atomicHandler = parentFunction.valueParameters[1].capture()
+                        atomicSymbols.isAtomicArrayHandlerType(atomicHandler.type)
+                    } else false
+                }
+                else -> false
+            }
+        }
+
+        override fun IrFunction.isTransformedAtomicExtension(): Boolean {
+            val isArrayReceiver = name.asString().endsWith(ATOMIC_ARRAY_RECEIVER_SUFFIX)
+            return if (isArrayReceiver) checkSyntheticArrayElementExtensionParameter() else checkSyntheticAtomicExtensionParameters()
         }
 
         private fun JvmAtomicfuIrBuilder.getAtomicFieldInfo(
@@ -579,14 +584,6 @@ class AtomicfuJvmIrTransformer(
                 else -> error("Unsupported type of atomic receiver expression: ${this.render()}")
             }
 
-        private fun IrExpression.isThisReceiver() =
-            this is IrGetValue && symbol.owner.name.asString() == "<this>"
-
-        private fun IrFunction.isTransformedAtomicExtension(): Boolean {
-            val isArrayReceiver = name.asString().endsWith(ATOMIC_ARRAY_RECEIVER_SUFFIX)
-            return if (isArrayReceiver) checkSyntheticArrayElementExtensionParameter() else checkSyntheticAtomicExtensionParameters()
-        }
-
         private fun IrFunction.checkSyntheticArrayElementExtensionParameter(): Boolean {
             if (valueParameters.size < 3) return false
             return valueParameters[0].name.asString() == DISPATCH_RECEIVER && valueParameters[0].type == irBuiltIns.anyNType &&
@@ -606,7 +603,7 @@ class AtomicfuJvmIrTransformer(
             isArrayReceiver: Boolean
         ): IrSimpleFunction {
             val parent = this
-            val mangledName = mangleFunctionName(functionName, isArrayReceiver)
+            val mangledName = mangleAtomicExtensionName(functionName, isArrayReceiver)
             val updaterType =
                 if (isArrayReceiver) atomicSymbols.getAtomicArrayType(valueType) else atomicSymbols.getFieldUpdaterType(valueType)
             findDeclaration<IrSimpleFunction> {
@@ -687,7 +684,4 @@ class AtomicfuJvmIrTransformer(
         property.name.asString().capitalizeAsciiOnly() + '$' +
                 (if (property.parent is IrFile) (property.parent as IrFile).name else property.parent.kotlinFqName.asString()).substringBefore('.') +
                 VOLATILE_WRAPPER_SUFFIX
-
-    private fun mangleFunctionName(name: String, isArrayReceiver: Boolean) =
-        if (isArrayReceiver) "$name$$ATOMICFU$ATOMIC_ARRAY_RECEIVER_SUFFIX" else "$name$$ATOMICFU"
 }

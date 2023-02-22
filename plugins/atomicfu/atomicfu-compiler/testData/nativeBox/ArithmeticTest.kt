@@ -1,4 +1,4 @@
-// FREE_COMPILER_ARGS: -Xplugin=/plugins/atomicfu/atomicfu-compiler/build/libs/kotlinx-atomicfu-compiler-plugin-1.8.255-volatile1-SNAPSHOT.jar
+// FREE_COMPILER_ARGS: -Xplugin=/Users/Maria.Sokolova/IdeaProjects/kotlin/plugins/atomicfu/atomicfu-compiler/build/libs/kotlinx-atomicfu-compiler-plugin-1.8.255-volatile-SNAPSHOT-new.jar
 
 import kotlinx.atomicfu.*
 import kotlin.test.*
@@ -87,6 +87,7 @@ fun testInt() {
     assertEquals(7, a.x)
     assertTrue(a._x.compareAndSet(7, 10))
 }
+
 
 @Test
 fun testLong() {

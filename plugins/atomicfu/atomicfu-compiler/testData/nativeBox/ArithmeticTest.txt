@@ -1,0 +1,95 @@
+CLASS CLASS name:IntArithmetic modality:FINAL visibility:public superTypes:[kotlin.Any]
+    $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:nativeBox.ArithmeticTest.IntArithmetic
+    CONSTRUCTOR visibility:public <> () returnType:nativeBox.ArithmeticTest.IntArithmetic [primary]
+      BLOCK_BODY
+        DELEGATING_CONSTRUCTOR_CALL 'public constructor <init> () [primary] declared in kotlin.Any'
+        INSTANCE_INITIALIZER_CALL classDescriptor='CLASS CLASS name:IntArithmetic modality:FINAL visibility:public superTypes:[kotlin.Any]'
+    PROPERTY name:_x visibility:public modality:FINAL [val]
+      FIELD name:_x type:kotlin.Int visibility:private
+        annotations:
+          Volatile
+        EXPRESSION_BODY
+          CONST Int type=kotlin.Int value=0
+      FUN DEFAULT_PROPERTY_ACCESSOR name:<get-_x> visibility:public modality:FINAL <> ($this:nativeBox.ArithmeticTest.IntArithmetic) returnType:kotlin.Int
+        correspondingProperty: PROPERTY name:_x visibility:public modality:FINAL [val]
+        $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:nativeBox.ArithmeticTest.IntArithmetic
+        BLOCK_BODY
+          RETURN type=kotlin.Nothing from='public final fun <get-_x> (): kotlin.Int declared in nativeBox.ArithmeticTest.IntArithmetic'
+            GET_FIELD 'FIELD name:_x type:kotlin.Int visibility:private' type=kotlin.Int origin=null
+              receiver: GET_VAR '<this>: nativeBox.ArithmeticTest.IntArithmetic declared in nativeBox.ArithmeticTest.IntArithmetic.<get-_x>' type=nativeBox.ArithmeticTest.IntArithmetic origin=null
+      FUN DEFAULT_PROPERTY_ACCESSOR name:<set-_x> visibility:public modality:FINAL <> ($this:nativeBox.ArithmeticTest.IntArithmetic, value:kotlin.Int) returnType:kotlin.Unit
+        correspondingProperty: PROPERTY name:_x visibility:public modality:FINAL [val]
+        $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:nativeBox.ArithmeticTest.IntArithmetic
+        VALUE_PARAMETER name:value index:0 type:kotlin.Int
+        BLOCK_BODY
+          RETURN type=kotlin.Unit from='public final fun <set-_x> (value: kotlin.Int): kotlin.Unit declared in nativeBox.ArithmeticTest.IntArithmetic'
+            SET_FIELD 'FIELD name:_x type:kotlin.Int visibility:private' type=kotlin.Int origin=null
+              receiver: GET_VAR '<this>: nativeBox.ArithmeticTest.IntArithmetic declared in nativeBox.ArithmeticTest.IntArithmetic.<set-_x>' type=nativeBox.ArithmeticTest.IntArithmetic origin=null
+              value: GET_VAR 'value: kotlin.Int declared in nativeBox.ArithmeticTest.IntArithmetic.<set-_x>' type=kotlin.Int origin=null
+    PROPERTY name:x visibility:public modality:FINAL [val]
+      FUN name:<get-x> visibility:public modality:FINAL <> ($this:nativeBox.ArithmeticTest.IntArithmetic) returnType:kotlin.Int
+        correspondingProperty: PROPERTY name:x visibility:public modality:FINAL [val]
+        $this: VALUE_PARAMETER name:<this> type:nativeBox.ArithmeticTest.IntArithmetic
+        BLOCK_BODY
+          RETURN type=kotlin.Nothing from='public final fun <get-x> (): kotlin.Int declared in nativeBox.ArithmeticTest.IntArithmetic'
+            CALL 'public abstract fun invoke (): R of kotlin.Function0 [operator] declared in kotlin.Function0' type=R of kotlin.Function0 origin=null
+              $this: FUN_EXPR type=kotlin.Function0<kotlin.Int> origin=LAMBDA
+                FUN DEFAULT_PROPERTY_ACCESSOR name:<get-_x> visibility:local modality:FINAL <> () returnType:kotlin.Int [inline]
+                  BLOCK_BODY
+                    GET_FIELD 'FIELD name:_x type:kotlin.Int visibility:private' type=kotlin.Int origin=GET_PROPERTY
+                      receiver: GET_VAR '<this>: nativeBox.ArithmeticTest.IntArithmetic declared in nativeBox.ArithmeticTest.IntArithmetic.<get-x>' type=nativeBox.ArithmeticTest.IntArithmetic origin=null
+    FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [external,fake_override,operator]
+      annotations:
+        GCUnsafeCall(callee = 'Kotlin_Any_equals')
+      overridden:
+        public open fun equals (other: kotlin.Any?): kotlin.Boolean [external,operator] declared in kotlin.Any
+      $this: VALUE_PARAMETER name:<this> type:kotlin.Any
+      VALUE_PARAMETER name:other index:0 type:kotlin.Any?
+    FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
+      overridden:
+        public open fun hashCode (): kotlin.Int declared in kotlin.Any
+      $this: VALUE_PARAMETER name:<this> type:kotlin.Any
+    FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
+      overridden:
+        public open fun toString (): kotlin.String declared in kotlin.Any
+      $this: VALUE_PARAMETER name:<this> type:kotlin.Any
+  FUN name:testGetValue visibility:public modality:FINAL <> () returnType:kotlin.Unit
+    annotations:
+      Test
+    BLOCK_BODY
+      VAR name:a type:nativeBox.ArithmeticTest.IntArithmetic [val]
+        CONSTRUCTOR_CALL 'public constructor <init> () [primary] declared in nativeBox.ArithmeticTest.IntArithmetic' type=nativeBox.ArithmeticTest.IntArithmetic origin=null
+      CALL 'public abstract fun invoke (p1: P1 of kotlin.Function1): R of kotlin.Function1 [operator] declared in kotlin.Function1' type=R of kotlin.Function1 origin=null
+        $this: FUN_EXPR type=kotlin.Function1<kotlin.Int, kotlin.Unit> origin=LAMBDA
+          FUN DEFAULT_PROPERTY_ACCESSOR name:<set-_x> visibility:local modality:FINAL <> (<set-_x>:kotlin.Int) returnType:kotlin.Unit [inline]
+            VALUE_PARAMETER SYNTHESIZED_DECLARATION name:<set-_x> index:0 type:kotlin.Int
+            BLOCK_BODY
+              SET_FIELD 'FIELD name:_x type:kotlin.Int visibility:private' type=kotlin.Int origin=GET_PROPERTY
+                receiver: GET_VAR 'val a: nativeBox.ArithmeticTest.IntArithmetic [val] declared in nativeBox.ArithmeticTest.testGetValue' type=nativeBox.ArithmeticTest.IntArithmetic origin=null
+                value: GET_VAR '<set-_x>: kotlin.Int declared in <no parent>.<set-_x>' type=kotlin.Int origin=null
+        p1: CONST Int type=kotlin.Int value=5
+      CALL 'public final fun assertEquals <T> (expected: T of kotlin.test.assertEquals, actual: T of kotlin.test.assertEquals, message: kotlin.String?): kotlin.Unit declared in kotlin.test' type=kotlin.Unit origin=null
+        <T>: kotlin.Int
+        expected: CONST Int type=kotlin.Int value=5
+        actual: CALL 'public abstract fun invoke (): R of kotlin.Function0 [operator] declared in kotlin.Function0' type=R of kotlin.Function0 origin=null
+          $this: FUN_EXPR type=kotlin.Function0<kotlin.Int> origin=LAMBDA
+            FUN DEFAULT_PROPERTY_ACCESSOR name:<get-_x> visibility:local modality:FINAL <> () returnType:kotlin.Int [inline]
+              BLOCK_BODY
+                GET_FIELD 'FIELD name:_x type:kotlin.Int visibility:private' type=kotlin.Int origin=GET_PROPERTY
+                  receiver: GET_VAR 'val a: nativeBox.ArithmeticTest.IntArithmetic [val] declared in nativeBox.ArithmeticTest.testGetValue' type=nativeBox.ArithmeticTest.IntArithmetic origin=null
+      VAR name:aValue type:kotlin.Int [var]
+        CALL 'public abstract fun invoke (): R of kotlin.Function0 [operator] declared in kotlin.Function0' type=R of kotlin.Function0 origin=null
+          $this: FUN_EXPR type=kotlin.Function0<kotlin.Int> origin=LAMBDA
+            FUN DEFAULT_PROPERTY_ACCESSOR name:<get-_x> visibility:local modality:FINAL <> () returnType:kotlin.Int [inline]
+              BLOCK_BODY
+                GET_FIELD 'FIELD name:_x type:kotlin.Int visibility:private' type=kotlin.Int origin=GET_PROPERTY
+                  receiver: GET_VAR 'val a: nativeBox.ArithmeticTest.IntArithmetic [val] declared in nativeBox.ArithmeticTest.testGetValue' type=nativeBox.ArithmeticTest.IntArithmetic origin=null
+      CALL 'public final fun assertEquals <T> (expected: T of kotlin.test.assertEquals, actual: T of kotlin.test.assertEquals, message: kotlin.String?): kotlin.Unit declared in kotlin.test' type=kotlin.Unit origin=null
+        <T>: kotlin.Int
+        expected: CONST Int type=kotlin.Int value=5
+        actual: GET_VAR 'var aValue: kotlin.Int [var] declared in nativeBox.ArithmeticTest.testGetValue' type=kotlin.Int origin=null
+      CALL 'public final fun assertEquals <T> (expected: T of kotlin.test.assertEquals, actual: T of kotlin.test.assertEquals, message: kotlin.String?): kotlin.Unit declared in kotlin.test' type=kotlin.Unit origin=null
+        <T>: kotlin.Int
+        expected: CONST Int type=kotlin.Int value=5
+        actual: CALL 'public final fun <get-x> (): kotlin.Int declared in nativeBox.ArithmeticTest.IntArithmetic' type=kotlin.Int origin=GET_PROPERTY
+          $this: GET_VAR 'val a: nativeBox.ArithmeticTest.IntArithmetic [val] declared in nativeBox.ArithmeticTest.testGetValue' type=nativeBox.ArithmeticTest.IntArithmetic origin=null

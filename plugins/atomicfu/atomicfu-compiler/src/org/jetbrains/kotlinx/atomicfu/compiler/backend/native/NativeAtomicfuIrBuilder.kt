@@ -8,6 +8,7 @@ package org.jetbrains.kotlinx.atomicfu.compiler.backend.native
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irInt
 import org.jetbrains.kotlin.ir.builders.irLong
+import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -15,6 +16,7 @@ import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.dumpKotlinLike
+import org.jetbrains.kotlin.ir.util.render
 import org.jetbrains.kotlin.psi2ir.generators.implicitCastTo
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.common.AbstractAtomicfuIrBuilder
 
@@ -25,27 +27,55 @@ class NativeAtomicfuIrBuilder(
     endOffset: Int
 ): AbstractAtomicfuIrBuilder(atomicSymbols.irBuiltIns, symbol, startOffset, endOffset) {
 
-    private fun irGetValue(getter: IrExpression) =
-        irCall(atomicSymbols.invoke0Symbol).apply {
-            this.dispatchReceiver = getter
+    internal fun callGetter(getterSymbol: IrSimpleFunctionSymbol, receiver: IrExpression?, valueType: IrType): IrCall =
+        irCall(getterSymbol).apply {
+            dispatchReceiver = receiver
+        }.let {
+            if (valueType.isBoolean() && it.type.isInt()) it.toBoolean() else it
         }
 
-    private fun irSetValue(setter: IrExpression, value: IrExpression?) =
-        irCall(atomicSymbols.invoke1Symbol).apply {
-            this.dispatchReceiver = setter
+    internal fun callSetter(setterSymbol: IrSimpleFunctionSymbol, receiver: IrExpression?, value: IrExpression?): IrCall =
+        irCall(setterSymbol).apply {
+            dispatchReceiver = receiver
+            putValueArgument(0, value)
+        }
+
+    internal fun IrProperty.callGetter(classReceiver: IrExpression?, valueType: IrType): IrCall {
+        val getter = requireNotNull(this.getter) { "Property getter should be defined ${this.render()}" }
+        return irCall(getter.symbol).apply {
+            dispatchReceiver = classReceiver
+        }.let {
+            if (valueType.isBoolean() && it.type.isInt()) it.toBoolean() else it
+        }
+    }
+
+    internal fun IrProperty.callSetter(classReceiver: IrExpression?, value: IrExpression?): IrCall {
+        val setter = requireNotNull(this.setter) { "Property setter should be defined ${this.render()}" }
+        return irCall(setter.symbol).apply {
+            dispatchReceiver = classReceiver
+            putValueArgument(0, value)
+        }
+    }
+
+    internal fun callKProperty0Get(propertyRef: IrExpression, valueType: IrType): IrCall =
+        irCall(atomicSymbols.kProperty0Get).apply {
+            dispatchReceiver = propertyRef
+        }.let {
+            if (valueType.isBoolean() && it.type.isInt()) it.toBoolean() else it
+        }
+
+    internal fun callKMutableProperty0Set(propertyRef: IrExpression, value: IrExpression?): IrCall =
+        irCall(atomicSymbols.kMutableProperty0Set).apply {
+            dispatchReceiver = propertyRef
             putValueArgument(0, value)
         }
 
     internal fun irCallAtomicNativeIntrinsic(
         functionName: String,
         propertyRef: IrExpression,
-        getter: IrExpression,
-        setter: IrExpression,
         valueType: IrType,
         valueArguments: List<IrExpression?>
     ): IrCall = when (functionName) {
-        "<get-value>" -> irGetValue(getter)
-        "<set-value>", "lazySet" -> irSetValue(setter, valueArguments[0])
         "compareAndSet" -> compareAndSetField(propertyRef, valueType, valueArguments[0], valueArguments[1])
         "getAndSet" -> getAndSetField(propertyRef, valueType, valueArguments[0])
         "getAndAdd" -> getAndAddField(propertyRef, valueType, valueArguments[0])
@@ -58,13 +88,6 @@ class NativeAtomicfuIrBuilder(
     }.let {
         if (valueType.isBoolean() && it.type.isInt()) it.toBoolean() else it
     }
-
-    internal fun callAtomicExtension(
-        symbol: IrSimpleFunctionSymbol,
-        dispatchReceiver: IrExpression?,
-        syntheticValueArguments: List<IrExpression?>,
-        valueArguments: List<IrExpression?>
-    ): IrCall = irCallWithArgs(symbol, dispatchReceiver, syntheticValueArguments + valueArguments)
 
     private fun compareAndSetField(propertyRef: IrExpression, valueType: IrType, expected: IrExpression?, updated: IrExpression?) =
         callNativeAtomicIntrinsic(propertyRef, atomicSymbols.compareAndSetFieldIntrinsic, valueType, expected, updated)

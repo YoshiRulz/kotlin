@@ -7,6 +7,7 @@ package org.jetbrains.kotlinx.atomicfu.compiler.backend.native
 
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.addExtensionReceiver
+import org.jetbrains.kotlin.backend.jvm.functionByName
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrBuiltIns
@@ -53,6 +54,10 @@ class NativeAtomicSymbols(
     val getAndAddLongFieldIntrinsic =
         context.referenceFunctions(CallableId(FqName("kotlin.native.concurrent"), Name.identifier("getAndAddField")))
             .single { it.owner.returnType.isLong() }
+
+    val kProperty0Get = irBuiltIns.kProperty0Class.functionByName("get")
+
+    val kMutableProperty0Set = irBuiltIns.kMutableProperty0Class.functionByName("set")
 
     val intPlusOperator = context.referenceFunctions(CallableId(StandardClassIds.Int, Name.identifier("plus")))
         .single { it.owner.valueParameters[0].type.isInt() }
