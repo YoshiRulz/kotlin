@@ -406,6 +406,7 @@ class AtomicfuJvmIrTransformer(
                     return irCallWithArgs(
                         symbol = loopFunc.symbol,
                         dispatchReceiver = parentFunction.containingFunction.dispatchReceiverParameter?.capture(),
+                        extensionReceiver = null,
                         valueArguments = if (isArrayReceiver) {
                             val index = getPropertyReceiver.getArrayElementIndex(parentFunction)
                             listOf(atomicHandler, index, action)

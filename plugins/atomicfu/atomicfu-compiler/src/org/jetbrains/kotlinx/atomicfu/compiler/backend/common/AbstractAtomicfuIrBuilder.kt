@@ -35,9 +35,10 @@ abstract class AbstractAtomicfuIrBuilder(
 
     abstract val atomicSymbols: AbstractAtomicSymbols
 
-    fun irCallWithArgs(symbol: IrSimpleFunctionSymbol, dispatchReceiver: IrExpression?, valueArguments: List<IrExpression?>) =
+    fun irCallWithArgs(symbol: IrSimpleFunctionSymbol, dispatchReceiver: IrExpression?, extensionReceiver: IrExpression?, valueArguments: List<IrExpression?>) =
         irCall(symbol).apply {
             this.dispatchReceiver = dispatchReceiver
+            this.extensionReceiver = extensionReceiver
             valueArguments.forEachIndexed { i, arg ->
                 putValueArgument(i, arg)
             }

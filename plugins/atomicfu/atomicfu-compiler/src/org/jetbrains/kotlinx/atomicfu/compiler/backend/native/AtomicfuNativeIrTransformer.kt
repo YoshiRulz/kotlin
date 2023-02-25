@@ -114,7 +114,7 @@ class AtomicfuNativeIrTransformer(
                 visibility = atomicExtension.visibility
             }.apply {
                 val newDeclaration = this
-                addExtensionReceiver(buildSimpleType(irBuiltIns.kProperty0Class, listOf(irBuiltIns.intType)))
+                addExtensionReceiver(buildSimpleType(irBuiltIns.kMutableProperty0Class, listOf(irBuiltIns.intType)))
                 dispatchReceiverParameter = atomicExtension.dispatchReceiverParameter?.deepCopyWithSymbols(this)
                 atomicExtension.valueParameters.forEach {
                     addValueParameter(it.name, it.type).also {
@@ -177,7 +177,8 @@ class AtomicfuNativeIrTransformer(
                     val property = getPropertyReceiver.getCorrespondingProperty()
                     val propertyRef = buildPropertyReference(property, classReceiver)
                     return when (functionName) {
-                        "<get-value>" -> callGetter(property.getter!!.symbol, classReceiver, valueType)
+                        //"<get-value>" -> callGetter(property.getter!!.symbol, classReceiver, valueType)
+                        "<get-value>" -> callGetter(atomicSymbols.kMutableProperty0Get, propertyRef, valueType)
                         "<set-value>", "lazySet" -> callSetter(property.setter!!.symbol, classReceiver, expression.getValueArgument(0))
                         else -> {
                             irCallAtomicNativeIntrinsic(
@@ -193,7 +194,7 @@ class AtomicfuNativeIrTransformer(
                     val propertyExtensionRecevier = requireNotNull(parentFunction?.extensionReceiverParameter) { "Extension receiver of function $parentFunction should be null" }
                     val propertyRef = propertyExtensionRecevier.capture()
                     return when (functionName) {
-                        "<get-value>" -> callGetter(atomicSymbols.kProperty0Get, propertyRef, valueType)
+                        "<get-value>" -> callGetter(atomicSymbols.kMutableProperty0Get, propertyRef, valueType)
                         "<set-value>", "lazySet" -> callSetter(atomicSymbols.kMutableProperty0Set, propertyRef, expression.getValueArgument(0))
                         else -> {
                             irCallAtomicNativeIntrinsic(
@@ -210,8 +211,7 @@ class AtomicfuNativeIrTransformer(
         }
 
         override fun IrFunction.isTransformedAtomicExtension(): Boolean =
-            name.asString().endsWith("\$atomicfu") &&
-                    extensionReceiverParameter != null && extensionReceiverParameter!!.type.classOrNull == irBuiltIns.kProperty0Class
+            extensionReceiverParameter != null && extensionReceiverParameter!!.type.classOrNull == irBuiltIns.kMutableProperty0Class
 
         override fun transformedCallOnAtomicArrayElement(
             expression: IrCall,
@@ -256,7 +256,8 @@ class AtomicfuNativeIrTransformer(
                     val propertyRef = buildPropertyReference(property, classReceiver)
                     return irCallWithArgs(
                         symbol = transformedAtomicExtension.symbol,
-                        dispatchReceiver = propertyRef,
+                        dispatchReceiver = expression.dispatchReceiver, // todo: check?
+                        extensionReceiver = propertyRef,
                         valueArguments = expression.getValueArguments()
                     )
                 }
@@ -271,7 +272,7 @@ class AtomicfuNativeIrTransformer(
             val backingField = requireNotNull(property.backingField) { "Backing field of the property $property should not be null" }
             return IrPropertyReferenceImpl(
                 UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-                type = backingField.type,
+                type = buildSimpleType(irBuiltIns.kMutableProperty0Class, listOf(backingField.type)),
                 symbol = property.symbol,
                 typeArgumentsCount = 0, // todo what about KProperty<Ref>?
                 field = backingField.symbol,

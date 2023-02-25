@@ -138,7 +138,7 @@ class JvmAtomicfuIrBuilder internal constructor(
         dispatchReceiver: IrExpression?,
         syntheticValueArguments: List<IrExpression?>,
         valueArguments: List<IrExpression?>
-    ) = irCallWithArgs(symbol, dispatchReceiver, syntheticValueArguments + valueArguments)
+    ) = irCallWithArgs(symbol, dispatchReceiver, null, syntheticValueArguments + valueArguments)
 
     // val a$FU = j.u.c.a.AtomicIntegerFieldUpdater.newUpdater(A::class, "a")
     private fun newJavaAtomicFieldUpdater(

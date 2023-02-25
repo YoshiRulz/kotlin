@@ -40,36 +40,6 @@ class NativeAtomicfuIrBuilder(
             putValueArgument(0, value)
         }
 
-    internal fun IrProperty.callGetter(classReceiver: IrExpression?, valueType: IrType): IrCall {
-        val getter = requireNotNull(this.getter) { "Property getter should be defined ${this.render()}" }
-        return irCall(getter.symbol).apply {
-            dispatchReceiver = classReceiver
-        }.let {
-            if (valueType.isBoolean() && it.type.isInt()) it.toBoolean() else it
-        }
-    }
-
-    internal fun IrProperty.callSetter(classReceiver: IrExpression?, value: IrExpression?): IrCall {
-        val setter = requireNotNull(this.setter) { "Property setter should be defined ${this.render()}" }
-        return irCall(setter.symbol).apply {
-            dispatchReceiver = classReceiver
-            putValueArgument(0, value)
-        }
-    }
-
-    internal fun callKProperty0Get(propertyRef: IrExpression, valueType: IrType): IrCall =
-        irCall(atomicSymbols.kProperty0Get).apply {
-            dispatchReceiver = propertyRef
-        }.let {
-            if (valueType.isBoolean() && it.type.isInt()) it.toBoolean() else it
-        }
-
-    internal fun callKMutableProperty0Set(propertyRef: IrExpression, value: IrExpression?): IrCall =
-        irCall(atomicSymbols.kMutableProperty0Set).apply {
-            dispatchReceiver = propertyRef
-            putValueArgument(0, value)
-        }
-
     internal fun irCallAtomicNativeIntrinsic(
         functionName: String,
         propertyRef: IrExpression,
