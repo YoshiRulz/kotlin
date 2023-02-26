@@ -57,6 +57,7 @@ abstract class AbstractAtomicfuTransformer(
         transformAtomicFunctions(moduleFragment)
         for (irFile in moduleFragment.files) {
             irFile.patchDeclarationParents()
+            println(irFile.dump())
         }
     }
 
@@ -181,7 +182,7 @@ abstract class AbstractAtomicfuTransformer(
         override fun visitCall(expression: IrCall, data: IrFunction?): IrElement {
             (expression.extensionReceiver ?: expression.dispatchReceiver)?.transform(this, data)?.let {
                 val propertyGetterCall = if (it is IrTypeOperatorCallImpl) it.argument else it
-                if (propertyGetterCall.type.isAtomicValueType()) {
+                 if (propertyGetterCall.type.isAtomicValueType()) {
                     val valueType = if (it is IrTypeOperatorCallImpl) {
                         // If receiverExpression is a cast `s as AtomicRef<String>`
                         // then valueType is the type argument of Atomic* class `String`
@@ -324,9 +325,11 @@ abstract class AbstractAtomicfuTransformer(
 
     // todo replace with fromKotlinxAtomicfu
     protected fun IrSimpleFunctionSymbol.fromKotlinxAtomicfuPackage(): Boolean =
-        owner.parentClassOrNull?.classId?.let {
-            it.packageFqName.asString() == AFU_PKG
-        } ?: false
+        // todo check if this works for all cases
+        owner.parentDeclarationContainer.kotlinFqName.asString().startsWith(AFU_PKG)
+//        owner.parentClassOrNull?.classId?.let {
+//            it.packageFqName.asString() == AFU_PKG
+//        } ?: false
 
     protected fun isKotlinxAtomicfuProperty(declaration: IrDeclaration): Boolean =
         declaration is IrProperty &&
@@ -399,4 +402,16 @@ abstract class AbstractAtomicfuTransformer(
 
     protected fun IrExpression.isThisReceiver() =
         this is IrGetValue && symbol.owner.name.asString() == "<this>"
+
+    protected val IrDeclaration.parentDeclarationContainer: IrDeclarationContainer
+        get() = parents.filterIsInstance<IrDeclarationContainer>().firstOrNull()
+            ?: error("In the sequence of parents for ${this.render()} no IrDeclarationContainer was found")
+
+    protected val IrFunction.containingFunction: IrFunction
+        get() {
+            if (this.origin != IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA) return this
+            return parents.filterIsInstance<IrFunction>().firstOrNull {
+                it.origin != IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
+            } ?: error("In the sequence of parents for the local function ${this.render()} no containing function was found")
+        }
 }

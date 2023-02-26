@@ -20,12 +20,14 @@ import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.util.addChild
 import org.jetbrains.kotlin.ir.util.createImplicitParameterDeclarationWithWrappedDescriptor
 import org.jetbrains.kotlin.ir.util.getSimpleFunction
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlinx.atomicfu.compiler.backend.buildSimpleType
 
 abstract class AbstractAtomicSymbols(
     val context: IrPluginContext,
@@ -36,6 +38,16 @@ abstract class AbstractAtomicSymbols(
 
     val invoke0Symbol = irBuiltIns.functionN(0).getSimpleFunction("invoke")!!
     val invoke1Symbol = irBuiltIns.functionN(1).getSimpleFunction("invoke")!!
+
+    fun function0Type(returnType: IrType) = buildSimpleType(
+        irBuiltIns.functionN(0).symbol,
+        listOf(returnType)
+    )
+
+    fun function1Type(argType: IrType, returnType: IrType) = buildSimpleType(
+        irBuiltIns.functionN(1).symbol,
+        listOf(argType, returnType)
+    )
 
     abstract val volatileAnnotationClass: IrClass
     val volatileAnnotationConstructorCall: IrConstructorCall

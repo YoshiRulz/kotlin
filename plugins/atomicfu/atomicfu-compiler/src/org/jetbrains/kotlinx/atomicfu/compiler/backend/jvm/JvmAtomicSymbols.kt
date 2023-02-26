@@ -506,16 +506,6 @@ class JvmAtomicSymbols(
             UNDEFINED_OFFSET, UNDEFINED_OFFSET, irBuiltIns.kClassClass.starProjectedType, irBuiltIns.kClassClass, classType
         )
 
-    fun function0Type(returnType: IrType) = buildSimpleType(
-        irBuiltIns.functionN(0).symbol,
-        listOf(returnType)
-    )
-
-    fun function1Type(argType: IrType, returnType: IrType) = buildSimpleType(
-        irBuiltIns.functionN(1).symbol,
-        listOf(argType, returnType)
-    )
-
     private fun buildIrGet(
         type: IrType,
         receiver: IrExpression?,
