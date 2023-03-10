@@ -60,7 +60,7 @@ class HostExecutor : Executor {
                     process.errorStream.close()
                 })
 
-                if (!process.waitFor(request.timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)) {
+                if (!process.waitFor(1000000000, TimeUnit.MILLISECONDS)) {
                     logger.warning("Timeout running $commandLine")
                     // Cancel every stream, no need to wait for them.
                     jobs.forEach {

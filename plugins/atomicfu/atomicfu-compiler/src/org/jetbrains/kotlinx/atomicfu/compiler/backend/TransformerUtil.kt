@@ -470,3 +470,63 @@ internal fun IdSignature.getDeclarationNameBySignature(): String? {
     val commonSignature = if (this is IdSignature.AccessorSignature) accessorSignature else asPublic()
     return commonSignature?.declarationFqName
 }
+
+internal fun IrField.isInitializedInInitBlock(parentContainer: IrDeclarationContainer): Boolean {
+    for (declaration in parentContainer.declarations) {
+        if (declaration is IrAnonymousInitializer) {
+            if (declaration.body.statements.any { it is IrSetField && it.symbol == this.symbol }) return true
+        }
+    }
+    return false
+}
+
+// reused from: kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/util/IrUtils.kt#remapTypeParameters
+// added support of remapping typeParameters in funciton type arguments
+internal fun IrType.remapTypeParameters(
+    source: IrTypeParametersContainer,
+    target: IrTypeParametersContainer
+): IrType =
+    when (this) {
+        is IrSimpleType -> {
+            when (val classifier = classifier.owner) {
+                is IrTypeParameter -> {
+                    val newClassifier =
+                        if (classifier.parent == source)
+                            target.typeParameters[classifier.index]
+                        else
+                            classifier
+                    IrSimpleTypeImpl(newClassifier.symbol, nullability, arguments, annotations)
+                }
+                is IrClass -> {
+                    val type = IrSimpleTypeImpl(
+                        classifier.symbol,
+                        nullability,
+                        arguments.map {
+                            when (it) {
+                                is IrSimpleType -> {
+                                    val argClassifier = it.classifier.owner
+                                    if (argClassifier is IrTypeParameter) {
+                                        val newClassifier =
+                                            if (argClassifier.parent == source)
+                                                target.typeParameters[argClassifier.index]
+                                            else
+                                                argClassifier
+                                        IrSimpleTypeImpl(newClassifier.symbol, it.nullability, it.arguments, it.annotations)
+                                    } else it
+                                }
+                                is IrTypeProjection -> makeTypeProjection(
+                                    it.type.remapTypeParameters(source, target),
+                                    it.variance
+                                )
+                                is IrStarProjection -> it
+                            }
+                        },
+                        annotations
+                    )
+                    type
+                }
+                else -> this
+            }
+        }
+        else -> this
+    }

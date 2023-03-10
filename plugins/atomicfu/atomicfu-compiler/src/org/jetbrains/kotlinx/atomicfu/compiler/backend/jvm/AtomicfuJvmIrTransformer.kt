@@ -6,7 +6,6 @@
 package org.jetbrains.kotlinx.atomicfu.compiler.backend.jvm
 
 import org.jetbrains.kotlin.backend.common.extensions.*
-import org.jetbrains.kotlin.backend.common.lower.parents
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.builders.declarations.*
@@ -106,7 +105,7 @@ class AtomicfuJvmIrTransformer(
             // class A$ParentFile$VolatileWrapper { volatile var a: Int = 0 }
             // val a$FU = AtomicIntegerFieldUpdater.newUpdater(A$ParentFile$VolatileWrapper::class, "a")
             val property = this
-            backingField = buildVolatileField(property, parentClass)
+            property.setVolatileBackingField(parentClass)
             updateGetter(parentClass, irBuiltIns)
             parentClass.addJavaAtomicFieldUpdater(property).also {
                 registerAtomicHandler(it)
@@ -134,7 +133,8 @@ class AtomicfuJvmIrTransformer(
                         // 2. transform getter/setter
                         // var a by atomic(0) ->
                         // volatile var a: Int = 0
-                        val volatileField = buildVolatileField(this, parent).also {
+                        // todo: make this function look more consistent
+                        val volatileField = this.setVolatileBackingField(parent).also {
                             parent.declarations.add(it)
                         }
                         backingField = null
@@ -224,8 +224,9 @@ class AtomicfuJvmIrTransformer(
         ): IrField {
             val atomicArrayField = requireNotNull(property.backingField) { "BackingField of atomic array $property should not be null" }
             val atomicArrayClass = atomicSymbols.getAtomicArrayClassByAtomicfuArrayType(atomicArrayField.type)
+            // todo fix this, pass generated array field as the second argument, here is the BUG NOW
             val consCall =
-                (atomicArrayField.initializer?.expression ?: atomicArrayField.getFieldInitializerFromInitBlock(parentContainer)?.value)
+                (atomicArrayField.initializer?.expression ?: updateInitBlockFieldInitialization(parentContainer, atomicArrayField.symbol, atomicArrayField.symbol)?.value)
                     ?: error("Atomic array $property was not initialized")
             val size = (consCall as IrFunctionAccessExpression).getArraySizeArgument()
             return with(atomicSymbols.createBuilder(atomicArrayField.symbol)) {

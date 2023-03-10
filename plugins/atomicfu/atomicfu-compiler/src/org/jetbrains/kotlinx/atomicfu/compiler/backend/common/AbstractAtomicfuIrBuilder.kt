@@ -47,7 +47,7 @@ abstract class AbstractAtomicfuIrBuilder(
     fun irVolatileField(
         name: Name,
         type: IrType,
-        initValue: IrExpression,
+        initValue: IrExpression?,
         annotations: List<IrConstructorCall>,
         parentContainer: IrDeclarationContainer
     ): IrField =
@@ -58,7 +58,7 @@ abstract class AbstractAtomicfuIrBuilder(
             isStatic = parentContainer is IrFile
             visibility = DescriptorVisibilities.PRIVATE
         }.apply {
-            initializer = IrExpressionBodyImpl(initValue)
+            initializer = initValue?.let { IrExpressionBodyImpl(it) }
             this.annotations = annotations + atomicSymbols.volatileAnnotationConstructorCall
             this.parent = parentContainer
         }

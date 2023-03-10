@@ -11,18 +11,17 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
+import org.jetbrains.kotlin.ir.symbols.IrFieldSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
-import org.jetbrains.kotlin.ir.symbols.IrValueParameterSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
-import org.jetbrains.kotlinx.atomicfu.compiler.backend.buildGetValue
-import org.jetbrains.kotlinx.atomicfu.compiler.backend.capture
+import org.jetbrains.kotlinx.atomicfu.compiler.backend.buildSetField
+import org.jetbrains.kotlinx.atomicfu.compiler.backend.isInitializedInInitBlock
 
 private const val ATOMICFU = "atomicfu"
 private const val ATOMIC_ARRAY_RECEIVER_SUFFIX = "\$array"
@@ -52,13 +51,39 @@ abstract class AbstractAtomicfuTransformer(
     protected val ATOMIC_ARRAY_TYPES = setOf("AtomicIntArray", "AtomicLongArray", "AtomicBooleanArray", "AtomicArray")
 
     fun transform(moduleFragment: IrModuleFragment) {
+        // start statistics
+        val startCounter = AtomicBoxesCounter()
+        for (irFile in moduleFragment.files) {
+            irFile.transform(startCounter, null)
+        }
+        println("moduleFragment: ${moduleFragment.name}: Start atomic boxes = ${startCounter.counter}")
+
         transformAtomicProperties(moduleFragment)
         transformAtomicExtensions(moduleFragment)
         transformAtomicFunctions(moduleFragment)
         for (irFile in moduleFragment.files) {
             irFile.patchDeclarationParents()
-            println(irFile.dump())
         }
+        // end statistics
+        val endCounter = AtomicBoxesCounter()
+        for (irFile in moduleFragment.files) {
+            irFile.transform(endCounter, null)
+            if (moduleFragment.name.asString().contains("nativeBox")) {
+                if (irFile.dump().contains("kotlinx.atomicfu")) {
+                    // todo a more intellectual test that leaves atomic arrays and extensions that are called on untransformed properties
+                    println("Atomicfu reference detected in tests in irFile: \n ${irFile.dump()}")
+                }
+            }
+            //if (irFile.name == "BufferedChannel.kt") {
+                //println("-------------------------------- AAAAAAAAAAA FILE RENDER: --------------------------------")
+                //error(irFile.dump())
+                //println("-------------------------------- END --------------------------------")
+            //}
+//            println("---------- start of the dump -------------")
+//            println(irFile.dump())
+//            println("---------- end of the dump -------------")
+        }
+        //println("moduleFragment: ${moduleFragment.name}: End atomic boxes = ${endCounter.counter}")
     }
 
     protected abstract fun transformAtomicProperties(moduleFragment: IrModuleFragment)
@@ -66,6 +91,17 @@ abstract class AbstractAtomicfuTransformer(
     protected abstract fun transformAtomicExtensions(moduleFragment: IrModuleFragment)
 
     protected abstract fun transformAtomicFunctions(moduleFragment: IrModuleFragment)
+
+    private inner class AtomicBoxesCounter : IrElementTransformer<IrFunction?> {
+        var counter: Int = 0
+
+        override fun visitProperty(declaration: IrProperty, data: IrFunction?): IrStatement {
+            declaration.backingField?.let {
+                if (it.type.classFqName?.parent()?.asString() == AFU_PKG) counter++
+            }
+            return super.visitProperty(declaration, data)
+        }
+    }
 
     protected abstract inner class AtomicPropertiesTransformer : IrElementTransformer<IrFunction?> {
         override fun visitClass(declaration: IrClass, data: IrFunction?): IrStatement {
@@ -109,42 +145,61 @@ abstract class AbstractAtomicfuTransformer(
 
         abstract fun IrProperty.transformAtomicArray(parentContainer: IrDeclarationContainer)
 
-        protected fun buildVolatileField(
-            property: IrProperty,
-            parentContainer: IrDeclarationContainer
-        ): IrField {
+        protected fun IrProperty.setVolatileBackingField(parentContainer: IrDeclarationContainer): IrField {
             // Generate a new backing field for the given property: a volatile variable of the atomic value type
             // val a = atomic(0)
             // volatile var a: Int = 0
+            val property = this
             val atomicField = requireNotNull(property.backingField) { "BackingField of atomic property $property should not be null" }
             val fieldType = atomicField.type.atomicToValueType()
-            val initValue =
-                (atomicField.initializer?.expression ?: atomicField.getFieldInitializerFromInitBlock(parentContainer)?.value)?.let {
-                    (it as IrCall).getAtomicFactoryValueArgument()
-                } ?: error("Atomic property $property was not initialized")
-            return with(atomicSymbols.createBuilder(atomicField.symbol)) {
-                irVolatileField(
-                    property.name,
-                    fieldType,
-                    //if (fieldType.isBoolean()) irBuiltIns.intType else fieldType,
-                    initValue,
-                    atomicField.annotations,
-                    parentContainer
-                )
+            // todo: support late initialization, in case of atomic field, we just leave it untransformed
+            atomicField.initializer?.expression?.let {
+                val initValue = (it as IrCall).getAtomicFactoryValueArgument()
+                property.backingField = with(atomicSymbols.createBuilder(atomicField.symbol)) {
+                    irVolatileField(
+                        property.name,
+                        fieldType,
+                        initValue,
+                        atomicField.annotations,
+                        parentContainer
+                    )
+                }
+                return property.backingField!!
             }
+            if (atomicField.isInitializedInInitBlock(parentContainer)) {
+                with(atomicSymbols.createBuilder(atomicField.symbol)) {
+                    irVolatileField(
+                        property.name,
+                        fieldType,
+                        null,
+                        atomicField.annotations,
+                        parentContainer
+                    ).also {
+                        updateInitBlockFieldInitialization(parentContainer, atomicField.symbol, it.symbol)
+                        property.backingField = it
+                        return it
+                    }
+                }
+            }
+            error("Atomic property ${this.dump()} should be initialized")
         }
 
-        protected fun IrField.getFieldInitializerFromInitBlock(
-            parentContainer: IrDeclarationContainer
+        protected fun updateInitBlockFieldInitialization(
+            parentContainer: IrDeclarationContainer,
+            oldFieldSymbol: IrFieldSymbol,
+            volatileFieldSymbol: IrFieldSymbol
         ): IrSetField? {
-            val field = this
             for (declaration in parentContainer.declarations) {
                 if (declaration is IrAnonymousInitializer) {
-                    return declaration.body.statements.singleOrNull {
-                        it is IrSetField && it.symbol == field.symbol
-                    }.also {
+                    declaration.body.statements.singleOrNull {
+                        it is IrSetField && it.symbol == oldFieldSymbol
+                    }?.let {
+                        it as IrSetField
+                        val initializationValue = (it.value as IrCall).getAtomicFactoryValueArgument() //test this
+                        val irSetField = buildSetField(volatileFieldSymbol, it.receiver, initializationValue)
+                        declaration.body.statements.add(irSetField)
                         declaration.body.statements.remove(it)
-                    } as IrSetField?
+                    }
                 }
             }
             return null
@@ -307,9 +362,9 @@ abstract class AbstractAtomicfuTransformer(
             isArrayReceiver: Boolean
         ): IrSimpleFunction =
             findDeclaration {
-                it.name.asString() == mangleAtomicExtensionName(declaration.name.asString(), isArrayReceiver) &&
+                it.name.asString().contains("${declaration.name.asString()}\$$ATOMICFU") &&
                         it.isTransformedAtomicExtension()
-            } ?: error("Could not find corresponding transformed declaration for the atomic extension ${declaration.render()}")
+            } ?: error("Could not find corresponding transformed declaration for the atomic extension ${declaration.render()}, $isArrayReceiver")
 
         abstract fun IrFunction.isTransformedAtomicExtension(): Boolean
 

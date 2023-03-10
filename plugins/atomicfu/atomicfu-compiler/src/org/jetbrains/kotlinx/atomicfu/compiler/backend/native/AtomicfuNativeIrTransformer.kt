@@ -8,7 +8,9 @@ package org.jetbrains.kotlinx.atomicfu.compiler.backend.native
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.addExtensionReceiver
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
+import org.jetbrains.kotlin.ir.builders.declarations.addTypeParameter
 import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irReturn
@@ -17,12 +19,12 @@ import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrPropertyReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrValueParameterSymbol
-import org.jetbrains.kotlin.ir.types.IrSimpleType
-import org.jetbrains.kotlin.ir.types.IrType
-import org.jetbrains.kotlin.ir.types.classOrNull
-import org.jetbrains.kotlin.ir.types.isBoolean
+import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
+import org.jetbrains.kotlin.ir.types.*
+import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.*
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.updateSetter
@@ -82,9 +84,12 @@ class AtomicfuNativeIrTransformer(
             // For now supported for primitive types (int, long, boolean) and for linuxX64 and macosX64
             // val a = atomic(0)
             // @Volatile var a: Int = 0
-            backingField = buildVolatileField(this, parentClass)
+            setVolatileBackingField(parentClass)
             updateGetter(parentClass, irBuiltIns)
             updateSetter(parentClass, irBuiltIns)
+//            if (parentClass.name.asString() == "ConcurrentLinkedListNode") {
+//                println("Dumping backingField for ${this.name.asString()}:\n ${this.dump()}")
+//            }
         }
     }
 
@@ -120,13 +125,20 @@ class AtomicfuNativeIrTransformer(
                 val newDeclaration = this
                 addExtensionReceiver(buildSimpleType(irBuiltIns.kMutableProperty0Class, listOf(irBuiltIns.intType)))
                 dispatchReceiverParameter = atomicExtension.dispatchReceiverParameter?.deepCopyWithSymbols(this)
-                atomicExtension.valueParameters.forEach {
-                    addValueParameter(it.name, it.type).also {
+                // TODO: abstract out all type remappings for JVM also
+                atomicExtension.typeParameters.forEach {
+                    addTypeParameter(it.name.asString(), irBuiltIns.anyNType).also {
                         it.parent = newDeclaration
                     }
                 }
+                atomicExtension.valueParameters.forEach {
+                    newDeclaration.addValueParameter(it.name, it.type.remapTypeParameters(atomicExtension, newDeclaration)).also {
+                        it.parent = newDeclaration
+                    }
+                }
+                // todo also fix the return type on JVM
                 // the body will be transformed later by `AtomicFUTransformer`
-                body = atomicExtension.body?.deepCopyWithSymbols(this)
+                body = atomicExtension.body?.deepCopyWithSymbols(newDeclaration)
                 body?.transform(
                     object : IrElementTransformerVoid() {
                         override fun visitReturn(expression: IrReturn): IrExpression = super.visitReturn(
@@ -140,7 +152,7 @@ class AtomicfuNativeIrTransformer(
                         )
                     }, null
                 )
-                returnType = atomicExtension.returnType
+                returnType = atomicExtension.returnType.remapTypeParameters(atomicExtension, newDeclaration)
                 this.parent = parent
             }
         }
@@ -155,9 +167,19 @@ class AtomicfuNativeIrTransformer(
             castType: IrType?,
             getPropertyReceiver: IrExpression,
             parentFunction: IrFunction?
-        ): IrExpression = // todo check that the corresponding atoicproperty was transformed -- otherwise skip
+        ): IrExpression =
             with(atomicSymbols.createBuilder(expression.symbol)) {
+                /**
+                 * Skipping untransformed atomic receivers
+                 */
+                val pf = (if (parentFunction?.origin == IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA) parentFunction.parent else parentFunction) as? IrSimpleFunction
+                if (getPropertyReceiver is IrCall && getPropertyReceiver.getCorrespondingProperty().backingField!!.type.isAtomicValueType() || // todo or is array
+                    (pf != null && pf.isAtomicExtension() && !pf.isTransformedAtomicExtension())) {
+                    return expression
+                }
+
                 requireNotNull(parentFunction) { "Parent function of the call ${expression.render()} is null" }
+                // skip untransformed atomic fields and array elements
                 return getPropertyRefReceiver(getPropertyReceiver, parentFunction)?.let { propertyRef ->
                     irCallAtomicNativeIntrinsic(
                         functionName = functionName,
@@ -174,7 +196,7 @@ class AtomicfuNativeIrTransformer(
             getPropertyReceiver: IrExpression,
             isArrayReceiver: Boolean,
             parentFunction: IrFunction?
-        ): IrCall = // todo check that the corresponding atoicproperty was transformed -- otherwise skip
+        ): IrCall =
             with(atomicSymbols.createBuilder(expression.symbol)) {
                 // volatile a:Int = 77
                 //
@@ -183,8 +205,17 @@ class AtomicfuNativeIrTransformer(
                 // }
                 //
                 // a.foo(45) --> this::a.foo(45)
+
+                /**
+                 * Skipping untransformed atomic receivers
+                 */
+                val pf = (if (parentFunction?.origin == IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA) parentFunction.parent else parentFunction) as? IrSimpleFunction
+                if (isArrayReceiver || (getPropertyReceiver is IrCall && getPropertyReceiver.getCorrespondingProperty().backingField!!.type.isAtomicValueType()) ||
+                    (pf != null && pf.isAtomicExtension() && !pf.isTransformedAtomicExtension())) {
+                    return expression
+                }
                 requireNotNull(parentFunction) { "Parent function of the call ${expression.render()} is null" }
-                return getPropertyRefReceiver(getPropertyReceiver, parentFunction)?.let { propertyRef ->
+                val irCall = getPropertyRefReceiver(getPropertyReceiver, parentFunction)?.let { propertyRef ->
                     irCallWithArgs(
                         symbol = transformedAtomicExtension.symbol,
                         dispatchReceiver = expression.dispatchReceiver,
@@ -192,6 +223,7 @@ class AtomicfuNativeIrTransformer(
                         valueArguments = expression.getValueArguments()
                     )
                 } ?: expression
+                return irCall
             }
 
         override fun transformedAtomicfuInlineFunctionCall(
@@ -203,6 +235,16 @@ class AtomicfuNativeIrTransformer(
             parentFunction: IrFunction?
         ): IrCall {
             with(atomicSymbols.createBuilder(expression.symbol)) {
+
+                /**
+                 * Skipping untransformed atomic receivers
+                 */
+                val pf = (if (parentFunction?.origin == IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA) parentFunction.parent else parentFunction) as? IrSimpleFunction
+                if (isArrayReceiver || (getPropertyReceiver is IrCall && getPropertyReceiver.getCorrespondingProperty().backingField!!.type.isAtomicValueType()) ||
+                    (pf != null && pf.isAtomicExtension() && !pf.isTransformedAtomicExtension())) {
+                    return expression
+                }
+
                 requireNotNull(parentFunction) { "Parent function of the call ${expression.render()} is null" }
                 val loopFunc = parentFunction.parentDeclarationContainer.getOrBuildInlineLoopFunction(
                     functionName = functionName,
@@ -295,6 +337,9 @@ class AtomicfuNativeIrTransformer(
             }
         }
 
+        private fun IrFunction.isAtomicExtension(): Boolean =
+            extensionReceiverParameter != null && isInline && extensionReceiverParameter!!.type.isAtomicValueType()
+
         override fun IrFunction.isTransformedAtomicExtension(): Boolean =
             extensionReceiverParameter != null && extensionReceiverParameter!!.type.classOrNull == irBuiltIns.kMutableProperty0Class
 
@@ -305,7 +350,8 @@ class AtomicfuNativeIrTransformer(
             getPropertyReceiver: IrExpression,
             parentFunction: IrFunction?
         ): IrExpression {
-            TODO("Not supported, leave the function untransformed")
+            // todo: not support
+            return expression
         }
 
         private fun getPropertyRefReceiver(
@@ -317,7 +363,7 @@ class AtomicfuNativeIrTransformer(
                 classReceiver = getPropertyReceiver.dispatchReceiver
             )
             getPropertyReceiver.isThisReceiver() -> {
-                val propertyExtensionReceiver = requireNotNull(parentFunction.extensionReceiverParameter) { "Extension receiver of function $parentFunction should be null" }
+                val propertyExtensionReceiver = requireNotNull(parentFunction.extensionReceiverParameter) { "Extension receiver of function $parentFunction should not be null" }
                 propertyExtensionReceiver.capture()
             }
             else -> null
@@ -339,7 +385,7 @@ class AtomicfuNativeIrTransformer(
         }
 
         override fun IrExpression.isArrayElementReceiver(parentFunction: IrFunction?): Boolean {
-            return false
+            return if (this is IrCall) this.isArrayElementGetter() else false
         }
     }
 }
