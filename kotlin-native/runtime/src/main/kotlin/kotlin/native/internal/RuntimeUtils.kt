@@ -88,7 +88,8 @@ internal fun ThrowIllegalArgumentException() : Nothing {
 
 @ExportForCppRuntime
 internal fun ThrowIllegalArgumentExceptionWithMessage(message: String) : Nothing {
-    throw IllegalArgumentException(message)
+    error("aaaaaaaaa: message: $message")
+    //throw IllegalArgumentException(message)
 }
 
 @ExportForCppRuntime
