@@ -5,13 +5,14 @@ import kotlin.test.*
 
 class ParameterizedInlineFunExtensionTest {
 
-    private inline fun <S> AtomicRef<S>.foo(arg: S) {
+    private inline fun <S> AtomicRef<S>.foo(arg: S, f: (S) -> S): S {
 //        val res = bar(res1, res2)
 //        return res
         //return "12"
          //f(value)
         //return arg
         val a = arg
+        return f(a)
     }
 
 //    private inline fun <S> AtomicRef<S>.bar(res1: S, res2: S): S {
@@ -21,8 +22,8 @@ class ParameterizedInlineFunExtensionTest {
     private val tail = atomic("aaa")
 
     fun testClose() {
-        tail.foo("djnvjkd")
-        //assertEquals("ccc", res)
+        val res = tail.foo("djnvjkd") { s -> s }
+        assertEquals("djnvjkd", res)
     }
 }
 

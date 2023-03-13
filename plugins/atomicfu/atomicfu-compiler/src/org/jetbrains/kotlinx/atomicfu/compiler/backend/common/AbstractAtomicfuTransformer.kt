@@ -79,9 +79,9 @@ abstract class AbstractAtomicfuTransformer(
                 //error(irFile.dump())
                 //println("-------------------------------- END --------------------------------")
             //}
-//            println("---------- start of the dump -------------")
-//            println(irFile.dump())
-//            println("---------- end of the dump -------------")
+            println("---------- start of the dump ${irFile.name} -------------")
+            println(irFile.dump())
+            println("---------- end of the dump -------------")
         }
         //println("moduleFragment: ${moduleFragment.name}: End atomic boxes = ${endCounter.counter}")
     }

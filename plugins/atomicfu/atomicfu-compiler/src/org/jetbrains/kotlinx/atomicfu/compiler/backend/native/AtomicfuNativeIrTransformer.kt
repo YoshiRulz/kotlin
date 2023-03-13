@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irReturn
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
+import org.jetbrains.kotlin.ir.deepCopyWithVariables
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrPropertyReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrValueParameterSymbol
@@ -26,6 +27,7 @@ import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.utils.addToStdlib.applyIf
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.*
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.updateSetter
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.common.AbstractAtomicfuTransformer
@@ -43,6 +45,7 @@ class AtomicfuNativeIrTransformer(
 
     override fun transformAtomicProperties(moduleFragment: IrModuleFragment) {
         for (irFile in moduleFragment.files) {
+            //error("ksvkdbvsdjbvsbvjfdvbkdfbkd")
             irFile.transform(NativeAtomicPropertiesTransformer(), null)
         }
     }
@@ -96,65 +99,18 @@ class AtomicfuNativeIrTransformer(
     private inner class NativeAtomicExtensionTransformer : AtomicExtensionTransformer() {
 
         override fun IrDeclarationContainer.transformAllAtomicExtensions() {
-            declarations.filter { it is IrFunction && it.isAtomicExtension() }.forEach { atomicExtension ->
-                atomicExtension as IrFunction
-                declarations.add(transformAtomicExtension(atomicExtension, this))
-                declarations.remove(atomicExtension)
+            declarations.filter { it is IrSimpleFunction && it.isAtomicExtension()  }.forEach {
+                declarations.add((it as IrSimpleFunction).deepCopyWithSymbols(this).transformAtomicExtension())
+                declarations.remove(it)
             }
         }
 
-        private fun transformAtomicExtension(
-            atomicExtension: IrFunction,
-            parent: IrDeclarationContainer
-        ): IrFunction {
-            // This function changes type of atomic extension receiver to KProperty<T>.
-            // The body of atomic extension function will be transformed later in `NativeAtomicFunctionCallTransformer`.
-            // inline fun AtomicInt.foo() {
-            //    compareAndSet(0, 56)
-            //}
-            // ---->
-            //inline fun KProperty<Int>.foo() {
-            //    this.compareAndSetField(0, 56) //  will be replaced with the intrinsic call in `NativeAtomicFunctionCallTransformer`.
-            //}
-            val mangledName = mangleAtomicExtensionName(atomicExtension.name.asString(), false)
-            return pluginContext.irFactory.buildFun {
-                name = Name.identifier(mangledName)
-                isInline = true
-                visibility = atomicExtension.visibility
-            }.apply {
-                val newDeclaration = this
-                addExtensionReceiver(buildSimpleType(irBuiltIns.kMutableProperty0Class, listOf(irBuiltIns.intType)))
-                dispatchReceiverParameter = atomicExtension.dispatchReceiverParameter?.deepCopyWithSymbols(this)
-                // TODO: abstract out all type remappings for JVM also
-                atomicExtension.typeParameters.forEach {
-                    addTypeParameter(it.name.asString(), irBuiltIns.anyNType).also {
-                        it.parent = newDeclaration
-                    }
-                }
-                atomicExtension.valueParameters.forEach {
-                    newDeclaration.addValueParameter(it.name, it.type.remapTypeParameters(atomicExtension, newDeclaration)).also {
-                        it.parent = newDeclaration
-                    }
-                }
-                // todo also fix the return type on JVM
-                // the body will be transformed later by `AtomicFUTransformer`
-                body = atomicExtension.body?.deepCopyWithSymbols(newDeclaration)
-                body?.transform(
-                    object : IrElementTransformerVoid() {
-                        override fun visitReturn(expression: IrReturn): IrExpression = super.visitReturn(
-                            if (expression.returnTargetSymbol == atomicExtension.symbol) {
-                                with(atomicSymbols.createBuilder(newDeclaration.symbol)) {
-                                    irReturn(expression.value)
-                                }
-                            } else {
-                                expression
-                            }
-                        )
-                    }, null
-                )
-                returnType = atomicExtension.returnType.remapTypeParameters(atomicExtension, newDeclaration)
-                this.parent = parent
-            }
+        private fun IrSimpleFunction.transformAtomicExtension(): IrFunction {
+            val mangledName = mangleAtomicExtensionName(this.name.asString(), false)
+            val valueType = extensionReceiverParameter!!.type.atomicToValueType()
+            this.name = Name.identifier(mangledName)
+            addExtensionReceiver(buildSimpleType(irBuiltIns.kMutableProperty0Class, listOf(if (valueType.isBoolean()) irBuiltIns.intType else valueType)))
+            return this
         }
     }
 
