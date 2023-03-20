@@ -83,7 +83,7 @@ abstract class AbstractAtomicfuTransformer(
 //            println(irFile.dump())
 //            println("---------- end of the dump -------------")
         }
-        //println("moduleFragment: ${moduleFragment.name}: End atomic boxes = ${endCounter.counter}")
+        println("moduleFragment: ${moduleFragment.name}: End atomic boxes = ${endCounter.counter}")
     }
 
     protected abstract fun transformAtomicProperties(moduleFragment: IrModuleFragment)
