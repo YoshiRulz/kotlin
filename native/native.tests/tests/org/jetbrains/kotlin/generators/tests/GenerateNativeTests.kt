@@ -202,6 +202,22 @@ fun main() {
             }
         }
 
+        // Klib ir tests
+        testGroup("native/native.tests/tests-gen", "native/native.tests/testData") {
+            testClass<AbstractNativeKlibIrTest>(
+                suiteTestClassName = "NativeKLibIrTestGenerated",
+            ) {
+                model("klibIr", pattern = "^([^_](.+)).kt$", recursive = true)
+            }
+        }
+        testGroup("native/native.tests/tests-gen", "native/native.tests/testData") {
+            testClass<AbstractNativeKlibIrTest>(
+                suiteTestClassName = "FirNativeKLibIrTestGenerated",
+            ) {
+                model("klibIr", pattern = "^([^_](.+)).kt$", recursive = true)
+            }
+        }
+
         // LLDB integration tests.
         testGroup("native/native.tests/tests-gen", "native/native.tests/testData") {
             testClass<AbstractNativeBlackBoxTest>(
