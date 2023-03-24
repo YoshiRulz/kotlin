@@ -155,7 +155,8 @@ internal class ModuleMetadataEmitter(
                                 annotations = listOf(AnnotationStub.Deprecated.unableToImport)
                         )
                     }
-                    KmFunction(function.flags, function.name).also { km ->
+                    KmFunction(function.name).also { km ->
+                        km.flags = function.flags
                         km.receiverParameterType = function.receiver?.type?.map()
                         function.typeParameters.mapTo(km.typeParameters) { it.map() }
                         function.parameters.mapTo(km.valueParameters) { it.map() }
@@ -198,7 +199,8 @@ internal class ModuleMetadataEmitter(
 
         override fun visitConstructor(constructorStub: ConstructorStub, data: VisitingContext) =
                 data.withMappingExtensions {
-                    KmConstructor(constructorStub.flags).apply {
+                    KmConstructor().apply {
+                        flags = constructorStub.flags
                         constructorStub.parameters.mapTo(valueParameters, { it.map() })
                         constructorStub.annotations.mapTo(annotations, { it.map() })
                     }

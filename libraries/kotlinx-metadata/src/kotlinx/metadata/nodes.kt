@@ -350,7 +350,10 @@ class KmLambda : KmLambdaVisitor() {
  * @property flags constructor flags, consisting of [Flag.HAS_ANNOTATIONS], visibility flag and [Flag.Constructor] flags
  */
 @Suppress("DEPRECATION")
-class KmConstructor(var flags: Flags) : KmConstructorVisitor() {
+class KmConstructor @Deprecated("Constructor with flags is deprecated. Assign properties individually.") constructor(var flags: Flags) :
+    KmConstructorVisitor() {
+    constructor() : this(flagsOf())
+
     /**
      * Value parameters of the constructor.
      */
@@ -397,10 +400,13 @@ class KmConstructor(var flags: Flags) : KmConstructorVisitor() {
  * @property name the name of the function
  */
 @Suppress("DEPRECATION")
-class KmFunction(
+class KmFunction @Deprecated("Constructor with flags is deprecated.") constructor(
     var flags: Flags,
     var name: String
 ) : KmFunctionVisitor() {
+
+    constructor(name: String) : this(flagsOf(), name)
+
     /**
      * Type parameters of the function.
      */
@@ -1037,7 +1043,7 @@ class KmEffect(
  */
 @ExperimentalContracts
 @Suppress("DEPRECATION")
-class  KmEffectExpression : KmEffectExpressionVisitor() {
+class KmEffectExpression : KmEffectExpressionVisitor() {
     /**
      * Effect expression flags, consisting of [Flag.EffectExpression] flags.
      */

@@ -126,9 +126,8 @@ internal fun linkSealedClassesWithSubclasses(packageName: CirPackageName, classC
 
 internal fun CirClassConstructor.serializeConstructor(
     context: CirTreeSerializationContext
-): KmConstructor = KmConstructor(
-    flags = classConstructorFlags()
-).also { constructor ->
+): KmConstructor = KmConstructor().also { constructor ->
+    constructor.flags = classConstructorFlags()
     annotations.mapTo(constructor.annotations) { it.serializeAnnotation() }
     // TODO: nowhere to write constructor type parameters
     valueParameters.mapTo(constructor.valueParameters) { it.serializeValueParameter(context) }
@@ -181,9 +180,9 @@ internal fun CirProperty.serializeProperty(
 internal fun CirFunction.serializeFunction(
     context: CirTreeSerializationContext,
 ): KmFunction = KmFunction(
-    flags = functionFlags(isExpect = context.isCommon && kind != CallableMemberDescriptor.Kind.SYNTHESIZED),
     name = name.name
 ).also { function ->
+    function.flags = functionFlags(isExpect = context.isCommon && kind != CallableMemberDescriptor.Kind.SYNTHESIZED)
     annotations.mapTo(function.annotations) { it.serializeAnnotation() }
     typeParameters.serializeTypeParameters(context, output = function.typeParameters)
     valueParameters.mapTo(function.valueParameters) { it.serializeValueParameter(context) }

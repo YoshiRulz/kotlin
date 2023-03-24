@@ -21,6 +21,9 @@ class MetadataSmokeTest {
         return getAnnotation(Metadata::class.java)
     }
 
+    private fun KotlinClassMetadata.asKmClass(): KmClass = (this as? KotlinClassMetadata.Class)?.toKmClass()
+        ?: error("Not a KotlinClassMetadata.Class: $this")
+
     @Test
     fun listInlineFunctions() {
         @Suppress("unused")
@@ -52,10 +55,13 @@ class MetadataSmokeTest {
         val klass = KmClass().apply {
             name = "Hello"
             flags = flagsOf(Flag.IS_PUBLIC)
-            constructors += KmConstructor(flagsOf(Flag.IS_PUBLIC)).apply {
+            constructors += KmConstructor().apply {
+                visibility = Visibility.PUBLIC
                 signature = JvmMethodSignature("<init>", "()V")
             }
-            functions += KmFunction(flagsOf(Flag.IS_PUBLIC, Flag.Function.IS_DECLARATION), "hello").apply {
+            functions += KmFunction("hello").apply {
+                visibility = Visibility.PUBLIC
+                kind = MemberKind.DECLARATION
                 returnType = KmType(flagsOf()).apply {
                     classifier = KmClassifier.Class("kotlin/String")
                 }
@@ -170,6 +176,9 @@ class MetadataSmokeTest {
         classWithStableParameterNames.constructors.forEach { assertFalse(Flag.Constructor.HAS_NON_STABLE_PARAMETER_NAMES(it.flags)) }
         classWithStableParameterNames.functions.forEach { assertFalse(Flag.Function.HAS_NON_STABLE_PARAMETER_NAMES(it.flags)) }
 
+        classWithStableParameterNames.constructors.forEach { assertFalse(it.hasNonStableParameterNames) }
+        classWithStableParameterNames.functions.forEach { assertFalse(it.hasNonStableParameterNames) }
+
         val newMetadata = KotlinClassMetadata.writeClass(
             KmClass().apply {
                 classWithStableParameterNames.accept(
@@ -188,6 +197,42 @@ class MetadataSmokeTest {
 
         classWithUnstableParameterNames.constructors.forEach { assertTrue(Flag.Constructor.HAS_NON_STABLE_PARAMETER_NAMES(it.flags)) }
         classWithUnstableParameterNames.functions.forEach { assertTrue(Flag.Function.HAS_NON_STABLE_PARAMETER_NAMES(it.flags)) }
+
+        classWithUnstableParameterNames.constructors.forEach { assertTrue(it.hasNonStableParameterNames) }
+        classWithUnstableParameterNames.functions.forEach { assertTrue(it.hasNonStableParameterNames) }
+    }
+
+    private class Prive
+
+    public class Publ {
+        public fun f() {}
+    }
+
+    @Test
+    fun testVisibilityFlags() {
+        val p1 = KotlinClassMetadata.read(Prive::class.java.readMetadata())?.asKmClass()!!
+        val p2 = KotlinClassMetadata.read(Publ::class.java.readMetadata())?.asKmClass()!!
+
+        assertEquals(Visibility.PRIVATE, p1.visibility)
+        assertEquals(Visibility.PUBLIC, p2.visibility)
+
+        assertTrue(Flag.Common.IS_PRIVATE(p1.flags))
+        assertTrue(Flag.Common.IS_PUBLIC(p2.flags))
+
+        p1.visibility = Visibility.PUBLIC
+        p2.visibility = Visibility.INTERNAL
+
+        assertFalse(Flag.Common.IS_PRIVATE(p1.flags))
+        assertFalse(Flag.Common.IS_PUBLIC(p2.flags))
+
+        assertTrue(Flag.Common.IS_PUBLIC(p1.flags))
+        assertTrue(Flag.Common.IS_INTERNAL(p2.flags))
+
+        val f = assertNotNull(p2.functions.find { it.name == "f" })
+        assertEquals(Visibility.PUBLIC, f.visibility)
+        f.visibility = Visibility.PRIVATE
+        assertFalse(Flag.Common.IS_PUBLIC(f.flags))
+        assertTrue(Flag.Common.IS_PRIVATE(f.flags))
     }
 
     @Test
