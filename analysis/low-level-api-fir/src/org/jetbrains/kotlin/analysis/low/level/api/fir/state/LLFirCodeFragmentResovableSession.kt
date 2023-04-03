@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.EffectiveVisibility
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.diagnostics.KtPsiDiagnostic
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirFunctionTarget
@@ -139,16 +140,44 @@ internal class LLFirCodeFragmentResovableSession(
                                     resolvedSymbol = constructorSymbol
                                     name = constructorSymbol.name
                                 }
+                                argumentList = buildArgumentList {
+                                    arguments += buildVarargArgumentsExpression {
+                                        varargElementType =
+                                            this@LLFirCodeFragmentResovableSession.useSiteFirSession.builtinTypes.stringType
+                                        arguments += buildConstExpression(
+                                            file.toFirSourceElement(),
+                                            ConstantValueKind.String,
+                                            "INVISIBLE_REFERENCE"
+                                        )
+                                        arguments += buildConstExpression(
+                                            file.toFirSourceElement(),
+                                            ConstantValueKind.String,
+                                            "INVISIBLE_MEMBER"
+                                        )
+                                    }
+                                }
+                                useSiteTarget = AnnotationUseSiteTarget.FILE
                                 annotationTypeRef = buildResolvedTypeRef {
                                     source = file.toFirSourceElement()
                                     type = annotationType
                                 }
                                 argumentMapping = buildAnnotationArgumentMapping {
-                                    source = file.toFirSourceElement()
-                                    mapping[Name.identifier("name")] =
-                                        buildConstExpression(file.toFirSourceElement(), ConstantValueKind.String, "INVISIBLE_REFERENCE")
+                                    mapping[Name.identifier("names")] = buildVarargArgumentsExpression {
+                                        varargElementType =
+                                            this@LLFirCodeFragmentResovableSession.useSiteFirSession.builtinTypes.stringType
+                                        arguments += buildConstExpression(
+                                            file.toFirSourceElement(),
+                                            ConstantValueKind.String,
+                                            "INVISIBLE_REFERENCE"
+                                        )
+                                        arguments += buildConstExpression(
+                                            file.toFirSourceElement(),
+                                            ConstantValueKind.String,
+                                            "INVISIBLE_MEMBER"
+                                        )
+                                    }
                                 }
-                                annotationResolvePhase = FirAnnotationResolvePhase.CompilerRequiredAnnotations
+                                annotationResolvePhase = FirAnnotationResolvePhase.Types
                             }
                         }
 
