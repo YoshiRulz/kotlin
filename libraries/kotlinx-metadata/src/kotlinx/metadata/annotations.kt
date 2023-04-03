@@ -47,6 +47,12 @@ sealed class KmAnnotationArgument {
          * The value of this argument.
          */
         abstract val value: T
+
+        private val valueName: String =
+            this::class.simpleName ?: throw AssertionError("KmAnnotationArgument.LiteralValue implementation can't be anonymous")
+
+        // final modifier prevents generation of data class-like .toString() in inheritors
+        final override fun toString(): String = "$valueName(${if (this is StringValue) "\"$value\"" else value.toString()})"
     }
 
     // For all inheritors of LiteralValue: KDoc is automatically copied from base property `value`
@@ -90,7 +96,9 @@ sealed class KmAnnotationArgument {
      * @property enumClassName FQ name of the enum class
      * @property enumEntryName Name of the enum entry
      */
-    data class EnumValue(val enumClassName: ClassName, val enumEntryName: String) : KmAnnotationArgument()
+    data class EnumValue(val enumClassName: ClassName, val enumEntryName: String) : KmAnnotationArgument() {
+        override fun toString(): String = "EnumValue($enumClassName.$enumEntryName)"
+    }
 
     /**
      * An annotation argument which is another annotation value.
@@ -107,7 +115,9 @@ sealed class KmAnnotationArgument {
      *
      * @property annotation Annotation instance with all its arguments.
      */
-    data class AnnotationValue(val annotation: KmAnnotation) : KmAnnotationArgument()
+    data class AnnotationValue(val annotation: KmAnnotation) : KmAnnotationArgument() {
+        override fun toString(): String = "AnnotationValue($annotation)"
+    }
 
     /**
      * An annotation argument with an array type, i.e. several values of one arbitrary type.
@@ -119,7 +129,9 @@ sealed class KmAnnotationArgument {
      *
      * @property elements Values of elements in the array.
      */
-    data class ArrayValue(val elements: List<KmAnnotationArgument>) : KmAnnotationArgument()
+    data class ArrayValue(val elements: List<KmAnnotationArgument>) : KmAnnotationArgument() {
+        override fun toString(): String = "ArrayValue($elements)"
+    }
 
     /**
      * An annotation argument of KClass type.
@@ -147,6 +159,8 @@ sealed class KmAnnotationArgument {
         init {
             require(arrayDimensionCount == 0) { "KClassValue must not have array dimensions. For Array<X>::class, use ArrayKClassValue." }
         }
+
+        override fun toString(): String = "KClassValue($className)"
     }
 
     /**
@@ -173,5 +187,15 @@ sealed class KmAnnotationArgument {
         init {
             require(arrayDimensionCount > 0) { "ArrayKClassValue must have at least one dimension. For regular X::class argument, use KClassValue." }
         }
+
+        private val stringRepresentation = buildString {
+            append("ArrayKClassValue(")
+            repeat(arrayDimensionCount) { append("kotlin/Array<") }
+            append(className)
+            repeat(arrayDimensionCount) { append(">") }
+            append(")")
+        }
+
+        override fun toString(): String = stringRepresentation
     }
 }
