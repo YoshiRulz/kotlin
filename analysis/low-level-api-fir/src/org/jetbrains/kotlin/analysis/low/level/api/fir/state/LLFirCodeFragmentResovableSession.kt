@@ -5,13 +5,16 @@
 
 package org.jetbrains.kotlin.analysis.low.level.api.fir.state
 
+import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.KtPsiSourceFile
 import org.jetbrains.kotlin.KtPsiSourceFileLinesMapping
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.DiagnosticCheckerFilter
 import org.jetbrains.kotlin.analysis.low.level.api.fir.lazy.resolve.FirLazyBodiesCalculator
 import org.jetbrains.kotlin.analysis.low.level.api.fir.providers.LLFirCodeFragmentSymbolProvider
 import org.jetbrains.kotlin.analysis.low.level.api.fir.sessions.LLFirSession
+import org.jetbrains.kotlin.analysis.project.structure.KtCodeFragmentModule
 import org.jetbrains.kotlin.analysis.project.structure.KtModule
+import org.jetbrains.kotlin.analysis.project.structure.getKtModule
 import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.EffectiveVisibility
@@ -80,6 +83,40 @@ internal class LLFirCodeFragmentResovableSession(
     }
 
     override fun getOrBuildFirFor(element: KtElement): FirElement? {
+        val fqNames = mutableSetOf<FqName>()
+        val debugeeSourceFile = (element.getKtModule() as KtCodeFragmentModule).sourceFile
+        val pathSegments = debugeeSourceFile.packageFqName.pathSegments().map { it.identifier }.toTypedArray()
+        debugeeSourceFile.accept(object : KtVisitorVoid() {
+            /**
+             * TODO: add imports from source file.
+             */
+            var scopeFqName = pathSegments
+            private fun scope(name: String, body: () -> Unit) {
+                val oldScope = scopeFqName
+                scopeFqName = arrayOf(*scopeFqName, name)
+                body()
+                scopeFqName = oldScope
+            }
+
+            override fun visitElement(element: PsiElement) {
+                element.acceptChildren(this)
+            }
+
+            override fun visitClass(klass: KtClass) {
+                klass.name ?: return
+                scope(klass.name!!) {
+                    klass.acceptChildren(this)
+                }
+            }
+
+            override fun visitProperty(property: KtProperty) {
+                fqNames += FqName.fromSegments(listOf(*scopeFqName, property.name))
+            }
+
+            override fun visitNamedFunction(function: KtNamedFunction) {
+                fqNames += FqName.fromSegments(listOf(*scopeFqName, function.name))
+            }
+        })
         val moduleComponents = getModuleComponentsForElement(element)
         val builder = object : RawFirBuilder(
             moduleComponents.session,
@@ -111,7 +148,7 @@ internal class LLFirCodeFragmentResovableSession(
                             /**
                              * applying Suppress("INVISIBLE_*) to file, supposed to instruct frontend to ignore `private`
                              * modifier.
-                             * TODO: invisitagte why it's not enough for
+                             * TODO: investigate why it's not enough for
                              * [org.jetbrains.kotlin.idea.k2.debugger.test.cases.K2EvaluateExpressionTestGenerated.SingleBreakpoint.CompilingEvaluator.InaccessibleMembers]
                              */
                             annotations += buildAnnotationCall {
@@ -190,19 +227,12 @@ internal class LLFirCodeFragmentResovableSession(
                                 aliasSource = importDirective.alias?.nameIdentifier?.toFirSourceElement()
                             }
                         }
-                        /**
-                         * TODO: imports it's supposed to be filled above, but ..
-                         * this is workaround for tests should be removed.
-                         */
-                        imports += buildImport {
-                            source = file.toFirSourceElement()
-                            importedFqName = FqName.fromSegments(listOf("test", "Foo"))
-                            isAllUnder = false
-                        }
-                        imports += buildImport {
-                            source = file.toFirSourceElement()
-                            importedFqName = FqName.fromSegments(listOf("test", "block"))
-                            isAllUnder = false
+                        fqNames.forEach { fqName ->
+                            imports += buildImport {
+                                source = file.toFirSourceElement()
+                                importedFqName = fqName
+                                isAllUnder = false
+                            }
                         }
                         for (declaration in file.declarations) {
                             declarations += when (declaration) {

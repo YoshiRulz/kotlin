@@ -185,7 +185,9 @@ public class KtBuiltinsModule(
     override fun hashCode(): Int = platform.hashCode()
 }
 
-public interface KtCodeFragmentModule: KtModule
+public interface KtCodeFragmentModule: KtModule {
+    val sourceFile: KtFile
+}
 
 /**
  * A module for a Kotlin script file.
