@@ -518,20 +518,24 @@ sealed class KotlinClassMetadata(val annotationData: Metadata) {
 
         /**
          * Reads and parses the given annotation data of a Kotlin JVM class file and returns the correct type of [KotlinClassMetadata] encoded by
-         * this annotation, or `null` if this annotation data has an unsupported metadata version.
+         * this annotation, if metadata version is supported.
          *
          * [annotationData] may be obtained reflectively, constructed manually or with helper [kotlinx.metadata.jvm.Metadata] function,
          * or equivalent [KotlinClassHeader] can be used.
          *
-         * @throws IllegalArgumentException if the metadata cannot be parsed from binary format or is inconsistent with itself
+         * Metadata version is supported if it is:
+         * 1. Written by the stable (1.0 or higher) Kotlin compiler. Due to technical reasons, value of Kotlin 1.0 `metadataVersion` is 1.1.0.
+         * 2. Written by Kotlin compiler which version is not newer than the latest released + 1 minor version.
+         * For example, if the latest Kotlin version is 1.7.0, latest kotlinx-metadata can read binaries produced by Kotlin compilers from 1.0 to 1.8.20.
+         * To get latest released version (with which this kotlinx-metadata library was compiled), one can use [COMPATIBLE_METADATA_VERSION] constant.
+         *
+         * @throws IllegalArgumentException if the metadata version is unsupported, or metadata is malformed and cannot be parsed from binary format, or metadata is inconsistent with itself.
+         *
+         * @see COMPATIBLE_METADATA_VERSION
          */
         @JvmStatic
-        fun read(annotationData: Metadata): KotlinClassMetadata? {
-            if (!JvmMetadataVersion(
-                    annotationData.metadataVersion,
-                    (annotationData.extraInt and (1 shl 3)/* see JvmAnnotationNames.METADATA_STRICT_VERSION_SEMANTICS_FLAG */) != 0
-                ).isCompatibleWithCurrentCompilerVersion()
-            ) return null
+        fun read(annotationData: Metadata): KotlinClassMetadata {
+            checkMetadataVersionForRead(annotationData)
 
             // All data is loaded lazily, no exceptions here to handle
             return when (annotationData.kind) {
@@ -541,6 +545,22 @@ sealed class KotlinClassMetadata(val annotationData: Metadata) {
                 MULTI_FILE_CLASS_FACADE_KIND -> MultiFileClassFacade(annotationData)
                 MULTI_FILE_CLASS_PART_KIND -> MultiFileClassPart(annotationData)
                 else -> Unknown(annotationData)
+            }
+        }
+
+        private fun checkMetadataVersionForRead(annotationData: Metadata) {
+            if (annotationData.metadataVersion.isEmpty())
+                throw IllegalArgumentException("Provided Metadata instance does not have metadataVersion in it and therefore is malformed and cannot be read.")
+            val jvmMetadataVersion = JvmMetadataVersion(
+                annotationData.metadataVersion,
+                (annotationData.extraInt and (1 shl 3)/* see JvmAnnotationNames.METADATA_STRICT_VERSION_SEMANTICS_FLAG */) != 0
+            )
+            if (!jvmMetadataVersion.isCompatibleWithCurrentCompilerVersion()) {
+                // Kotlin 1.0 produces classfiles with metadataVersion = 1.1.0, while 1.0.0 represents unsupported pre-1.0 Kotlin (see JvmMetadataVersion.kt:39)
+                val postfix =
+                    if (jvmMetadataVersion.isAtMost(1, 0, 0)) "while minimum supported version is 1.1.0 (Kotlin 1.0)."
+                    else "while maximum supported version is ${JvmMetadataVersion.INSTANCE_NEXT}. To support newer versions, update kotlinx-metadata library."
+                throw IllegalArgumentException("Provided Metadata instance has version ${jvmMetadataVersion}, $postfix")
             }
         }
 
@@ -593,7 +613,11 @@ sealed class KotlinClassMetadata(val annotationData: Metadata) {
         const val MULTI_FILE_CLASS_PART_KIND = 5
 
         /**
-         * The latest metadata version supported by this version of the library.
+         * The latest released metadata version supported by this version of the library.
+         * Library can read Kotlin metadata produced by Kotlin compiler from 1.0 up to and including this version + 1 minor.
+         *
+         * For example, if the latest Kotlin version is 1.7.0, kotlinx-metadata can read binaries produced by Kotlin compilers from 1.0 to 1.8.20.
+         * In this case, this property will have value `[1, 7, 0]`.
          *
          * @see Metadata.metadataVersion
          */

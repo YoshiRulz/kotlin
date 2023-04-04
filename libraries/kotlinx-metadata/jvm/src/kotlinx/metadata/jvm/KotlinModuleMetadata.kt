@@ -33,16 +33,10 @@ import org.jetbrains.kotlin.metadata.jvm.deserialization.serializeToByteArray
  * @property bytes the byte array representing the contents of a `.kotlin_module` file
  */
 @UnstableMetadataApi
-class KotlinModuleMetadata(@Suppress("MemberVisibilityCanBePrivate") val bytes: ByteArray) {
-    @get:IgnoreInApiDump
-    internal val data: ModuleMapping = ModuleMapping.loadModuleMapping(
-        bytes, javaClass.name,
-        skipMetadataVersionCheck = false,
-        isJvmPackageNameSupported = true
-    ) {
-        // TODO: report incorrect versions of modules
-    }
-
+class KotlinModuleMetadata private constructor(
+    @Suppress("MemberVisibilityCanBePrivate") val bytes: ByteArray,
+    @get:IgnoreInApiDump internal val data: ModuleMapping
+) {
     /**
      * Visits metadata of this module with a new [KmModule] instance and returns that instance.
      */
@@ -96,8 +90,10 @@ class KotlinModuleMetadata(@Suppress("MemberVisibilityCanBePrivate") val bytes: 
          *   [KotlinClassMetadata.COMPATIBLE_METADATA_VERSION] by default
          */
         @Deprecated("Writer API is deprecated as excessive and cumbersome. Please use KotlinModuleMetadata.write(kmModule, metadataVersion)")
-        fun write(metadataVersion: IntArray = COMPATIBLE_METADATA_VERSION): KotlinModuleMetadata =
-            KotlinModuleMetadata(b.build().serializeToByteArray(JvmMetadataVersion(*metadataVersion), 0))
+        fun write(metadataVersion: IntArray = COMPATIBLE_METADATA_VERSION): KotlinModuleMetadata {
+            val bytes = b.build().serializeToByteArray(JvmMetadataVersion(*metadataVersion), 0)
+            return KotlinModuleMetadata(bytes, dataFromBytes(bytes))
+        }
     }
 
     /**
@@ -137,13 +133,12 @@ class KotlinModuleMetadata(@Suppress("MemberVisibilityCanBePrivate") val bytes: 
         @UnstableMetadataApi
         fun read(bytes: ByteArray): KotlinModuleMetadata? {
             return wrapIntoMetadataExceptionWhenNeeded {
-                val result = KotlinModuleMetadata(bytes)
-                when (result.data) {
-                    ModuleMapping.EMPTY -> null
-                    ModuleMapping.CORRUPTED ->
+                val result = dataFromBytes(bytes)
+                when (result) {
+                    ModuleMapping.EMPTY, ModuleMapping.CORRUPTED ->
                         throw InconsistentKotlinMetadataException("Data is not the content of a .kotlin_module file, or it has been corrupted.")
-                    else -> result
                 }
+                KotlinModuleMetadata(bytes, result)
             }
         }
 
@@ -160,6 +155,16 @@ class KotlinModuleMetadata(@Suppress("MemberVisibilityCanBePrivate") val bytes: 
         @JvmOverloads
         fun write(kmModule: KmModule, metadataVersion: IntArray = COMPATIBLE_METADATA_VERSION): KotlinModuleMetadata = wrapWriteIntoIAE {
             Writer().also { kmModule.accept(it) }.write(metadataVersion)
+        }
+
+        private fun dataFromBytes(bytes: ByteArray): ModuleMapping {
+            return ModuleMapping.loadModuleMapping(
+                bytes, "KotlinModuleMetadata",
+                skipMetadataVersionCheck = false,
+                isJvmPackageNameSupported = true
+            ) {
+                throw IllegalArgumentException("Provided metadata has version $it which can't be read by this version of library.")
+            }
         }
     }
 }
