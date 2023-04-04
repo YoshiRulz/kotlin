@@ -126,7 +126,8 @@ internal class LLFirCodeFragmentResovableSession(
 
     override fun getOrBuildFirFor(element: KtElement): FirElement? {
         val moduleComponents = getModuleComponentsForElement(element)
-        val debugeeSourceFile = (element.getKtModule() as KtCodeFragmentModule).sourceFile
+        val codeFragmentModule = element.getKtModule() as KtCodeFragmentModule
+        val debugeeSourceFile = codeFragmentModule.sourceFile
         val importsFetcher = DebuggeeSourceFileImportsFetcher(debugeeSourceFile)
         debugeeSourceFile.accept(importsFetcher)
         val builder = object : RawFirBuilder(
@@ -225,7 +226,7 @@ internal class LLFirCodeFragmentResovableSession(
                                 else -> convertElement(declaration) as FirDeclaration
                             }
                         }
-                        val name = Name.identifier("Generated_for_debugger_class")
+                        val name = codeFragmentModule.codeFragmentClassName
                         val generatedClassId = ClassId(FqName.ROOT, name)
                         val generatedClass = buildRegularClass {
                             moduleData = baseModuleData
@@ -301,7 +302,7 @@ internal class LLFirCodeFragmentResovableSession(
                                 moduleData = baseModuleData
                                 origin = FirDeclarationOrigin.Source
                                 returnTypeRef = dangingReturnType
-                                val functionName = Name.identifier("generated_for_debugger_fun")
+                                val functionName = codeFragmentModule.codeFragmentFunctionName
                                 this.name = functionName
                                 status = FirDeclarationStatusImpl(Visibilities.Public, Modality.FINAL).apply {
                                     isOperator = false

@@ -9,7 +9,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.config.LanguageVersionSettings
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.TargetPlatform
+import org.jetbrains.kotlin.psi.KtCodeFragment
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.PlatformDependentAnalyzerServices
 import java.nio.file.Path
@@ -187,6 +189,9 @@ public class KtBuiltinsModule(
 
 public interface KtCodeFragmentModule: KtModule {
     val sourceFile: KtFile
+    val codeFragment: KtCodeFragment
+    val codeFragmentClassName: Name
+    val codeFragmentFunctionName: Name
 }
 
 /**
