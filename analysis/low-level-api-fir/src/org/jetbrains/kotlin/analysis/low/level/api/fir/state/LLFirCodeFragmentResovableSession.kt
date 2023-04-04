@@ -67,6 +67,47 @@ import org.jetbrains.kotlin.types.ConstantValueKind
 
 internal val FirSession.codeFragmentSymbolProvider: LLFirCodeFragmentSymbolProvider by FirSession.sessionComponentAccessor()
 
+private class DebuggeeSourceFileImportsFetcher(val file: KtFile) : KtVisitorVoid() {
+    private val pathSegments = file.packageFqName.pathSegments().map { it.identifier }.toTypedArray()
+    val fqNames = mutableSetOf<FqName>()
+
+    /**
+     * TODO: add imports from source file.
+     */
+    var scopeFqName = pathSegments
+    private inline fun scope(name: String, body: () -> Unit) {
+        val oldScope = scopeFqName
+        scopeFqName = arrayOf(*scopeFqName, name)
+        body()
+        scopeFqName = oldScope
+    }
+
+    override fun visitElement(element: PsiElement) {
+        element.acceptChildren(this)
+    }
+
+    override fun visitClass(klass: KtClass) {
+        klass.name ?: return
+        scope(klass.name!!) {
+            fqNames += FqName.fromSegments(scopeFqName.toList())
+            klass.companionObjects.forEach {
+                it.acceptChildren(this)
+            }
+            klass.acceptChildren(this)
+        }
+    }
+
+    override fun visitProperty(property: KtProperty) {
+        if (property.isTopLevel)
+            fqNames += FqName.fromSegments(listOf(*scopeFqName, property.name))
+    }
+
+    override fun visitNamedFunction(function: KtNamedFunction) {
+        if (function.isTopLevel)
+            fqNames += FqName.fromSegments(listOf(*scopeFqName, function.name))
+    }
+}
+
 internal class LLFirCodeFragmentResovableSession(
     ktModule: KtModule,
     useSiteSessionFactory: (KtModule) -> LLFirSession
@@ -84,54 +125,16 @@ internal class LLFirCodeFragmentResovableSession(
     }
 
     override fun getOrBuildFirFor(element: KtElement): FirElement? {
-        val fqNames = mutableSetOf<FqName>()
-        val debugeeSourceFile = (element.getKtModule() as KtCodeFragmentModule).sourceFile
-        val pathSegments = debugeeSourceFile.packageFqName.pathSegments().map { it.identifier }.toTypedArray()
-        debugeeSourceFile.accept(object : KtVisitorVoid() {
-            /**
-             * TODO: add imports from source file.
-             */
-            var scopeFqName = pathSegments
-            private fun scope(name: String, body: () -> Unit) {
-                val oldScope = scopeFqName
-                scopeFqName = arrayOf(*scopeFqName, name)
-                body()
-                scopeFqName = oldScope
-            }
-
-            override fun visitElement(element: PsiElement) {
-                element.acceptChildren(this)
-            }
-
-            override fun visitClass(klass: KtClass) {
-                klass.name ?: return
-                scope(klass.name!!) {
-                    fqNames += FqName.fromSegments(listOf(*scopeFqName, klass.name))
-                    klass.acceptChildren(this)
-                }
-            }
-
-            override fun visitProperty(property: KtProperty) {
-                if (property.isTopLevel)
-                    fqNames += FqName.fromSegments(listOf(*scopeFqName, property.name))
-            }
-
-            override fun visitNamedFunction(function: KtNamedFunction) {
-                if (function.isTopLevel)
-                    fqNames += FqName.fromSegments(listOf(*scopeFqName, function.name))
-            }
-        })
         val moduleComponents = getModuleComponentsForElement(element)
+        val debugeeSourceFile = (element.getKtModule() as KtCodeFragmentModule).sourceFile
+        val importsFetcher = DebuggeeSourceFileImportsFetcher(debugeeSourceFile)
+        debugeeSourceFile.accept(importsFetcher)
         val builder = object : RawFirBuilder(
             moduleComponents.session,
             moduleComponents.scopeProvider,
             bodyBuildingMode = BodyBuildingMode.NORMAL
         ) {
             fun build() = object : Visitor() {
-                override fun visitCallExpression(expression: KtCallExpression, data: Unit): FirElement {
-                    return super.visitCallExpression(expression, data)
-                }
-
                 override fun visitKtFile(file: KtFile, data: Unit): FirElement {
                     return buildFile {
                         symbol = FirFileSymbol()
@@ -183,18 +186,7 @@ internal class LLFirCodeFragmentResovableSession(
                                 }
                                 argumentList = buildArgumentList {
                                     arguments += buildVarargArgumentsExpression {
-                                        varargElementType =
-                                            this@LLFirCodeFragmentResovableSession.useSiteFirSession.builtinTypes.stringType
-                                        arguments += buildConstExpression(
-                                            file.toFirSourceElement(),
-                                            ConstantValueKind.String,
-                                            "INVISIBLE_REFERENCE"
-                                        )
-                                        arguments += buildConstExpression(
-                                            file.toFirSourceElement(),
-                                            ConstantValueKind.String,
-                                            "INVISIBLE_MEMBER"
-                                        )
+                                        initialiazeSuppressAnnotionArguments()
                                     }
                                 }
                                 useSiteTarget = AnnotationUseSiteTarget.FILE
@@ -204,18 +196,7 @@ internal class LLFirCodeFragmentResovableSession(
                                 }
                                 argumentMapping = buildAnnotationArgumentMapping {
                                     mapping[Name.identifier("names")] = buildVarargArgumentsExpression {
-                                        varargElementType =
-                                            this@LLFirCodeFragmentResovableSession.useSiteFirSession.builtinTypes.stringType
-                                        arguments += buildConstExpression(
-                                            file.toFirSourceElement(),
-                                            ConstantValueKind.String,
-                                            "INVISIBLE_REFERENCE"
-                                        )
-                                        arguments += buildConstExpression(
-                                            file.toFirSourceElement(),
-                                            ConstantValueKind.String,
-                                            "INVISIBLE_MEMBER"
-                                        )
+                                        initialiazeSuppressAnnotionArguments()
                                     }
                                 }
                                 annotationResolvePhase = FirAnnotationResolvePhase.Types
@@ -231,7 +212,7 @@ internal class LLFirCodeFragmentResovableSession(
                                 aliasSource = importDirective.alias?.nameIdentifier?.toFirSourceElement()
                             }
                         }
-                        fqNames.forEach { fqName ->
+                        importsFetcher.fqNames.forEach { fqName ->
                             imports += buildImport {
                                 source = file.toFirSourceElement()
                                 importedFqName = fqName
@@ -359,5 +340,20 @@ internal class LLFirCodeFragmentResovableSession(
         val firFile = builder.build()
         FirLazyBodiesCalculator.calculateLazyBodies(firFile as FirFile)
         return firFile
+    }
+
+    private fun FirVarargArgumentsExpressionBuilder.initialiazeSuppressAnnotionArguments() {
+        varargElementType =
+            this@LLFirCodeFragmentResovableSession.useSiteFirSession.builtinTypes.stringType
+        arguments += buildConstExpression(
+            null,
+            ConstantValueKind.String,
+            "INVISIBLE_REFERENCE"
+        )
+        arguments += buildConstExpression(
+            null,
+            ConstantValueKind.String,
+            "INVISIBLE_MEMBER"
+        )
     }
 }
