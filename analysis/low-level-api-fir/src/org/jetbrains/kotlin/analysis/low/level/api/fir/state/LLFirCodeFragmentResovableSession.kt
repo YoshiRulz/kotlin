@@ -39,6 +39,7 @@ import org.jetbrains.kotlin.fir.expressions.FirAnnotationResolvePhase
 import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.builder.*
+import org.jetbrains.kotlin.fir.lightTree.converter.nameAsSafeName
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
 import org.jetbrains.kotlin.fir.scopes.getDeclaredConstructors
 import org.jetbrains.kotlin.fir.scopes.impl.declaredMemberScope
@@ -105,16 +106,19 @@ internal class LLFirCodeFragmentResovableSession(
             override fun visitClass(klass: KtClass) {
                 klass.name ?: return
                 scope(klass.name!!) {
+                    fqNames += FqName.fromSegments(listOf(*scopeFqName, klass.name))
                     klass.acceptChildren(this)
                 }
             }
 
             override fun visitProperty(property: KtProperty) {
-                fqNames += FqName.fromSegments(listOf(*scopeFqName, property.name))
+                if (property.isTopLevel)
+                    fqNames += FqName.fromSegments(listOf(*scopeFqName, property.name))
             }
 
             override fun visitNamedFunction(function: KtNamedFunction) {
-                fqNames += FqName.fromSegments(listOf(*scopeFqName, function.name))
+                if (function.isTopLevel)
+                    fqNames += FqName.fromSegments(listOf(*scopeFqName, function.name))
             }
         })
         val moduleComponents = getModuleComponentsForElement(element)
