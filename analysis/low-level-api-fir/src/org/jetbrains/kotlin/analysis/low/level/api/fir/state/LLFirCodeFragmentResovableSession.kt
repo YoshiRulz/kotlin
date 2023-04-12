@@ -9,6 +9,8 @@ import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.KtPsiSourceFile
 import org.jetbrains.kotlin.KtPsiSourceFileLinesMapping
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.DiagnosticCheckerFilter
+import org.jetbrains.kotlin.analysis.low.level.api.fir.api.getFirResolveSession
+import org.jetbrains.kotlin.analysis.low.level.api.fir.api.resolveToFirSymbolOfType
 import org.jetbrains.kotlin.analysis.low.level.api.fir.lazy.resolve.FirLazyBodiesCalculator
 import org.jetbrains.kotlin.analysis.low.level.api.fir.providers.LLFirCodeFragmentSymbolProvider
 import org.jetbrains.kotlin.analysis.low.level.api.fir.sessions.LLFirSession
@@ -32,6 +34,7 @@ import org.jetbrains.kotlin.fir.builder.buildPackageDirective
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirFile
+import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.declarations.builder.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedDeclarationStatusImpl
@@ -41,21 +44,17 @@ import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.builder.*
 import org.jetbrains.kotlin.fir.lightTree.converter.nameAsSafeName
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
+import org.jetbrains.kotlin.fir.resolve.dfa.symbol
+import org.jetbrains.kotlin.fir.scopes.FakeOverrideTypeCalculator.Forced.getResolvedTypeRef
 import org.jetbrains.kotlin.fir.scopes.getDeclaredConstructors
 import org.jetbrains.kotlin.fir.scopes.impl.declaredMemberScope
 import org.jetbrains.kotlin.fir.scopes.kotlinScopeProvider
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
-import org.jetbrains.kotlin.fir.symbols.impl.FirConstructorSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirFileSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.*
+import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.FirImplicitUnitTypeRef
-import org.jetbrains.kotlin.fir.types.toFirResolvedTypeRef
-import org.jetbrains.kotlin.fir.types.toLookupTag
-import org.jetbrains.kotlin.fir.types.toRegularClassSymbol
-import org.jetbrains.kotlin.fir.types.toSymbol
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
@@ -86,24 +85,24 @@ private class DebuggeeSourceFileImportsFetcher(val file: KtFile) : KtVisitorVoid
         element.acceptChildren(this)
     }
 
-    override fun visitClass(klass: KtClass) {
-        klass.name ?: return
-        scope(klass.name!!) {
+    override fun visitClassOrObject(classOrObject: KtClassOrObject) {
+        classOrObject.name ?: return
+        scope(classOrObject.name!!) {
             fqNames += FqName.fromSegments(scopeFqName.toList())
-            klass.companionObjects.forEach {
+            classOrObject.companionObjects.forEach {
                 it.acceptChildren(this)
             }
-            klass.acceptChildren(this)
+            classOrObject.acceptChildren(this)
         }
     }
 
     override fun visitProperty(property: KtProperty) {
-        if (property.isTopLevel)
+        //if (property.isTopLevel)
             fqNames += FqName.fromSegments(listOf(*scopeFqName, property.name))
     }
 
     override fun visitNamedFunction(function: KtNamedFunction) {
-        if (function.isTopLevel)
+        //if (function.isTopLevel)
             fqNames += FqName.fromSegments(listOf(*scopeFqName, function.name))
     }
 }
@@ -113,7 +112,7 @@ internal class LLFirCodeFragmentResovableSession(
     useSiteSessionFactory: (KtModule) -> LLFirSession
 ) : LLFirResolvableResolveSession(ktModule, useSiteSessionFactory) {
     override fun getModuleKind(module: KtModule): ModuleKind {
-        TODO("Not yet implemented")
+        return ModuleKind.RESOLVABLE_MODULE
     }
 
     override fun getDiagnostics(element: KtElement, filter: DiagnosticCheckerFilter): List<KtPsiDiagnostic> {
@@ -128,6 +127,24 @@ internal class LLFirCodeFragmentResovableSession(
         val moduleComponents = getModuleComponentsForElement(element)
         val codeFragmentModule = element.getKtModule() as KtCodeFragmentModule
         val debugeeSourceFile = codeFragmentModule.sourceFile
+        val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
+        val properties = mutableMapOf<String, FirTypeRef>()
+        element.accept(object : KtVisitorVoid() {
+            override fun visitElement(element: PsiElement) {
+                element.acceptChildren(this)
+            }
+
+            override fun visitReferenceExpression(expression: KtReferenceExpression) {
+                expression as? KtNameReferenceExpression ?: return
+                expression.getReferencedName().let { name ->
+                    codeFragmentModule.properties
+                        .find { it.name == name }
+                        ?.let {
+                            properties[name] = it.resolveToFirSymbolOfType<FirPropertySymbol>(debugeeFileFirSession).fir.returnTypeRef
+                        }
+                }
+            }
+        })
         val importsFetcher = DebuggeeSourceFileImportsFetcher(debugeeSourceFile)
         debugeeSourceFile.accept(importsFetcher)
         val builder = object : RawFirBuilder(
@@ -136,6 +153,10 @@ internal class LLFirCodeFragmentResovableSession(
             bodyBuildingMode = BodyBuildingMode.NORMAL
         ) {
             fun build() = object : Visitor() {
+                override fun visitPropertyAccessor(accessor: KtPropertyAccessor, data: Unit?): FirElement {
+                    return super.visitPropertyAccessor(accessor, data)
+                }
+
                 override fun visitKtFile(file: KtFile, data: Unit): FirElement {
                     return buildFile {
                         symbol = FirFileSymbol()
@@ -275,7 +296,6 @@ internal class LLFirCodeFragmentResovableSession(
                                     isFromEnumClass = false
                                 }
                                 returnTypeRef = buildResolvedTypeRef {
-                                    //source = this@toDelegatedSelfType?.toFirSourceElement(KtFakeSourceElementKind.ClassSelfTypeRef)
                                     type = ConeClassLikeTypeImpl(
                                         this@buildRegularClass.symbol.toLookupTag(),
                                         emptyArray(),
@@ -304,11 +324,41 @@ internal class LLFirCodeFragmentResovableSession(
                                 returnTypeRef = dangingReturnType
                                 val functionName = codeFragmentModule.codeFragmentFunctionName
                                 this.name = functionName
+                                symbol = FirNamedFunctionSymbol(CallableId(FqName.ROOT, null, functionName))
+                                valueParameters += properties.map {
+                                    buildValueParameter {
+                                        val parameterName = Name.identifier(it.key)
+                                        this.name = parameterName
+                                        this.returnTypeRef = it.value
+                                        moduleData = baseModuleData
+                                        origin = FirDeclarationOrigin.Source
+                                        symbol = FirValueParameterSymbol(parameterName)
+                                        containingFunctionSymbol = this@buildSimpleFunction.symbol
+                                        isCrossinline = false
+                                        isNoinline = false
+                                        isVararg = false
+                                    }
+                                }
+                                val names = valueParameters.map { it.name.asString() }
+                                codeFragmentModule.valueParameters.filter { !names.contains(it.name) }.forEach {
+                                    valueParameters += buildValueParameter {
+                                        val parameterName = it.name?.let { it1 -> Name.identifier(it1) } ?: return@forEach
+                                        this.name = parameterName
+                                        this.returnTypeRef =
+                                            it.resolveToFirSymbolOfType<FirValueParameterSymbol>(debugeeFileFirSession).resolvedReturnTypeRef
+                                        moduleData = baseModuleData
+                                        origin = FirDeclarationOrigin.Source
+                                        symbol = FirValueParameterSymbol(parameterName)
+                                        containingFunctionSymbol = this@buildSimpleFunction.symbol
+                                        isCrossinline = false
+                                        isNoinline = false
+                                        isVararg = false
+                                    }
+                                }
                                 status = FirDeclarationStatusImpl(Visibilities.Public, Modality.FINAL).apply {
                                     isOperator = false
                                     isStatic = true
                                 }
-                                symbol = FirNamedFunctionSymbol(CallableId(FqName.ROOT, null, functionName))
                                 dispatchReceiverType = null//currentDispatchReceiverType()
                                 body = buildBlock {
                                     statements += when (danglingExpression) {

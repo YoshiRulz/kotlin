@@ -13,6 +13,8 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.psi.KtCodeFragment
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.resolve.PlatformDependentAnalyzerServices
 import java.nio.file.Path
 
@@ -192,6 +194,8 @@ public interface KtCodeFragmentModule: KtModule {
     val codeFragment: KtCodeFragment
     val codeFragmentClassName: Name
     val codeFragmentFunctionName: Name
+    val valueParameters: List<KtParameter>
+    val properties: List<KtProperty>
 }
 
 /**
