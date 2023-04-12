@@ -97,13 +97,11 @@ private class DebuggeeSourceFileImportsFetcher(val file: KtFile) : KtVisitorVoid
     }
 
     override fun visitProperty(property: KtProperty) {
-        //if (property.isTopLevel)
-            fqNames += FqName.fromSegments(listOf(*scopeFqName, property.name))
+        fqNames += FqName.fromSegments(listOf(*scopeFqName, property.name))
     }
 
     override fun visitNamedFunction(function: KtNamedFunction) {
-        //if (function.isTopLevel)
-            fqNames += FqName.fromSegments(listOf(*scopeFqName, function.name))
+        fqNames += FqName.fromSegments(listOf(*scopeFqName, function.name))
     }
 }
 
