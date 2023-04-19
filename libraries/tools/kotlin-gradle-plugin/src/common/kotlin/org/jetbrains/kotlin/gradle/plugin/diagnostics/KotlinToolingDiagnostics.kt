@@ -240,4 +240,25 @@ object KotlinToolingDiagnostics {
             """.trimIndent()
         )
     }
+
+    object DisabledCinteropsCommonizationInHmppProject : ToolingDiagnosticFactory(WARNING) {
+        operator fun invoke(affectedSourceSetsString: String, affectedCinteropsString: String) = build(
+            """
+                The project is using Kotlin Multiplatform with hierarchical structure and disabled 'cinterop commonization'
+                See: https://kotlinlang.org/docs/mpp-share-on-platforms.html#use-native-libraries-in-the-hierarchical-structure
+           
+                'cinterop commonization' can be enabled in your 'gradle.properties'
+                kotlin.mpp.enableCInteropCommonization=true
+                
+                To hide this message, add to your 'gradle.properties'
+                ${PropertiesProvider.PropertyNames.KOTLIN_MPP_ENABLE_CINTEROP_COMMONIZATION}.nowarn=true 
+            
+                The following source sets are affected: 
+                $affectedSourceSetsString
+                
+                The following cinterops are affected: 
+                $affectedCinteropsString
+            """.trimIndent()
+        )
+    }
 }
