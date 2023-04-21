@@ -152,8 +152,8 @@ object JsIrBuilder {
         endOffset: Int = UNDEFINED_OFFSET
     ) =
         IrGetFieldImpl(
-            UNDEFINED_OFFSET,
-            UNDEFINED_OFFSET,
+            startOffset,
+            endOffset,
             symbol,
             type ?: symbol.owner.type,
             receiver,
