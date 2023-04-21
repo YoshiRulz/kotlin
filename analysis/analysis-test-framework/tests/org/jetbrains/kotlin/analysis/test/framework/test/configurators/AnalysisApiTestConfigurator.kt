@@ -13,7 +13,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiFile
 import org.jetbrains.kotlin.analysis.api.standalone.base.project.structure.KtModuleProjectStructure
-import org.jetbrains.kotlin.analysis.providers.KotlinModificationTrackerFactory
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.NotNullableUserDataProperty
 import org.jetbrains.kotlin.test.builders.TestConfigurationBuilder
@@ -25,6 +24,7 @@ import java.util.concurrent.locks.ReadWriteLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.withLock
 import kotlin.reflect.KClass
+import org.jetbrains.kotlin.analysis.providers.KotlinGlobalModificationService
 
 abstract class AnalysisApiTestConfigurator {
     open val testPrefix: String? get() = null
@@ -40,8 +40,7 @@ abstract class AnalysisApiTestConfigurator {
     open fun prepareFilesInModule(files: List<PsiFile>, module: TestModule, testServices: TestServices) {}
 
     open fun doOutOfBlockModification(file: KtFile) {
-        file.project.getService(KotlinModificationTrackerFactory::class.java)
-            .incrementModificationsCount()
+        KotlinGlobalModificationService.getInstance(file.project).publishGlobalOutOfBlockModification()
     }
 
     open fun preprocessTestDataPath(path: Path): Path = path
