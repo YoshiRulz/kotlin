@@ -96,7 +96,7 @@ class PurifyObjectInstanceGettersLowering(val context: JsCommonBackendContext) :
     private fun IrStatement.isPureStatementForObjectInitialization(owner: IrClass): Boolean {
         return (this is IrDelegatingConstructorCall && symbol.owner.parent == context.irBuiltIns.anyClass.owner) ||
                 (this is IrExpression && isPure(anyVariable = true, context = context)) ||
-                (this is IrComposite && statements.all { isPureStatementForObjectInitialization(owner) }) ||
+                (this is IrComposite && statements.all { it.isPureStatementForObjectInitialization(owner) }) ||
                 (this is IrVariable && initializer?.isPureStatementForObjectInitialization(owner) != false) ||
                 (this is IrSetField && symbol == owner.thisReceiver?.symbol && value.isPureStatementForObjectInitialization(owner)) ||
                 (this is IrSetField && symbol.owner.origin == IrDeclarationOrigin.FIELD_FOR_OBJECT_INSTANCE) ||
