@@ -266,8 +266,7 @@ class IrModuleToJsTransformer(
                                     moduleFragmentToNameMapper.getSafeNameFor(it.file),
                                     moduleFragmentToNameMapper.getExternalNameFor(it.file, mode.granularity),
                                     listOf(generateProgramFragment(it, mode.minimizedMemberNames)),
-                                    reexportedInModuleWithName = module.fragment.safeName,
-                                    allowReexportNotExportedDeclarations = true
+                                    module.fragment.safeName,
                                 )
                             }
                         }
@@ -493,9 +492,7 @@ private fun generateMultiWrappedModuleBody(
     // mutable container allows explicitly remove elements from itself,
     // so we are able to help GC to free heavy JsIrModule objects
     // TODO: It makes sense to invent something better, because this logic can be easily broken
-    val moduleToRef = program
-        .asCrossModuleDependencies(moduleKind, relativeRequirePath, granularity == JsGenerationGranularity.PER_FILE)
-        .toMutableList()
+    val moduleToRef = program.asCrossModuleDependencies(moduleKind, relativeRequirePath).toMutableList()
 
     val mainModule = moduleToRef.removeLast().let { (main, mainRef) ->
         generateSingleWrappedModuleBody(
