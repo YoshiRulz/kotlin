@@ -180,7 +180,7 @@ class Merger(
 
     private fun transitiveJsExport(): List<JsStatement> {
         return if (isEsModules) {
-            crossModuleReferences.transitiveJsExportFrom.map {
+            crossModuleReferences.transitiveExportFrom.map {
                 JsExport(JsExport.Subject.All, it.getRequireEsmName())
             }
         } else {
