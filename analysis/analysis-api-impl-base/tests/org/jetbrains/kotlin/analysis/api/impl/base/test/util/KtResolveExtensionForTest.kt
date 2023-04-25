@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.analysis.api.impl.base.test.util
 
 import com.intellij.mock.MockProject
-import com.intellij.openapi.util.ModificationTracker
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.analysis.api.KtAnalysisSession
 import org.jetbrains.kotlin.analysis.api.resolve.extensions.KtResolveExtension
@@ -50,7 +49,6 @@ class KtResolveExtensionForTest(
     private val packages: Set<FqName>,
 ) : KtResolveExtension() {
     override fun getKtFiles(): List<KtResolveExtensionFile> = files
-    override fun getModificationTracker(): ModificationTracker = ModificationTracker.NEVER_CHANGED
     override fun getContainedPackages(): Set<FqName> = packages
 }
 
