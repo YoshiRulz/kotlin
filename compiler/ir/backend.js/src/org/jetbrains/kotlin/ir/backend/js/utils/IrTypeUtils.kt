@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.util.isEffectivelyExternal
+import org.jetbrains.kotlin.js.backend.ast.JsExpression
 import org.jetbrains.kotlin.ir.util.unexpectedSymbolKind
 import org.jetbrains.kotlin.js.backend.ast.JsNameRef
 import org.jetbrains.kotlin.types.Variance
@@ -54,8 +55,8 @@ tailrec fun erase(type: IrType): IrClass? = when (val classifier = type.classifi
     is IrScriptSymbol -> null
 }
 
-fun IrType.getClassRef(context: JsGenerationContext): JsNameRef =
-    when (val klass = classifierOrFail.owner) {
+fun IrType.getClassRef(context: JsGenerationContext): JsExpression {
+    val classRef = when (val klass = classifierOrFail.owner) {
         is IrClass ->
             if (klass.isEffectivelyExternal())
                 context.getRefForExternalClass(klass)
@@ -64,3 +65,6 @@ fun IrType.getClassRef(context: JsGenerationContext): JsNameRef =
 
         else -> context.getNameForStaticDeclaration(klass as IrDeclarationWithName).makeRef()
     }
+
+    return if (context.staticContext.backendContext.isPerFile)
+}

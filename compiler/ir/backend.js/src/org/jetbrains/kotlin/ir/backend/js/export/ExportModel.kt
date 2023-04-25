@@ -75,6 +75,7 @@ class ErrorDeclaration(val message: String) : ExportedDeclaration() {
 
 
 sealed class ExportedClass : ExportedDeclaration() {
+    abstract val name: String
     abstract val ir: IrClass
     abstract val members: List<ExportedDeclaration>
     abstract val superClasses: List<ExportedType>
@@ -83,7 +84,7 @@ sealed class ExportedClass : ExportedDeclaration() {
 }
 
 data class ExportedRegularClass(
-    val name: String,
+    override val name: String,
     val isInterface: Boolean = false,
     val isAbstract: Boolean = false,
     override val superClasses: List<ExportedType> = emptyList(),
@@ -95,7 +96,7 @@ data class ExportedRegularClass(
 ) : ExportedClass()
 
 data class ExportedObject(
-    val name: String,
+    override val name: String,
     override val superClasses: List<ExportedType> = emptyList(),
     override val superInterfaces: List<ExportedType> = emptyList(),
     override val members: List<ExportedDeclaration>,

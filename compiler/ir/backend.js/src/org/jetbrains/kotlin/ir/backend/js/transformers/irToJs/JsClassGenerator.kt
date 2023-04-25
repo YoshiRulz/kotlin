@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.ir.symbols.IrClassifierSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.js.backend.ast.*
+import org.jetbrains.kotlin.js.backend.ast.JsVars.JsVar
 import org.jetbrains.kotlin.js.common.isValidES5Identifier
 import org.jetbrains.kotlin.utils.addIfNotNull
 import org.jetbrains.kotlin.utils.memoryOptimizedMap
@@ -38,8 +39,40 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
     private val classModel = JsIrClassModel(irClass)
 
     private val es6mode = context.staticContext.backendContext.es6mode
+    private val perFile = context.staticContext.backendContext.isPerFile
+    private val undefined by lazy { jsUndefined(context, context.staticContext.backendContext) }
 
     fun generate(): JsStatement {
+        val classBlock = generateClassBlock()
+        if (perFile) {
+            classModel.wrapInFunction()
+        }
+        return classBlock
+    }
+
+    private fun JsIrClassModel.wrapInFunction(): JsStatement {
+        val classHolder = JsVar(JsName("${className.ident}_klass", true))
+
+        val functionBody = JsBlock(
+            JsIf(
+                JsAstUtils.equality(classHolder.name.makeRef(), undefined),
+                JsBlock(
+                    preDeclarationBlock.statements + postDeclarationBlock.statements +
+                            JsAstUtils.assignment(classHolder.name.makeRef(), classNameRef).makeStmt()
+                )
+            ),
+            JsReturn(classHolder.name.makeRef())
+        )
+
+        return JsCompositeBlock(
+            listOf(
+                JsVars(classHolder),
+                JsFunction(emptyScope, functionBody, className.ident).makeStmt()
+            )
+        )
+    }
+
+    private fun generateClassBlock(): JsCompositeBlock {
         assert(!irClass.isExpect)
 
         if (!es6mode) maybeGeneratePrimaryConstructor()
