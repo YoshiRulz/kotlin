@@ -6,8 +6,7 @@
 package kotlin.js
 
 internal external interface Ctor {
-    var `$imask$`: (() -> BitMask)?
-    var __imask__: BitMask?
+    var `$imask$`: BitMask?
     var `$metadata$`: Metadata
     var constructor: Ctor?
     val prototype: dynamic

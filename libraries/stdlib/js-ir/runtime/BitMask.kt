@@ -36,17 +36,13 @@ private fun compositeBitMask(capacity: Int, masks: Array<BitMask>): BitMask {
     }
 }
 
-internal fun implement(interfaces: Array<dynamic>): BitMask {
+internal fun implement(vararg interfaces: dynamic): BitMask {
     var maxSize = 1
     val masks = js("[]")
 
     for (i in interfaces) {
         var currentSize = maxSize
-        val imask: BitMask? = when {
-            i.prototype.`$get_imask$` != null -> i.prototype.`$get_imask$`()
-            i.`$get_imask$` != null -> i.`$get_imask$`()
-            else -> null
-        }
+        val imask: BitMask? = i.prototype.`$imask$` ?: i.`$imask$`
 
         if (imask != null) {
             masks.push(imask)

@@ -31,7 +31,7 @@ internal fun getLocalDelegateReference(name: String, superType: dynamic, mutable
 private fun getPropertyRefClass(obj: Ctor, metadata: Metadata, imask: BitMask): dynamic {
     obj.`$metadata$` = metadata
     obj.constructor = obj
-    if (obj.`$get_imask$` == null) obj.`$get_imask$` = { imask }
+    obj.`$imask$` = imask
     return obj;
 }
 
