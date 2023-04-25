@@ -130,7 +130,7 @@ class IrElementToJsExpressionTransformer : BaseIrElementToJsNodeTransformer<JsEx
         val fieldName = context.getNameForField(field)
         return jsElementAccess(fieldName, expression.receiver?.accept(this, context)).withSource(expression, context)
             .apply {
-                if (field.origin == IrDeclarationOrigin.FIELD_FOR_OBJECT_INSTANCE || expression.origin == JsStatementOrigins.SYNTHESIZED_STATEMENT) {
+                if (field.origin == IrDeclarationOrigin.FIELD_FOR_OBJECT_INSTANCE && expression.origin == JsStatementOrigins.SYNTHESIZED_STATEMENT) {
                     synthetic = true
                     sideEffects = SideEffectKind.PURE
                 }
