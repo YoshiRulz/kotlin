@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.backend.common.serialization.IrInterningService
 import org.jetbrains.kotlin.backend.common.serialization.cityHash64
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.backend.js.*
-import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsIrLinker
 import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.JsGenerationGranularity
 import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.JsIrProgramFragment
 import org.jetbrains.kotlin.ir.declarations.*
@@ -28,7 +27,6 @@ import org.jetbrains.kotlin.utils.newHashSetWithExpectedSize
 import java.io.File
 import java.nio.file.Files
 import java.util.EnumSet
-import java.util.stream.Collectors
 
 fun interface JsIrCompilerICInterface {
     fun compile(

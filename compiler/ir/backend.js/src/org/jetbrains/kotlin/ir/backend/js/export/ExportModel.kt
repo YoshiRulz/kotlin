@@ -18,10 +18,6 @@ sealed class ExportedAttribute {
     class DeprecatedAttribute(val message: String): ExportedAttribute()
 }
 
-sealed class NamedExportedDeclaration : ExportedDeclaration() {
-    abstract val name: String
-}
-
 data class ExportedModule(
     val name: String,
     val moduleKind: ModuleKind,
@@ -29,12 +25,12 @@ data class ExportedModule(
 )
 
 class ExportedNamespace(
-    override val name: String,
+    val name: String,
     val declarations: List<ExportedDeclaration>,
-) : NamedExportedDeclaration()
+) : ExportedDeclaration()
 
 data class ExportedFunction(
-    override val name: String,
+    val name: String,
     val returnType: ExportedType,
     val parameters: List<ExportedParameter>,
     val typeParameters: List<ExportedType.TypeParameter> = emptyList(),
@@ -43,7 +39,7 @@ data class ExportedFunction(
     val isAbstract: Boolean = false,
     val isProtected: Boolean,
     val ir: IrSimpleFunction
-) : NamedExportedDeclaration()
+) : ExportedDeclaration()
 
 data class ExportedConstructor(
     val parameters: List<ExportedParameter>,
@@ -59,7 +55,7 @@ data class ExportedConstructSignature(
 ) : ExportedDeclaration()
 
 data class ExportedProperty(
-    override val name: String,
+    val name: String,
     val type: ExportedType,
     val mutable: Boolean = true,
     val isMember: Boolean = false,
@@ -70,15 +66,15 @@ data class ExportedProperty(
     val irGetter: IrFunction? = null,
     val irSetter: IrFunction? = null,
     val isOptional: Boolean = false
-) : NamedExportedDeclaration()
+) : ExportedDeclaration()
 
 // TODO: Cover all cases with frontend and disable error declarations
-class ErrorDeclaration(val message: String) : NamedExportedDeclaration() {
-    override val name = message
+class ErrorDeclaration(val message: String) : ExportedDeclaration() {
+    val name = message
 }
 
 
-sealed class ExportedClass : NamedExportedDeclaration() {
+sealed class ExportedClass : ExportedDeclaration() {
     abstract val ir: IrClass
     abstract val members: List<ExportedDeclaration>
     abstract val superClasses: List<ExportedType>
@@ -87,7 +83,7 @@ sealed class ExportedClass : NamedExportedDeclaration() {
 }
 
 data class ExportedRegularClass(
-    override val name: String,
+    val name: String,
     val isInterface: Boolean = false,
     val isAbstract: Boolean = false,
     override val superClasses: List<ExportedType> = emptyList(),
@@ -99,7 +95,7 @@ data class ExportedRegularClass(
 ) : ExportedClass()
 
 data class ExportedObject(
-    override val name: String,
+    val name: String,
     override val superClasses: List<ExportedType> = emptyList(),
     override val superInterfaces: List<ExportedType> = emptyList(),
     override val members: List<ExportedDeclaration>,
