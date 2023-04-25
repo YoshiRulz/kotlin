@@ -32,7 +32,8 @@ class InlineObjectsWithPureInitializationLowering(val context: JsCommonBackendCo
                 return JsIrBuilder.buildGetField(
                     instanceFieldForObject.symbol,
                     startOffset = expression.startOffset,
-                    endOffset = expression.endOffset
+                    endOffset = expression.endOffset,
+                    origin = expression.origin
                 )
             }
         })

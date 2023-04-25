@@ -149,7 +149,8 @@ object JsIrBuilder {
         superQualifierSymbol: IrClassSymbol? = null,
         type: IrType? = null,
         startOffset: Int = UNDEFINED_OFFSET,
-        endOffset: Int = UNDEFINED_OFFSET
+        endOffset: Int = UNDEFINED_OFFSET,
+        origin: IrStatementOrigin? = JsStatementOrigins.SYNTHESIZED_STATEMENT
     ) =
         IrGetFieldImpl(
             startOffset,
@@ -157,7 +158,7 @@ object JsIrBuilder {
             symbol,
             type ?: symbol.owner.type,
             receiver,
-            JsStatementOrigins.SYNTHESIZED_STATEMENT,
+            origin,
             superQualifierSymbol
         )
 

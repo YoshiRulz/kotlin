@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.ir.backend.js.lower
 
 import org.jetbrains.kotlin.backend.common.DeclarationTransformer
 import org.jetbrains.kotlin.backend.common.getOrPut
+import org.jetbrains.kotlin.backend.common.ir.isPure
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.backend.js.JsCommonBackendContext
 import org.jetbrains.kotlin.ir.backend.js.JsLoweredDeclarationOrigin
@@ -88,20 +89,18 @@ class PurifyObjectInstanceGettersLowering(val context: JsCommonBackendContext) :
 
     private fun IrClass.isPureObject(): Boolean {
         return context.mapping.objectsWithPureInitialization.getOrPut(this) {
-            superClass == null && primaryConstructor?.body?.statements?.all { it.isPure(this) } != false
+            superClass == null && primaryConstructor?.body?.statements?.all { it.isPureStatementForObjectInitialization(this) } != false
         }
     }
 
-    private fun IrStatement.isPure(owner: IrClass): Boolean {
-        return this is IrConst<*> ||
-                this is IrGetField ||
-                this is IrGetValue ||
-                (this is IrStringConcatenation && arguments.all { it.isPure(owner) }) ||
-                (this is IrVariable && initializer?.isPure(owner) != false) ||
-                (this is IrSetField && symbol == owner.thisReceiver?.symbol && value.isPure(owner)) ||
+    private fun IrStatement.isPureStatementForObjectInitialization(owner: IrClass): Boolean {
+        return (this is IrDelegatingConstructorCall && symbol.owner.parent == context.irBuiltIns.anyClass.owner) ||
+                (this is IrExpression && isPure(anyVariable = true, context = context)) ||
+                (this is IrComposite && statements.all { isPureStatementForObjectInitialization(owner) }) ||
+                (this is IrVariable && initializer?.isPureStatementForObjectInitialization(owner) != false) ||
+                (this is IrSetField && symbol == owner.thisReceiver?.symbol && value.isPureStatementForObjectInitialization(owner)) ||
                 (this is IrSetField && symbol.owner.origin == IrDeclarationOrigin.FIELD_FOR_OBJECT_INSTANCE) ||
-                (this is IrSetValue && symbol.owner.isLocal && value.isPure(owner)) ||
-                (this is IrDelegatingConstructorCall && symbol.owner.parent == context.irBuiltIns.anyClass.owner) ||
+                (this is IrSetValue && symbol.owner.isLocal && value.isPureStatementForObjectInitialization(owner)) ||
                 (this is IrCall && symbol.owner.origin == JsLoweredDeclarationOrigin.OBJECT_GET_INSTANCE_FUNCTION && symbol.owner.returnType.classOrNull?.owner?.isPureObject() == true)
     }
 }
