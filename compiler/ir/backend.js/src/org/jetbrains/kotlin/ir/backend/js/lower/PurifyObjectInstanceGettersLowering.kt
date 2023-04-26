@@ -12,6 +12,8 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.backend.js.JsCommonBackendContext
 import org.jetbrains.kotlin.ir.backend.js.JsLoweredDeclarationOrigin
 import org.jetbrains.kotlin.ir.backend.js.ir.JsIrBuilder
+import org.jetbrains.kotlin.ir.backend.js.utils.isObjectInstanceField
+import org.jetbrains.kotlin.ir.backend.js.utils.isObjectInstanceGetter
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
@@ -79,14 +81,6 @@ class PurifyObjectInstanceGettersLowering(val context: JsCommonBackendContext) :
         return this is IrConstructor && parentAsClass.isObject
     }
 
-    private fun IrDeclaration.isObjectInstanceGetter(): Boolean {
-        return this is IrSimpleFunction && origin == JsLoweredDeclarationOrigin.OBJECT_GET_INSTANCE_FUNCTION
-    }
-
-    private fun IrDeclaration.isObjectInstanceField(): Boolean {
-        return this is IrField && origin == IrDeclarationOrigin.FIELD_FOR_OBJECT_INSTANCE
-    }
-
     private fun IrClass.isPureObject(): Boolean {
         return context.mapping.objectsWithPureInitialization.getOrPut(this) {
             superClass == null && primaryConstructor?.body?.statements?.all { it.isPureStatementForObjectInitialization(this) } != false
@@ -99,8 +93,9 @@ class PurifyObjectInstanceGettersLowering(val context: JsCommonBackendContext) :
                 (this is IrComposite && statements.all { it.isPureStatementForObjectInitialization(owner) }) ||
                 (this is IrVariable && initializer?.isPureStatementForObjectInitialization(owner) != false) ||
                 (this is IrSetField && symbol == owner.thisReceiver?.symbol && value.isPureStatementForObjectInitialization(owner)) ||
-                (this is IrSetField && symbol.owner.origin == IrDeclarationOrigin.FIELD_FOR_OBJECT_INSTANCE) ||
+                (this is IrSetField && symbol.owner.isObjectInstanceField()) ||
                 (this is IrSetValue && symbol.owner.isLocal && value.isPureStatementForObjectInitialization(owner)) ||
-                (this is IrCall && symbol.owner.origin == JsLoweredDeclarationOrigin.OBJECT_GET_INSTANCE_FUNCTION && symbol.owner.returnType.classOrNull?.owner?.isPureObject() == true)
+                (this is IrBlock && statements.all { it.isPureStatementForObjectInitialization(owner) }) ||
+                (this is IrCall && symbol.owner.isObjectInstanceGetter() && symbol.owner.returnType.classOrNull?.owner?.isPureObject() == true)
     }
 }
