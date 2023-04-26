@@ -324,7 +324,7 @@ private class JsIrAstDeserializer(private val source: ByteArray) {
                         CLASS -> {
                             JsClass(
                                 ifTrue { nameTable[readInt()] },
-                                ifTrue { nameTable[readInt()].makeRef() },
+                                ifTrue { readExpression() },
                                 ifTrue { readFunction() },
                             ).apply {
                                 readRepeated { members += readFunction() }

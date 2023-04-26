@@ -126,7 +126,7 @@ class ExportModelToJsStatements(
                 val newNameSpace = when {
                     namespace != null -> jsElementAccess(declaration.name, namespace)
                     else ->
-                        jsElementAccess(Namer.PROTOTYPE_NAME, staticContext.getNameForClass(declaration.ir).makeRef())
+                        jsElementAccess(Namer.PROTOTYPE_NAME, declaration.ir.getClassRef(staticContext))
                 }
                 val staticsExport =
                     declaration.nestedClasses.flatMap { generateDeclarationExport(it, newNameSpace, esModules, declaration.ir) }
@@ -164,7 +164,7 @@ class ExportModelToJsStatements(
                 val newNameSpace = when {
                     namespace != null -> jsElementAccess(declaration.name, namespace)
                     esModules -> name.makeRef()
-                    else -> prototypeOf(staticContext.getNameForClass(declaration.ir).makeRef(), staticContext)
+                    else -> prototypeOf(declaration.ir.getClassRef(staticContext), staticContext)
                 }
                 val klassExport = when {
                     namespace != null -> jsAssignment(newNameSpace, JsNameRef(name)).makeStmt()
@@ -301,9 +301,7 @@ class ExportModelToJsStatements(
     }
 
     private fun IrClass.getCorrespondingJsClass(): JsClass {
-        val jsClassModel = staticContext.classModels[symbol] ?: error("Class with name '$name' was not found")
-        return (jsClassModel.preDeclarationBlock.statements.first() as? JsExpressionStatement)?.expression as? JsClass
-            ?: error("Expect to have JsClass as a first statement inside JsIrClassModel")
+        return staticContext.classModels[symbol]?.jsClass ?: error("Class with name '$name' was not found")
     }
 
     private fun JsNameRef.bindToThis(bindTo: JsExpression): JsInvocation {

@@ -443,9 +443,8 @@ private class JsIrAstSerializer {
                 ifNotNull(x.name) {
                     writeInt(internalizeName(it))
                 }
-                // TODO: add more complex JsNameRef parsing in future when we will support `class` expressions inside a `js` call
-                ifNotNull(x.baseClass?.name) {
-                    writeInt(internalizeName(it))
+                ifNotNull(x.baseClass) {
+                    writeExpression(it)
                 }
                 ifNotNull(x.constructor) {
                     writeFunction(it)

@@ -23,53 +23,64 @@ import org.jetbrains.kotlin.js.backend.ast.*
 import org.jetbrains.kotlin.js.backend.ast.JsVars.JsVar
 import org.jetbrains.kotlin.js.common.isValidES5Identifier
 import org.jetbrains.kotlin.utils.addIfNotNull
+import org.jetbrains.kotlin.utils.addToStdlib.butIf
 import org.jetbrains.kotlin.utils.memoryOptimizedMap
 import org.jetbrains.kotlin.utils.toSmartList
 
 class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationContext) {
+    private val perFile = context.staticContext.isPerFile
+    private val es6mode = context.staticContext.backendContext.es6mode
+
     private val className = context.getNameForClass(irClass)
-    private val classNameRef = className.makeRef()
     private val baseClass: IrType? = irClass.superTypes.firstOrNull { !it.classifierOrFail.isInterface }
+
+    private val usedClassName = when {
+        perFile -> JsName("$", true)
+        else -> className
+    }
+
+    private val classNameRef = usedClassName.makeRef()
 
     private val classPrototypeRef by lazy(LazyThreadSafetyMode.NONE) { prototypeOf(classNameRef, context.staticContext) }
     private val baseClassRef by lazy(LazyThreadSafetyMode.NONE) { // Lazy in case was not collected by namer during JsClassGenerator construction
-        if (baseClass != null && !baseClass.isAny()) baseClass.getClassRef(context) else null
+        if (baseClass != null && !baseClass.isAny()) baseClass.getClassRef(context.staticContext) else null
     }
-    private val classBlock = JsCompositeBlock()
     private val classModel = JsIrClassModel(irClass)
+    private val classBlock = JsCompositeBlock()
 
-    private val es6mode = context.staticContext.backendContext.es6mode
-    private val perFile = context.staticContext.backendContext.isPerFile
-    private val undefined by lazy { jsUndefined(context, context.staticContext.backendContext) }
+    private val interfaceDefaultsBlock = when {
+        perFile -> JsCompositeBlock()
+        else -> classModel.preDeclarationBlock
+    }
+
+    private val jsUndefined by lazy(LazyThreadSafetyMode.NONE) { jsUndefined(context.staticContext) }
 
     fun generate(): JsStatement {
-        val classBlock = generateClassBlock()
-        if (perFile) {
-            classModel.wrapInFunction()
-        }
-        return classBlock
+        return generateClassBlock().butIf(perFile) { it.wrapInFunction() }
     }
 
-    private fun JsIrClassModel.wrapInFunction(): JsStatement {
+    private fun JsCompositeBlock.wrapInFunction(): JsStatement {
         val classHolder = JsVar(JsName("${className.ident}_klass", true))
-
-        val functionBody = JsBlock(
-            JsIf(
-                JsAstUtils.equality(classHolder.name.makeRef(), undefined),
-                JsBlock(
-                    preDeclarationBlock.statements + postDeclarationBlock.statements +
-                            JsAstUtils.assignment(classHolder.name.makeRef(), classNameRef).makeStmt()
+        val functionWrapper = JsFunction(emptyScope, JsBlock(), "lazy wrapper for classes in per-file").apply {
+            name = className
+            with(body.statements) {
+                add(
+                    JsIf(
+                        JsAstUtils.equality(classHolder.name.makeRef(), jsUndefined),
+                        JsBlock(
+                            classModel.preDeclarationBlock.statements + statements + classModel.postDeclarationBlock.statements +
+                                    JsAstUtils.assignment(classHolder.name.makeRef(), classNameRef).makeStmt()
+                        )
+                    )
                 )
-            ),
-            JsReturn(classHolder.name.makeRef())
-        )
+                add(JsReturn(classHolder.name.makeRef()))
+            }
+        }
 
-        return JsCompositeBlock(
-            listOf(
-                JsVars(classHolder),
-                JsFunction(emptyScope, functionBody, className.ident).makeStmt()
-            )
-        )
+        return JsCompositeBlock(interfaceDefaultsBlock.statements + listOf(JsVars(classHolder), functionWrapper.makeStmt())).also {
+            classModel.preDeclarationBlock.statements.clear()
+            classModel.postDeclarationBlock.statements.clear()
+        }
     }
 
     private fun generateClassBlock(): JsCompositeBlock {
@@ -83,13 +94,16 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
         // We'll use IrSimpleFunction::correspondingProperty to collect them into set
         val properties = mutableSetOf<IrProperty>()
 
-        val jsClass = JsClass(name = className, baseClass = baseClassRef)
+        val jsClass = JsClass(name = usedClassName, baseClass = baseClassRef)
 
         if (baseClass != null && !baseClass.isAny()) {
             jsClass.baseClass = baseClassRef
         }
 
-        if (es6mode) classModel.preDeclarationBlock.statements += jsClass.makeStmt()
+        if (es6mode) {
+            classModel.jsClass = jsClass
+            classModel.preDeclarationBlock.statements += jsClass.makeStmt()
+        }
 
         for (declaration in irClass.declarations) {
             when (declaration) {
@@ -301,7 +315,7 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
             assert(!declaration.isStaticMethodOfClass)
 
             if (irClass.isInterface) {
-                classModel.preDeclarationBlock.statements += translatedFunction.makeStmt()
+                interfaceDefaultsBlock.statements += translatedFunction.makeStmt()
                 return Pair(memberName, null)
             }
 
@@ -349,7 +363,7 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
     private fun maybeGeneratePrimaryConstructor() {
         if (!irClass.declarations.any { it is IrConstructor }) {
             val func = JsFunction(emptyScope, JsBlock(), "Ctor for ${irClass.name}")
-            func.name = className
+            func.name = usedClassName
             classBlock.statements += func.makeStmt()
         }
     }
@@ -378,12 +392,12 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
     }
 
 
-    private fun IrType.asConstructorRef(): JsNameRef? {
+    private fun IrType.asConstructorRef(): JsExpression? {
         val ownerSymbol = classOrNull?.takeIf {
             !isAny() && !isFunctionType() && !it.owner.isEffectivelyExternal()
         } ?: return null
 
-        return JsNameRef(context.getNameForClass(ownerSymbol.owner))
+        return ownerSymbol.owner.getClassRef(context.staticContext)
     }
 
     private fun IrType.isFunctionType() = isFunctionOrKFunction() || isSuspendFunctionOrKFunction()
@@ -501,6 +515,8 @@ private fun IrOverridableDeclaration<*>.overridesExternal(): Boolean {
 private val IrClassifierSymbol.isInterface get() = (owner as? IrClass)?.isInterface == true
 
 class JsIrClassModel(val klass: IrClass) {
+    lateinit var jsClass: JsClass // we need it only in ES6 mode
+
     val superClasses = klass.superTypes.memoryOptimizedMap { it.classifierOrNull as IrClassSymbol }
 
     val preDeclarationBlock = JsCompositeBlock()

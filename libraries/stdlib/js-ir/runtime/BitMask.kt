@@ -36,7 +36,7 @@ private fun compositeBitMask(capacity: Int, masks: Array<BitMask>): BitMask {
     }
 }
 
-internal fun implement(vararg interfaces: dynamic): BitMask {
+internal fun implement(interfaces: Array<dynamic>): BitMask {
     var maxSize = 1
     val masks = js("[]")
 

@@ -119,7 +119,7 @@ class JsCodeGenerator(
 class IrModuleToJsTransformer(
     private val backendContext: JsIrBackendContext,
     private val mainArguments: List<String>?,
-    private val moduleToName: Map<IrModuleFragment, String> = emptyMap(),
+    moduleToName: Map<IrModuleFragment, String> = emptyMap(),
     private val removeUnusedAssociatedObjects: Boolean = true,
 ) {
     private val shouldGeneratePolyfills = backendContext.configuration.getBoolean(JSConfigurationKeys.GENERATE_POLYFILLS)
@@ -204,13 +204,14 @@ class IrModuleToJsTransformer(
         val files = dirtyFiles + backendContext.mapping.chunkToOriginalFile.keys
         val exportModelGenerator = ExportModelGenerator(backendContext, generateNamespacesForPackages = !isEsModules)
         val exportData = exportModelGenerator.generateExportWithExternals(files)
+        val mode = TranslationMode.fromFlags(production = false, backendContext.granularity, minimizedMemberNames = false)
 
         doStaticMembersLowering(allModules)
 
         return exportData
             .groupBy { it.generatedFrom ?: it.file }
             .map {
-                { it.value.map { generateProgramFragment(it, minimizedMemberNames = false) } }
+                { it.value.map { generateProgramFragment(it, mode) } }
             }
     }
 
@@ -248,7 +249,7 @@ class IrModuleToJsTransformer(
                 JsIrModule(
                     data.fragment.safeName,
                     moduleFragmentToNameMapper.getExternalNameFor(data.fragment),
-                    data.files.map { generateProgramFragment(it, mode.minimizedMemberNames) },
+                    data.files.map { generateProgramFragment(it, mode) },
                     mainModule.fragment.safeName.takeIf { moduleKind != ModuleKind.ES && data != mainModule }
                 )
             }
@@ -265,7 +266,7 @@ class IrModuleToJsTransformer(
                                 JsIrModule(
                                     moduleFragmentToNameMapper.getSafeNameFor(it.file),
                                     moduleFragmentToNameMapper.getExternalNameFor(it.file, mode.granularity),
-                                    listOf(generateProgramFragment(it, mode.minimizedMemberNames)),
+                                    listOf(generateProgramFragment(it, mode)),
                                     module.fragment.safeName,
                                 )
                             }
@@ -292,15 +293,16 @@ class IrModuleToJsTransformer(
     private val pathPrefixMap = backendContext.configuration.getMap(JSConfigurationKeys.FILE_PATHS_PREFIX_MAP)
     private val optimizeGeneratedJs = backendContext.configuration.get(JSConfigurationKeys.OPTIMIZE_GENERATED_JS, true)
 
-    private fun generateProgramFragment(fileExports: IrFileExports, minimizedMemberNames: Boolean): JsIrProgramFragment {
-        val nameGenerator = JsNameLinkingNamer(backendContext, minimizedMemberNames)
+    private fun generateProgramFragment(fileExports: IrFileExports, mode: TranslationMode): JsIrProgramFragment {
+        val nameGenerator = JsNameLinkingNamer(backendContext, mode.minimizedMemberNames)
 
         val globalNameScope = NameTable<IrDeclaration>()
 
         val staticContext = JsStaticContext(
             backendContext = backendContext,
             irNamer = nameGenerator,
-            globalNameScope = globalNameScope
+            globalNameScope = globalNameScope,
+            mode = mode
         )
 
         val result = JsIrProgramFragment(fileExports.file.fqName.asString()).apply {
