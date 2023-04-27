@@ -6,11 +6,11 @@
 package org.jetbrains.kotlin.analysis.low.level.api.fir.state
 
 import com.intellij.psi.PsiElement
+import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.tree.IElementType
 import org.jetbrains.kotlin.KtPsiSourceFile
 import org.jetbrains.kotlin.KtPsiSourceFileLinesMapping
-import org.jetbrains.kotlin.analysis.low.level.api.fir.api.DiagnosticCheckerFilter
-import org.jetbrains.kotlin.analysis.low.level.api.fir.api.getFirResolveSession
-import org.jetbrains.kotlin.analysis.low.level.api.fir.api.resolveToFirSymbolOfType
+import org.jetbrains.kotlin.analysis.low.level.api.fir.api.*
 import org.jetbrains.kotlin.analysis.low.level.api.fir.lazy.resolve.FirLazyBodiesCalculator
 import org.jetbrains.kotlin.analysis.low.level.api.fir.providers.LLFirCodeFragmentSymbolProvider
 import org.jetbrains.kotlin.analysis.low.level.api.fir.sessions.LLFirSession
@@ -34,7 +34,7 @@ import org.jetbrains.kotlin.fir.builder.buildPackageDirective
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirFile
-import org.jetbrains.kotlin.fir.declarations.FirValueParameter
+import org.jetbrains.kotlin.fir.declarations.FirPropertyAccessor
 import org.jetbrains.kotlin.fir.declarations.builder.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedDeclarationStatusImpl
@@ -42,10 +42,10 @@ import org.jetbrains.kotlin.fir.expressions.FirAnnotationResolvePhase
 import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.builder.*
-import org.jetbrains.kotlin.fir.lightTree.converter.nameAsSafeName
+import org.jetbrains.kotlin.fir.pipeline.runResolution
+import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
-import org.jetbrains.kotlin.fir.resolve.dfa.symbol
-import org.jetbrains.kotlin.fir.scopes.FakeOverrideTypeCalculator.Forced.getResolvedTypeRef
+import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.scopes.getDeclaredConstructors
 import org.jetbrains.kotlin.fir.scopes.impl.declaredMemberScope
 import org.jetbrains.kotlin.fir.scopes.kotlinScopeProvider
@@ -55,11 +55,17 @@ import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.FirImplicitUnitTypeRef
+import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
+import org.jetbrains.kotlin.lexer.KtKeywordToken
+import org.jetbrains.kotlin.lexer.KtTokens.IDENTIFIER
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.psi
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.psiUtil.endOffset
+import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.toKtPsiSourceElement
 import org.jetbrains.kotlin.types.ConstantValueKind
 
@@ -105,6 +111,8 @@ private class DebuggeeSourceFileImportsFetcher(val file: KtFile) : KtVisitorVoid
     }
 }
 
+internal class LabeledThis(val name: String?, val type: FirTypeRef)
+
 internal class LLFirCodeFragmentResovableSession(
     ktModule: KtModule,
     useSiteSessionFactory: (KtModule) -> LLFirSession
@@ -127,6 +135,72 @@ internal class LLFirCodeFragmentResovableSession(
         val debugeeSourceFile = codeFragmentModule.sourceFile
         val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
         val properties = mutableMapOf<String, FirTypeRef>()
+
+        val needle = run {
+            var needle_: KtElement? = null
+            debugeeSourceFile.accept(object : KtVisitorVoid() {
+                val place = codeFragmentModule.place.placeCalculator()
+                override fun visitElement(element: PsiElement) {
+                    if (needle_ == null)
+                        element.acceptChildren(this)
+                }
+
+                override fun visitKtElement(element: KtElement) {
+                    if (needle_ == null && element.startOffset >= place.startOffset && element.endOffset <= place.endOffset) {
+                        needle_ = element
+                    } else {
+                        element.acceptChildren(this)
+                    }
+                }
+
+                fun PsiElement.placeCalculator(): PsiElement = when {
+                    this is KtKeywordToken ||
+                            this is KtNameReferenceExpression ||
+                            this is LeafPsiElement && (elementType == IDENTIFIER || elementType is KtKeywordToken) -> context!!.placeCalculator()
+                            context is KtCallExpression -> context!!.placeCalculator()
+                    else -> this
+                }
+            })
+            needle_
+        }
+
+
+        val convertedFirExpression = OnAirResolver(debugeeSourceFile).resolve(
+            debugeeFileFirSession,
+            needle!!,
+            element.children.first() as KtElement
+        )
+
+        val thisAccessors = mutableMapOf<KtThisExpression, LabeledThis>()
+
+        convertedFirExpression?.accept(object : FirVisitorVoid() {
+            override fun visitElement(element: FirElement) {
+                element.acceptChildren(this)
+            }
+
+            override fun visitThisReference(thisReference: FirThisReference) {
+                thisReference.source?.psi?.let {
+                    thisAccessors.getOrPut(it as KtThisExpression) {
+                        when (thisReference.boundSymbol) {
+                            is FirAnonymousFunctionSymbol -> {
+                                val symbol = thisReference.boundSymbol as FirAnonymousFunctionSymbol
+                                LabeledThis(
+                                    symbol.label!!.name,
+                                    symbol.receiverParameter!!.typeRef
+                                )
+                            }
+                            else -> TODO()
+                        }
+                    }
+                }
+                super.visitThisReference(thisReference)
+            }
+
+            override fun visitPropertyAccessor(propertyAccessor: FirPropertyAccessor) {
+                super.visitPropertyAccessor(propertyAccessor)
+            }
+        })
+
         element.accept(object : KtVisitorVoid() {
             override fun visitElement(element: PsiElement) {
                 element.acceptChildren(this)
@@ -153,6 +227,42 @@ internal class LLFirCodeFragmentResovableSession(
             fun build() = object : Visitor() {
                 override fun visitPropertyAccessor(accessor: KtPropertyAccessor, data: Unit?): FirElement {
                     return super.visitPropertyAccessor(accessor, data)
+                }
+
+                /**
+                 * TODO: add differenciation of `this`:
+                 * expression: {
+                 *      this.apply {
+                 *          doSmth(this)
+                 *      }
+                 * }
+                 * first `this` from debugee context, and second from expression's one.
+                 */
+                internal var generatedFunctionBuilder: FirSimpleFunctionBuilder? = null
+                override fun visitThisExpression(expression: KtThisExpression, data: Unit): FirElement {
+                    thisAccessors.get(expression)?.let {
+                        val parameterName =
+                            it.name?.let { label -> Name.identifier("${'$'}this${'$'}$label") } ?: Name.identifier("${'$'}this")
+                        val thisParameter = buildValueParameter {
+                            this.name = parameterName
+                            this.returnTypeRef = it.type
+                            moduleData = baseModuleData
+                            origin = FirDeclarationOrigin.Source
+                            symbol = FirValueParameterSymbol(parameterName)
+                            containingFunctionSymbol = generatedFunctionBuilder!!.symbol
+                            isCrossinline = false
+                            isNoinline = false
+                            isVararg = false
+                        }
+                        generatedFunctionBuilder!!.valueParameters += thisParameter
+                        return buildPropertyAccessExpression {
+                            typeRef = it.type
+                            calleeReference = buildResolvedNamedReference {
+                                name = parameterName // TODO: add alias names here.
+                                resolvedSymbol = thisParameter.symbol
+                            }
+                        }
+                    } ?: return super.visitThisExpression(expression, data)
                 }
 
                 override fun visitKtFile(file: KtFile, data: Unit): FirElement {
@@ -269,18 +379,8 @@ internal class LLFirCodeFragmentResovableSession(
                             classKind = ClassKind.OBJECT
                             scopeProvider = this@LLFirCodeFragmentResovableSession.useSiteFirSession.kotlinScopeProvider
                             superTypeRefs += this@LLFirCodeFragmentResovableSession.useSiteFirSession.builtinTypes.anyType
-                            val danglingExpression = file.children.filter {
-                                it is KtExpression || it is KtBlockExpression
-                            }.map {
-                                super.convertElement(it as KtElement)
-                            }.single()
-                            val dangingReturnType = when (danglingExpression) {
-                                is FirBlock -> (danglingExpression.statements.last() as? FirExpression)?.typeRef
-                                    ?: FirImplicitUnitTypeRef(file.toKtPsiSourceElement())
-                                else -> (danglingExpression as? FirExpression)?.typeRef
-                                    ?: FirImplicitUnitTypeRef(file.toKtPsiSourceElement())
-                            }
-                            val generatedFunctionReturnTarget = FirFunctionTarget(null, false)
+
+
                             val generatedConstructor = buildPrimaryConstructor {
                                 source = file.toFirSourceElement()
                                 moduleData = baseModuleData
@@ -315,14 +415,28 @@ internal class LLFirCodeFragmentResovableSession(
                                     isThis = false
                                 }
                             }
+                            val generatedFunctionReturnTarget = FirFunctionTarget(null, false)
                             val generatedFunction = buildSimpleFunction {
                                 source = file.toFirSourceElement()
                                 moduleData = baseModuleData
                                 origin = FirDeclarationOrigin.Source
-                                returnTypeRef = dangingReturnType
                                 val functionName = codeFragmentModule.codeFragmentFunctionName
                                 this.name = functionName
                                 symbol = FirNamedFunctionSymbol(CallableId(FqName.ROOT, null, functionName))
+                                generatedFunctionBuilder = this
+                                val danglingExpression = file.children.filter {
+                                    it is KtExpression || it is KtBlockExpression
+                                }.map {
+                                    super.convertElement(it as KtElement)
+                                }.single()
+
+                                val dangingReturnType = when (danglingExpression) {
+                                    is FirBlock -> (danglingExpression.statements.last() as? FirExpression)?.typeRef
+                                        ?: FirImplicitUnitTypeRef(file.toKtPsiSourceElement())
+                                    else -> (danglingExpression as? FirExpression)?.typeRef
+                                        ?: FirImplicitUnitTypeRef(file.toKtPsiSourceElement())
+                                }
+                                returnTypeRef = dangingReturnType
                                 valueParameters += properties.map {
                                     buildValueParameter {
                                         val parameterName = Name.identifier(it.key)
@@ -338,7 +452,7 @@ internal class LLFirCodeFragmentResovableSession(
                                     }
                                 }
                                 val names = valueParameters.map { it.name.asString() }
-                                codeFragmentModule.valueParameters.filter { !names.contains(it.name) }.forEach {
+                                codeFragmentModule.valueParameters.filter { !names.contains(it.name!!) }.forEach {
                                     valueParameters += buildValueParameter {
                                         val parameterName = it.name?.let { it1 -> Name.identifier(it1) } ?: return@forEach
                                         this.name = parameterName
@@ -404,5 +518,25 @@ internal class LLFirCodeFragmentResovableSession(
             ConstantValueKind.String,
             "INVISIBLE_MEMBER"
         )
+    }
+}
+
+internal class OnAirResolver(val debugeeSourceFile: KtFile) {
+    fun resolve(session: LLFirResolveSession, place: KtElement, expression: KtElement): FirElement? {
+        var convertedElement: FirElement? = null
+        val builder = object : RawFirBuilder(session.useSiteFirSession, session.useSiteFirSession.kotlinScopeProvider) {
+            fun build() = object : Visitor() {
+                override fun convertElement(element: KtElement): FirElement? {
+                    if (element == place) {
+                        convertedElement = convertElement(expression)
+                        return convertedElement
+                    }
+                    return super.convertElement(element)
+                }
+            }.convertElement(debugeeSourceFile)
+        }
+        val modifiedFile = builder.build() as? FirFile ?: return null
+        val (_, _) = session.useSiteFirSession.runResolution(listOf(modifiedFile))
+        return convertedElement
     }
 }

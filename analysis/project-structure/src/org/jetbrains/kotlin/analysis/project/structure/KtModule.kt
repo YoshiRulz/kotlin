@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.analysis.project.structure
 
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.config.LanguageVersionSettings
@@ -192,6 +193,7 @@ public class KtBuiltinsModule(
 public interface KtCodeFragmentModule: KtModule {
     val sourceFile: KtFile
     val codeFragment: KtCodeFragment
+    val place: PsiElement
     val codeFragmentClassName: Name
     val codeFragmentFunctionName: Name
     val valueParameters: List<KtParameter>
