@@ -97,8 +97,9 @@ class ScriptTest : TestCase() {
             return (extraInt(metadata) as Int) and JvmAnnotationNames.METADATA_SCRIPT_FLAG != 0
         }
 
-        val scriptClass = compileScript("metadata_flag.kts", StandardScriptDefinition)!!
-        assertTrue("Script class SHOULD have the metadata flag set", scriptClass.isFlagSet())
+        val scriptClass = compileScript("metadata_flag.kts", StandardScriptDefinition)
+        assertNotNull("compilation failed", scriptClass)
+        assertTrue("Script class SHOULD have the metadata flag set", scriptClass!!.isFlagSet())
         assertFalse(
             "Non-script class in a script should NOT have the metadata flag set",
             scriptClass.classLoader.loadClass("Metadata_flag\$RandomClass").isFlagSet()
