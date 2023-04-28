@@ -72,6 +72,7 @@ class ScriptingHostTest : TestCase() {
         Assert.assertEquals("\$\$result", resVal.name)
         Assert.assertEquals("kotlin.Int", resVal.type)
         val resField = resVal.scriptInstance!!::class.java.getDeclaredField("\$\$result")
+        resField.setAccessible(true)
         Assert.assertEquals(42, resField.get(resVal.scriptInstance!!))
     }
 
