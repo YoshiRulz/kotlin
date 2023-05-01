@@ -29,6 +29,7 @@ import org.jetbrains.kotlin.js.config.SourceMapNamesPolicy
 import org.jetbrains.kotlin.js.config.SourceMapSourceEmbedding
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlin.utils.addIfNotNull
+import org.jetbrains.kotlin.utils.addToStdlib.runIf
 import org.jetbrains.kotlin.utils.memoryOptimizedMap
 import org.jetbrains.kotlin.utils.memoryOptimizedPlus
 import java.io.FileInputStream
@@ -91,15 +92,11 @@ fun objectCreate(prototype: JsExpression, context: JsStaticContext) =
     )
 
 fun defineProperty(obj: JsExpression, name: String, getter: JsExpression?, setter: JsExpression?, context: JsStaticContext): JsExpression {
-    val undefined by lazy(LazyThreadSafetyMode.NONE) { jsUndefined(context) }
     return JsInvocation(
         context
             .getNameForStaticFunction(context.backendContext.intrinsics.jsDefinePropertySymbol.owner)
             .makeRef(),
-        obj,
-        JsStringLiteral(name),
-        getter ?: undefined,
-        setter ?: undefined
+        listOfNotNull(obj, JsStringLiteral(name), getter ?: runIf(setter != null) { jsUndefined(context) }, setter)
     )
 }
 

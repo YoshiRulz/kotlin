@@ -32,11 +32,12 @@ internal fun setMetadataFor(
 
 // There was a problem with per-module compilation (KT-55758) when the top-level state (iid) was reinitialized during stdlib module initialization
 // As a result we miss already incremented iid and had the same iids in two different modules
-// So, to keep the state consistent it was moved into the next lateinit variable and function
-private lateinit var iid: Any
+// So, to keep the state consistent it was moved into the variable without initializer and function
+@Suppress("MUST_BE_INITIALIZED")
+private var iid: dynamic
 
 private fun generateInterfaceId(): Int {
-    if (!::iid.isInitialized) {
+    if (iid === VOID) {
         iid = 0
     }
     iid = iid.unsafeCast<Int>() + 1

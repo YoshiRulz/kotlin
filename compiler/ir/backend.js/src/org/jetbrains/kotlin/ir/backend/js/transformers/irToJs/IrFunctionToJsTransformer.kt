@@ -33,9 +33,7 @@ class IrFunctionToJsTransformer : BaseIrElementToJsNodeTransformer<JsFunction, J
 
     override fun visitConstructor(declaration: IrConstructor, context: JsGenerationContext): JsFunction {
         assert(declaration.isPrimary)
-        val funcName = runIf(!context.staticContext.backendContext.es6mode) {
-            context.getNameForConstructor(declaration)
-        }
+        val funcName = context.getNameForConstructor(declaration)
         return translateFunction(declaration, funcName, context)
     }
 }

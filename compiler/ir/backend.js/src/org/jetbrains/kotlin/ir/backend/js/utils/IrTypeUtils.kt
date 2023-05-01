@@ -76,5 +76,5 @@ fun IrClass.getClassRef(context: JsStaticContext): JsExpression {
 fun IrConstructor.getConstructorRef(context: JsStaticContext): JsExpression {
     return context.getNameForConstructor(this)
         .makeRef()
-        .butIf(context.isPerFile) { JsInvocation(it) }
+        .butIf(context.isPerFile && !isEffectivelyExternal()) { JsInvocation(it) }
 }

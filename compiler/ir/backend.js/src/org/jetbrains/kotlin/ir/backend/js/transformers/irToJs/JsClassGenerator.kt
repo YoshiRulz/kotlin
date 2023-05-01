@@ -88,8 +88,6 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
 
         if (!es6mode) maybeGeneratePrimaryConstructor()
 
-        val transformer = IrDeclarationToJsTransformer()
-
         // Properties might be lowered out of classes
         // We'll use IrSimpleFunction::correspondingProperty to collect them into set
         val properties = mutableSetOf<IrProperty>()
@@ -101,21 +99,17 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
         }
 
         if (es6mode) {
-            classModel.jsClass = jsClass
             classModel.preDeclarationBlock.statements += jsClass.makeStmt()
         }
 
         for (declaration in irClass.declarations) {
             when (declaration) {
                 is IrConstructor -> {
+                    val constructor = declaration.accept(IrFunctionToJsTransformer(), context)
                     if (es6mode) {
-                        declaration.accept(IrFunctionToJsTransformer(), context).let { fn ->
-                            if (fn.body.statements.any { it !is JsEmpty && !it.isSimpleSuperCall(fn) }) {
-                                jsClass.constructor = fn
-                            }
-                        }
+                        jsClass.constructor = constructor.apply { name = null }
                     } else {
-                        classBlock.statements += declaration.accept(transformer, context)
+                        classBlock.statements += constructor.apply { name = usedClassName }.makeStmt()
                     }
                 }
                 is IrSimpleFunction -> {
@@ -515,8 +509,6 @@ private fun IrOverridableDeclaration<*>.overridesExternal(): Boolean {
 private val IrClassifierSymbol.isInterface get() = (owner as? IrClass)?.isInterface == true
 
 class JsIrClassModel(val klass: IrClass) {
-    lateinit var jsClass: JsClass // we need it only in ES6 mode
-
     val superClasses = klass.superTypes.memoryOptimizedMap { it.classifierOrNull as IrClassSymbol }
 
     val preDeclarationBlock = JsCompositeBlock()
