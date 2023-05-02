@@ -60,7 +60,7 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
     }
 
     private fun JsCompositeBlock.wrapInFunction(): JsStatement {
-        val classHolder = JsVar(JsName("${className.ident}_klass", true))
+        val classHolder = JsVar(JsName("${className.ident}Class", true))
         val functionWrapper = JsFunction(emptyScope, JsBlock(), "lazy wrapper for classes in per-file").apply {
             name = className
             with(body.statements) {
