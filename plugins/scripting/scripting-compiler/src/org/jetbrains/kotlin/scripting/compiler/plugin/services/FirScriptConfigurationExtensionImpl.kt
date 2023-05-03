@@ -66,6 +66,7 @@ class FirScriptConfiguratorExtensionImpl(
                 fileBuilder.imports += buildImport {
                     importedFqName = fqName
                     isAllUnder = endsWithStar
+                    source = fileBuilder.source
                 }
             }
 
@@ -82,7 +83,7 @@ class FirScriptConfiguratorExtensionImpl(
                         parameters.add(
                             buildProperty {
                                 moduleData = session.moduleData
-                                origin = FirDeclarationOrigin.ScriptCustomization
+                                origin = FirDeclarationOrigin.ScriptCustomization.Default
                                 // TODO: copy type parameters?
                                 returnTypeRef = baseCtorParameter.returnTypeRef
                                 this.name = baseCtorParameter.name
@@ -110,7 +111,7 @@ class FirScriptConfiguratorExtensionImpl(
                 parameters.add(
                     buildProperty {
                         moduleData = session.moduleData
-                        origin = FirDeclarationOrigin.ScriptCustomization
+                        origin = FirDeclarationOrigin.ScriptCustomization.Default
                         returnTypeRef = typeRef
                         this.name = Name.identifier(propertyName)
                         this.symbol = FirPropertySymbol(this.name)
@@ -135,13 +136,13 @@ class FirScriptConfiguratorExtensionImpl(
                             this.symbol = FirPropertySymbol(this.name)
                             source = lastExpression.source
                             moduleData = session.moduleData
-                            origin = FirDeclarationOrigin.ScriptCustomization
+                            origin = FirDeclarationOrigin.ScriptCustomization.ResultProperty
                             initializer = lastExpression
                             returnTypeRef = lastExpression.typeRef
                             getter = FirDefaultPropertyGetter(
                                 lastExpression.source,
                                 session.moduleData,
-                                FirDeclarationOrigin.ScriptCustomization,
+                                FirDeclarationOrigin.ScriptCustomization.ResultProperty,
                                 lastExpression.typeRef,
                                 Visibilities.Public,
                                 this.symbol,

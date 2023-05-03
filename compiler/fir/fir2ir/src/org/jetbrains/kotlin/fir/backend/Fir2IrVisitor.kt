@@ -239,7 +239,7 @@ class Fir2IrVisitor(
                         irScript.statements.add(irDeclaration)
                         if (script.resultPropertyName != null &&
                             (statement as? FirProperty)?.name == script.resultPropertyName &&
-                                (irDeclaration as IrProperty).backingField?.type?.isUnit() == false
+                                (irDeclaration as IrProperty).backingField?.type?.let { it.isNothing() || it.isNullableNothing() || it.isUnit() } == false
                         ) {
                             irScript.resultProperty = (irDeclaration as? IrProperty)?.symbol
                         }

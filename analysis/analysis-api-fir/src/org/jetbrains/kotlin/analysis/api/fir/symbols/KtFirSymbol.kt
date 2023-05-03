@@ -104,7 +104,7 @@ internal tailrec fun FirDeclaration.ktSymbolOrigin(): KtSymbolOrigin = when (ori
     FirDeclarationOrigin.DynamicScope -> buildErrorWithAttachment("Invalid FirDeclarationOrigin ${origin::class.simpleName}") {
         withFirEntry("firToGetOrigin", this@ktSymbolOrigin)
     }
-    FirDeclarationOrigin.ScriptCustomization -> KtSymbolOrigin.PLUGIN
+    is FirDeclarationOrigin.ScriptCustomization -> KtSymbolOrigin.PLUGIN
 }
 
 internal fun KtClassLikeSymbol.getSymbolKind(): KtSymbolKind {
