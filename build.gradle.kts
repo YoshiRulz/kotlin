@@ -1,6 +1,10 @@
 import org.gradle.crypto.checksum.Checksum
 import org.gradle.plugins.ide.idea.model.IdeaModel
+import org.jetbrains.kotlin.gradle.dsl.KotlinTopLevelExtension
+import org.jetbrains.kotlin.gradle.targets.js.d8.D8RootExtension
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension
+import java.net.URI
 
 buildscript {
     // a workaround for kotlin compiler classpath in kotlin project: sometimes gradle substitutes
@@ -168,11 +172,11 @@ val firCompilerCoreModules = arrayOf(
 ).also { extra["firCompilerCoreModules"] = it }
 
 val firAllCompilerModules = firCompilerCoreModules +
-    arrayOf(
-        ":compiler:fir:raw-fir:light-tree2fir",
-        ":compiler:fir:analysis-tests",
-        ":compiler:fir:analysis-tests:legacy-fir-tests"
-    )
+        arrayOf(
+            ":compiler:fir:raw-fir:light-tree2fir",
+            ":compiler:fir:analysis-tests",
+            ":compiler:fir:analysis-tests:legacy-fir-tests"
+        )
 
 val fe10CompilerModules = arrayOf(
     ":compiler",
@@ -954,4 +958,53 @@ afterEvaluate {
 
 afterEvaluate {
     checkExpectedGradlePropertyValues()
+}
+
+tasks.register("resolveDependencies") {
+    doFirst {
+        allprojects {
+            logger.info("Resolving dependencies in $this")
+
+            // resolve cached dependencies one by one to avoid conflicts between them
+            configurations.findByName("cachedDependencies")?.allDependencies?.forEach { cachedDependency ->
+                configurations.detachedConfiguration(cachedDependency).resolve()
+            }
+
+            plugins.withId("java-base") {
+                val service = project.extensions.getByType<JavaToolchainService>()
+                val javaExtension = extensions.getByType<JavaPluginExtension>()
+                service.compilerFor(javaExtension.toolchain).get()
+            }
+        }
+
+        fun Project.resolveDependencies(vararg dependency: String, repositoryHandler: RepositoryHandler.() -> ArtifactRepository) {
+            val repo = repositories.repositoryHandler()
+            dependency.forEach {
+                configurations.detachedConfiguration(dependencies.create(it)).resolve()
+            }
+            repositories.remove(repo)
+        }
+
+        rootProject.extensions.findByType<D8RootExtension>()?.run {
+            listOf(
+                "google.d8:v8:linux64-rel-$version@zip",
+                "google.d8:v8:win64-rel-$version@zip"
+            ).forEach { dependency ->
+                configurations.detachedConfiguration(dependencies.create(dependency)).resolve()
+            }
+        }
+
+        rootProject.extensions.findByType<YarnRootExtension>()?.run {
+            project.resolveDependencies("com.yarnpkg:yarn:$version@tar.gz") {
+                ivy {
+                    url = URI(downloadBaseUrl)
+                    patternLayout {
+                        artifact("v[revision]/[artifact](-v[revision]).[ext]")
+                    }
+                    metadataSources { artifact() }
+                    content { includeModule("com.yarnpkg", "yarn") }
+                }
+            }
+        }
+    }
 }
