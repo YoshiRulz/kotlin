@@ -8,6 +8,7 @@ dependencies {
     implementation(project(":analysis:project-structure"))
     api(project(":compiler:fir:fir2ir"))
     api(project(":compiler:fir:fir2ir:jvm-backend"))
+    api(project(":compiler:ir.backend.common"))
     api(project(":compiler:ir.serialization.common"))
     api(project(":compiler:fir:resolve"))
     api(project(":compiler:fir:providers"))
