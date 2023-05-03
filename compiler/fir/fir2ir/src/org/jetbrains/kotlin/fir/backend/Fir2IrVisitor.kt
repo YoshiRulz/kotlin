@@ -21,10 +21,7 @@ import org.jetbrains.kotlin.fir.backend.generators.OperatorExpressionGenerator
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.builder.buildProperty
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
-import org.jetbrains.kotlin.fir.declarations.utils.expandedConeType
-import org.jetbrains.kotlin.fir.declarations.utils.isSealed
-import org.jetbrains.kotlin.fir.declarations.utils.isSynthetic
-import org.jetbrains.kotlin.fir.declarations.utils.visibility
+import org.jetbrains.kotlin.fir.declarations.utils.*
 import org.jetbrains.kotlin.fir.deserialization.toQualifiedPropertyAccessExpression
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirContractCallBlock
@@ -45,6 +42,7 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrErrorTypeImpl
 import org.jetbrains.kotlin.ir.util.constructors
@@ -53,6 +51,7 @@ import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.ir.util.parentClassOrNull
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.NameUtils
 import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtForExpression
@@ -214,6 +213,24 @@ class Fir2IrVisitor(
             declarationStorage.enterScope(irScript)
             irScript.explicitCallParameters = script.parameters.map { parameter ->
                 declarationStorage.createIrVariable(parameter, irScript)
+            }
+            irScript.implicitReceiversParameters = script.contextReceivers.mapIndexedNotNull { index, receiver ->
+                if (receiver.customLabelName?.asString() == SCRIPT_SPECIAL_NAME_STRING)
+                    null
+                else
+                    receiver.convertWithOffsets { startOffset, endOffset ->
+                        irFactory.createValueParameter(
+                            startOffset, endOffset, IrDeclarationOrigin.DEFINED, IrValueParameterSymbolImpl(),
+                            Name.identifier("${receiver.labelName?.asStringStripSpecialMarkers() ?: SCRIPT_RECEIVER_NAME_PREFIX}_$index"),
+                            index,
+                            receiver.typeRef.toIrType(),
+                            varargElementType = null,
+                            isCrossinline = false, isNoinline = false,
+                            isHidden = false, isAssignable = false
+                        ).also {
+                            it.parent = irScript
+                        }
+                    }
             }
             conversionScope.withParent(irScript) {
                 for (statement in script.statements) {
