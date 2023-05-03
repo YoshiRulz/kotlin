@@ -78,7 +78,7 @@ val jsMainSources by task<Sync> {
             listOf(
                 "libraries/stdlib/js/src/org.w3c/**",
                 "libraries/stdlib/js/src/kotlin/char.kt",
-                "libraries/stdlib/js/src/kotlin/collections.kt",
+                "libraries/stdlib/js/src/kotlin/collectionUtils.kt",
                 "libraries/stdlib/js/src/kotlin/collections/**",
                 "libraries/stdlib/js/src/kotlin/time/**",
                 "libraries/stdlib/js/src/kotlin/console.kt",

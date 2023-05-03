@@ -289,6 +289,12 @@ class JsIrBackendFacade(
             it.extension == "js" || it.extension == "mjs"
         }
 
+        val indexValue = dependencies.withIndex().indexOfFirst { !allJsFiles[it.index].path.contains(it.value.first.drop(2)) }
+
+        if (indexValue != -1) {
+            println("Gotcha")
+        }
+
         val mainModuleFile = allJsFiles.last()
         mainModuleFile.fixJsFile(outputFile, moduleId, moduleKind)
 

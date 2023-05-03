@@ -58,5 +58,5 @@ fun moveAllClassesToSeparateFiles(context: JsIrBackendContext, moduleFragment: I
 private const val KT_EXTENSION = ".kt"
 
 private fun IrFile.generatePathFor(klass: IrClass): String {
-    return "${path.removeSuffix(KT_EXTENSION)}__${klass.name}$KT_EXTENSION"
+    return "${path.removeSuffix(KT_EXTENSION)}$${klass.name}$KT_EXTENSION"
 }

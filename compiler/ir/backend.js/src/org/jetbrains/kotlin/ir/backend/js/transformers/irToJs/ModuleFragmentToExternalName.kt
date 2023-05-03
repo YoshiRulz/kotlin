@@ -5,10 +5,10 @@
 
 package org.jetbrains.kotlin.ir.backend.js.transformers.irToJs
 
-import org.jetbrains.kotlin.backend.common.serialization.cityHash64
 import org.jetbrains.kotlin.ir.backend.js.utils.sanitizeName
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.declarations.name
 import org.jetbrains.kotlin.ir.declarations.path
 
 private const val EXPORTER_FILE_POSTFIX = ".export"
@@ -24,7 +24,7 @@ class ModuleFragmentToExternalName(private val jsOutputNamesMapping: Map<IrModul
     }
 
     fun getSafeNameFor(file: IrFile): String {
-        return "${file.module.safeName}${file.stableFileName}"
+        return "${file.module.safeName}/${file.stableFileName}"
     }
 
     fun getSafeNameExporterFor(file: IrFile): String {
@@ -42,6 +42,9 @@ class ModuleFragmentToExternalName(private val jsOutputNamesMapping: Map<IrModul
 
     private fun String.getExternalModuleNameForPerFile(file: IrFile) = "$this/${file.stableFileName}"
 
-    private val IrFile.stableFileName: String get() =
-            path.substringAfterLast('/').substringBeforeLast(".kt") + path.cityHash64().toULong().toString(16)
+    private val IrFile.stableFileName: String
+        get() {
+            val prefix = fqName.asString().replace('.', '/')
+            return "$prefix${if (prefix.isNotEmpty()) "/" else ""}${name.substringBefore(".kt")}"
+        }
 }
