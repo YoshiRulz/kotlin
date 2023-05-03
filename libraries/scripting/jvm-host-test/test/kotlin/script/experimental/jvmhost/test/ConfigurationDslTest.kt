@@ -23,9 +23,12 @@ class ConfigurationDslTest : TestCase() {
 
     @Test
     fun testComposableRefinementHandlers() {
+        val baseCompilerOptions = listOf("-Xskip-prerelease-check")
+
         val baseConfig = createJvmCompilationConfigurationFromTemplate<SimpleScript> {
             updateClasspath(classpathFromClass<SimpleScript>())
             defaultImports(MyTestAnnotation1::class, MyTestAnnotation2::class)
+            compilerOptions(baseCompilerOptions)
             refineConfiguration {
                 beforeParsing { (_, config, _) ->
                     config.with {
@@ -62,7 +65,7 @@ class ConfigurationDslTest : TestCase() {
 
         Assert.assertNull(baseConfig[ScriptCompilationConfiguration.implicitReceivers])
         Assert.assertNull(baseConfig[ScriptCompilationConfiguration.providedProperties])
-        Assert.assertNull(baseConfig[ScriptCompilationConfiguration.compilerOptions])
+        Assert.assertEquals(baseCompilerOptions, baseConfig[ScriptCompilationConfiguration.compilerOptions])
 
         val script = "@file:MyTestAnnotation1\nann1+ann12".toScriptSource()
 
@@ -80,7 +83,7 @@ class ConfigurationDslTest : TestCase() {
             finalConfig[ScriptCompilationConfiguration.providedProperties]
         )
         Assert.assertEquals(
-            listOf("-version"),
+            baseCompilerOptions + "-version",
             finalConfig[ScriptCompilationConfiguration.compilerOptions]
         )
 
