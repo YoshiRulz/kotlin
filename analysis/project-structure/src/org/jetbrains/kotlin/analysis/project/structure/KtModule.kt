@@ -196,8 +196,12 @@ public interface KtCodeFragmentModule: KtModule {
     val place: PsiElement
     val codeFragmentClassName: Name
     val codeFragmentFunctionName: Name
-    val valueParameters: List<KtParameter>
-    val properties: List<KtProperty>
+    val parameterResolver:(name: String, debugName: String, parameterType: ParameterType) -> Unit
+
+    enum class ParameterType {
+        ORDINARY, DELEGATED, EXTENSION_RECEIVER, DISPATCH_RECEIVER, CONTEXT_RECEIVER, COROUTINE_CONTEXT, LOCAL_FUNCTION,
+        FAKE_JAVA_OUTER_CLASS, FIELD_VAR, DEBUG_LABEL
+    }
 }
 
 /**
