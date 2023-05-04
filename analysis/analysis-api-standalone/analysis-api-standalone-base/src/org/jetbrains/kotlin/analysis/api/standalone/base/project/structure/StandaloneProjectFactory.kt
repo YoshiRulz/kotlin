@@ -74,9 +74,7 @@ object StandaloneProjectFactory {
 
     fun registerServicesForProjectEnvironment(
         environment: KotlinCoreProjectEnvironment,
-        projectStructureProvider: ProjectStructureProvider,
-        modules: List<KtModule>,
-        sourceFiles: List<PsiFileSystemItem>,
+        projectStructureProvider: KtStaticProjectStructureProvider,
         languageVersionSettings: LanguageVersionSettings = latestLanguageVersionSettings,
         jdkHome: Path? = null,
     ) {
@@ -86,7 +84,13 @@ object StandaloneProjectFactory {
         KotlinCoreEnvironment.registerProjectServices(project)
 
         project.registerService(ProjectStructureProvider::class.java, projectStructureProvider)
-        initialiseVirtualFileFinderServices(environment, modules, sourceFiles, languageVersionSettings, jdkHome)
+        initialiseVirtualFileFinderServices(
+            environment,
+            projectStructureProvider.allKtModules,
+            projectStructureProvider.allSourceFiles,
+            languageVersionSettings,
+            jdkHome,
+        )
     }
 
     private fun initialiseVirtualFileFinderServices(
