@@ -24,9 +24,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.load.java.structure.JavaField;
 import org.jetbrains.kotlin.load.java.structure.JavaType;
+import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementPsiSource;
 
 public class JavaFieldImpl extends JavaMemberImpl<PsiField> implements JavaField {
-    public JavaFieldImpl(@NotNull PsiField psiField) {
+    public JavaFieldImpl(@NotNull JavaElementPsiSource<PsiField> psiField) {
         super(psiField);
     }
 
@@ -38,7 +39,7 @@ public class JavaFieldImpl extends JavaMemberImpl<PsiField> implements JavaField
     @Override
     @NotNull
     public JavaType getType() {
-        return JavaTypeImpl.create(getPsi().getType());
+        return JavaTypeImpl.create(createTypeSource(getPsi().getType()));
     }
 
     @Nullable

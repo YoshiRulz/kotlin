@@ -19,17 +19,26 @@ package org.jetbrains.kotlin.load.java.structure.impl;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlin.load.java.structure.JavaElement;
+import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementPsiSource;
+import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementSourceFactory;
+import org.jetbrains.kotlin.load.java.structure.impl.source.JavaSourceFactoryOwner;
 
-public abstract class JavaElementImpl<Psi extends PsiElement> implements JavaElement {
-    private final Psi psiElement;
+public abstract class JavaElementImpl<Psi extends PsiElement> implements JavaElement, JavaSourceFactoryOwner {
+    protected final JavaElementPsiSource<Psi> psiElement;
 
-    protected JavaElementImpl(@NotNull Psi psiElement) {
+    @Override
+    @NotNull
+    public JavaElementSourceFactory getSourceFactory() {
+        return psiElement.getFactory();
+    }
+
+    protected JavaElementImpl(@NotNull JavaElementPsiSource<Psi> psiElement) {
         this.psiElement = psiElement;
     }
 
     @NotNull
     public Psi getPsi() {
-        return psiElement;
+        return psiElement.getPsi();
     }
 
     @Override
@@ -44,6 +53,6 @@ public abstract class JavaElementImpl<Psi extends PsiElement> implements JavaEle
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + ": " + getPsi();
+        return getClass().getSimpleName() + ": " + psiElement;
     }
 }
