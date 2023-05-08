@@ -190,14 +190,44 @@ public class KtBuiltinsModule(
     override fun hashCode(): Int = platform.hashCode()
 }
 
+/**
+ * A module for Kotlin expression.
+ */
 public interface KtCodeFragmentModule: KtModule {
-    val sourceFile: KtFile
+    /**
+     * Kotlin expression.
+     */
     val codeFragment: KtCodeFragment
+
+    /**
+     * File in context which expression is evaluated.
+     */
+    val sourceFile: KtFile
+
+    /**
+     * Coordinate where expression is evaluated.
+     */
     val place: PsiElement
+
+    /**
+     * Classname of generated from expression, expected by evaluator.
+     */
     val codeFragmentClassName: Name
+
+    /**
+     * Name of generated method from expression, expected by evaluator.
+     */
     val codeFragmentFunctionName: Name
+
+    /**
+     * Сallback for injection parameters name and type of arguments passing, required by evaluator.
+     */
     val parameterResolver:(name: String, debugName: String, parameterType: ParameterType) -> Unit
 
+    /**
+     * This is replica of org.jetbrains.kotlin.idea.debugger.evaluate.compilation.CodeFragmentParameter.Kind
+     * to instruct evaluator how to pass argument.
+     */
     enum class ParameterType {
         ORDINARY, DELEGATED, EXTENSION_RECEIVER, DISPATCH_RECEIVER, CONTEXT_RECEIVER, COROUTINE_CONTEXT, LOCAL_FUNCTION,
         FAKE_JAVA_OUTER_CLASS, FIELD_VAR, DEBUG_LABEL
