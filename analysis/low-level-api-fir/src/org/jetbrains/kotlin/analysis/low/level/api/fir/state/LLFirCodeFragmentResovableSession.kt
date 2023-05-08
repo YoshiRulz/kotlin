@@ -9,6 +9,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import org.jetbrains.kotlin.KtPsiSourceFile
 import org.jetbrains.kotlin.KtPsiSourceFileLinesMapping
+import org.jetbrains.kotlin.analysis.low.level.api.fir.LLFirModuleResolveComponents
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.*
 import org.jetbrains.kotlin.analysis.low.level.api.fir.lazy.resolve.FirLazyBodiesCalculator
 import org.jetbrains.kotlin.analysis.low.level.api.fir.providers.LLFirCodeFragmentSymbolProvider
@@ -130,6 +131,10 @@ internal class LLFirCodeFragmentResovableSession(
 
     override fun getOrBuildFirFor(element: KtElement): FirElement? {
         val moduleComponents = getModuleComponentsForElement(element)
+        return (element as? KtFile)?.let { moduleComponents.cache.fileCached(it) { buildFirFileFor(element, moduleComponents) } }
+    }
+
+    private fun buildFirFileFor(element: KtFile, moduleComponents: LLFirModuleResolveComponents): FirFile {
         val codeFragmentModule = element.getKtModule() as KtCodeFragmentModule
         val debugeeSourceFile = codeFragmentModule.sourceFile
         val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
@@ -162,7 +167,6 @@ internal class LLFirCodeFragmentResovableSession(
             })
             needle_
         }
-
 
         val convertedFirExpression = OnAirResolver(debugeeSourceFile).resolve(
             debugeeFileFirSession,
