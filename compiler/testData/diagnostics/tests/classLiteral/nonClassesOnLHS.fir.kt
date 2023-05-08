@@ -17,4 +17,4 @@ inline fun <reified T : Any> bar() {
     val t3 = <!NULLABLE_TYPE_IN_CLASS_LITERAL_LHS!>T?::class<!>
 }
 
-val m = Map<String>::class
+val m = <!WRONG_NUMBER_OF_TYPE_ARGUMENTS!>Map<String><!>::class

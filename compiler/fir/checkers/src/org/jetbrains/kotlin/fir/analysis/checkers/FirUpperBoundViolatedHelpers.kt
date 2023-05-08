@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.substitution.AbstractConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
+import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.resolve.withCombinedAttributesFrom
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
@@ -140,6 +141,27 @@ class TypeArgumentWithSourceInfo(
     val typeRef: FirTypeRef?,
     val source: KtSourceElement?,
 )
+
+fun List<FirTypeProjection>.toTypeArgumentsWithSourceInfo(): List<TypeArgumentWithSourceInfo> {
+    return map { firTypeProjection ->
+        TypeArgumentWithSourceInfo(
+            firTypeProjection.toConeTypeProjection(),
+            (firTypeProjection as? FirTypeProjectionWithVariance)?.typeRef,
+            firTypeProjection.source
+        )
+    }
+}
+
+fun createSubstitutorForUpperBoundViolationCheck(
+    typeParameters: List<FirTypeParameterSymbol>,
+    typeArguments: List<TypeArgumentWithSourceInfo>,
+    session: FirSession
+): ConeSubstitutor {
+    return substitutorByMap(
+        typeParameters.withIndex().associate { Pair(it.value, typeArguments[it.index].coneTypeProjection as ConeKotlinType) },
+        session,
+    )
+}
 
 fun checkUpperBoundViolated(
     context: CheckerContext,

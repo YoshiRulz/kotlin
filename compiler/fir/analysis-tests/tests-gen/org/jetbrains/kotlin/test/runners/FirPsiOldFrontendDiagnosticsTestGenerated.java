@@ -3850,6 +3850,12 @@ public class FirPsiOldFrontendDiagnosticsTestGenerated extends AbstractFirPsiDia
                 }
 
                 @Test
+                @TestMetadata("boundViolated.kt")
+                public void testBoundViolated() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/callableReference/generic/boundViolated.kt");
+                }
+
+                @Test
                 @TestMetadata("dependOnArgumentType.kt")
                 public void testDependOnArgumentType() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/callableReference/generic/dependOnArgumentType.kt");
@@ -3877,6 +3883,12 @@ public class FirPsiOldFrontendDiagnosticsTestGenerated extends AbstractFirPsiDia
                 @TestMetadata("genericFunctionsWithNullableTypes.kt")
                 public void testGenericFunctionsWithNullableTypes() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/callableReference/generic/genericFunctionsWithNullableTypes.kt");
+                }
+
+                @Test
+                @TestMetadata("incorrectNumberOfTypeArguments.kt")
+                public void testIncorrectNumberOfTypeArguments() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/callableReference/generic/incorrectNumberOfTypeArguments.kt");
                 }
 
                 @Test

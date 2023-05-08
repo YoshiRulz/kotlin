@@ -9,18 +9,21 @@ import org.jetbrains.kotlin.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.checkers.TypeArgumentWithSourceInfo
 import org.jetbrains.kotlin.fir.analysis.checkers.checkUpperBoundViolated
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
+import org.jetbrains.kotlin.fir.analysis.checkers.createSubstitutorForUpperBoundViolationCheck
+import org.jetbrains.kotlin.fir.analysis.checkers.toTypeArgumentsWithSourceInfo
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
-import org.jetbrains.kotlin.fir.references.toResolvedCallableSymbol
 import org.jetbrains.kotlin.fir.references.FirResolvedErrorReference
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
+import org.jetbrains.kotlin.fir.references.toResolvedCallableSymbol
 import org.jetbrains.kotlin.fir.resolve.diagnostics.ConeInapplicableWrongReceiver
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.isTypeAliasedConstructor
-import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.symbols.impl.FirConstructorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
-import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.ConeKotlinType
+import org.jetbrains.kotlin.fir.types.coneType
+import org.jetbrains.kotlin.fir.types.toSymbol
 
 object FirUpperBoundViolatedExpressionChecker : FirQualifiedAccessExpressionChecker() {
     override fun check(expression: FirQualifiedAccessExpression, context: CheckerContext, reporter: DiagnosticReporter) {
@@ -50,13 +53,7 @@ object FirUpperBoundViolatedExpressionChecker : FirQualifiedAccessExpressionChec
 
             typeParameters = (constructedType.toSymbol(context.session) as? FirRegularClassSymbol)?.typeParameterSymbols ?: return
         } else {
-            typeArguments = expression.typeArguments.map { firTypeProjection ->
-                TypeArgumentWithSourceInfo(
-                    firTypeProjection.toConeTypeProjection(),
-                    (firTypeProjection as? FirTypeProjectionWithVariance)?.typeRef,
-                    firTypeProjection.source
-                )
-            }
+            typeArguments = expression.typeArguments.toTypeArgumentsWithSourceInfo()
             typeParameters = calleeSymbol?.typeParameterSymbols ?: return
         }
 
@@ -68,10 +65,7 @@ object FirUpperBoundViolatedExpressionChecker : FirQualifiedAccessExpressionChec
 
         if (typeArguments.size != typeParameters.size) return
 
-        val substitutor = substitutorByMap(
-            typeParameters.withIndex().associate { Pair(it.value, typeArguments[it.index].coneTypeProjection as ConeKotlinType) },
-            context.session,
-        )
+        val substitutor = createSubstitutorForUpperBoundViolationCheck(typeParameters, typeArguments, context.session)
 
         checkUpperBoundViolated(
             context,
