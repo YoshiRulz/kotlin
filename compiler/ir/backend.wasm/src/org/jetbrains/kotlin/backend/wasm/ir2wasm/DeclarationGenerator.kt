@@ -38,6 +38,9 @@ class DeclarationGenerator(
     private val irBuiltIns: IrBuiltIns = backendContext.irBuiltIns
 
     private val unitGetInstanceFunction: IrSimpleFunction by lazy { backendContext.findUnitGetInstanceFunction() }
+    private val unitPrimaryConstructor: IrConstructor by lazy {
+        backendContext.irBuiltIns.unitClass.owner.primaryConstructor ?: error("Unit has no primary constructor")
+    }
 
     override fun visitElement(element: IrElement) {
         error("Unexpected element of type ${element::class}")
@@ -98,12 +101,11 @@ class DeclarationGenerator(
         // Generate function type
         val watName = declaration.fqNameWhenAvailable.toString()
         val irParameters = declaration.getEffectiveValueParameters()
-        val resultType =
-            when {
-                // Unit_getInstance returns true Unit reference instead of "void"
-                declaration == unitGetInstanceFunction -> context.transformType(declaration.returnType)
-                else -> context.transformResultType(declaration.returnType)
-            }
+        val resultType = when (declaration) {
+            // Unit_getInstance returns true Unit reference instead of "void"
+            unitGetInstanceFunction, unitPrimaryConstructor -> context.transformType(declaration.returnType)
+            else -> context.transformResultType(declaration.returnType)
+        }
 
         val wasmFunctionType =
             WasmFunctionType(
