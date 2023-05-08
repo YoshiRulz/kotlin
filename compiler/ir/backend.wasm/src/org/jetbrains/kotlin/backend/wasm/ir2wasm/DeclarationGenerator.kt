@@ -149,7 +149,6 @@ class DeclarationGenerator(
             context = context,
             functionContext = functionCodegenContext,
             hierarchyDisjointUnions = hierarchyDisjointUnions,
-            isGetUnitFunction = declaration == unitGetInstanceFunction
         )
 
         if (declaration is IrConstructor) {

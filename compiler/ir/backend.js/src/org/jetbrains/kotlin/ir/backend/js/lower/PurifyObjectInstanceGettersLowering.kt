@@ -92,8 +92,8 @@ class PurifyObjectInstanceGettersLowering(val context: JsCommonBackendContext) :
                 (this is IrExpression && isPure(anyVariable = true, context = context)) ||
                 (this is IrComposite && statements.all { it.isPureStatementForObjectInitialization(owner) }) ||
                 (this is IrVariable && initializer?.isPureStatementForObjectInitialization(owner) != false) ||
-                (this is IrSetField && symbol == owner.thisReceiver?.symbol && value.isPureStatementForObjectInitialization(owner)) ||
                 (this is IrSetField && symbol.owner.isObjectInstanceField()) ||
+                (this is IrSetField && symbol == owner.thisReceiver?.symbol && value.isPureStatementForObjectInitialization(owner)) ||
                 (this is IrSetValue && symbol.owner.isLocal && value.isPureStatementForObjectInitialization(owner)) ||
                 (this is IrBlock && statements.all { it.isPureStatementForObjectInitialization(owner) }) ||
                 (this is IrCall && symbol.owner.isObjectInstanceGetter() && symbol.owner.returnType.classOrNull?.owner?.isPureObject() == true)
