@@ -38,9 +38,7 @@ class DeclarationGenerator(
     private val irBuiltIns: IrBuiltIns = backendContext.irBuiltIns
 
     private val unitGetInstanceFunction: IrSimpleFunction by lazy { backendContext.findUnitGetInstanceFunction() }
-    private val unitPrimaryConstructor: IrConstructor by lazy {
-        backendContext.irBuiltIns.unitClass.owner.primaryConstructor ?: error("Unit has no primary constructor")
-    }
+    private val unitPrimaryConstructor: IrConstructor? by lazy { backendContext.irBuiltIns.unitClass.owner.primaryConstructor }
 
     override fun visitElement(element: IrElement) {
         error("Unexpected element of type ${element::class}")
