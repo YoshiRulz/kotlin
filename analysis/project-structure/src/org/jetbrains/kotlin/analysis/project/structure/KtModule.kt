@@ -193,11 +193,16 @@ public class KtBuiltinsModule(
 /**
  * A module for Kotlin expression.
  */
-public interface KtCodeFragmentModule: KtModule {
+public interface KtCodeFragmentModule : KtModule {
     /**
      * Kotlin expression.
      */
     val codeFragment: KtCodeFragment
+
+    /**
+     * A set of Kotlin settings, like API version, supported features and flags.
+     */
+    public val languageVersionSettings: LanguageVersionSettings
 
     /**
      * Coordinate where expression is evaluated.
@@ -217,12 +222,13 @@ public interface KtCodeFragmentModule: KtModule {
     /**
      * Сallback for injection parameters name and type of arguments passing, required by evaluator.
      */
-    val parameterResolver:(name: String, debugName: String, parameterType: ParameterType) -> Unit
+    val parameterResolver: (name: String, debugName: String, parameterType: ParameterType) -> Unit
 
     /**
      * This is replica of org.jetbrains.kotlin.idea.debugger.evaluate.compilation.CodeFragmentParameter.Kind
      * to instruct evaluator how to pass argument.
      */
+
     enum class ParameterType {
         ORDINARY, DELEGATED, EXTENSION_RECEIVER, DISPATCH_RECEIVER, CONTEXT_RECEIVER, COROUTINE_CONTEXT, LOCAL_FUNCTION,
         FAKE_JAVA_OUTER_CLASS, FIELD_VAR, DEBUG_LABEL

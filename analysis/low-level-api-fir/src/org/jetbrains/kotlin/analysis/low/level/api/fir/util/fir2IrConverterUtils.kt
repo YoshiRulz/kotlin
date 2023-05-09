@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.analysis.low.level.api.fir.util
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.getFirResolveSession
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.getOrBuildFir
+import org.jetbrains.kotlin.analysis.project.structure.KtCodeFragmentModule
 import org.jetbrains.kotlin.analysis.project.structure.getKtModule
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.jvm.JvmIrDeserializerImpl
@@ -186,7 +187,6 @@ private fun createModuleFragmentWithSignaturesIfNeededWorkaround(
 
 fun compileKt2Ir(
     codeFragment: KtElement,
-    languageVersionSettings: LanguageVersionSettings,
     dianosticErrorProcessing: (Map.Entry<String?, List<KtDiagnostic>>) -> Unit
 ): Fir2IrResult {
     val session = codeFragment.getFirResolveSession()
@@ -202,12 +202,12 @@ fun compileKt2Ir(
         diagnosticReporter
     )
     if (diagnosticReporter.hasErrors) {
-
         diagnosticReporter.diagnosticsByFilePath.forEach(dianosticErrorProcessing)
     }
 
     val irGenerationExtension = IrGenerationExtension.getInstances(codeFragment.project)
 
+    val languageVersionSettings = (codeFragment.getKtModule(codeFragment.project) as KtCodeFragmentModule).languageVersionSettings
     val compilerConfiguration = CompilerConfiguration().apply {
         this.languageVersionSettings = languageVersionSettings
     }
