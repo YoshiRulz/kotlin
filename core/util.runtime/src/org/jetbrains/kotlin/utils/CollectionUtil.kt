@@ -33,6 +33,10 @@ inline fun <reified R> Collection<*>.filterIsInstanceAnd(predicate: (R) -> Boole
     return filterIsInstanceAndTo(SmartList(), predicate)
 }
 
+public fun <T> MutableList<T>.removeLastFrom(index: Int) {
+    subList(index, size).clear()
+}
+
 inline fun <reified T, reified R, C : MutableCollection<in R>> Iterable<*>.filterIsInstanceMapNotNullTo(
     destination: C,
     transform: (T) -> R?

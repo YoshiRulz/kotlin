@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.wasm.ir
 
+import org.jetbrains.kotlin.utils.removeLastFrom
 import org.jetbrains.kotlin.wasm.ir.source.location.SourceLocation
 
 private fun WasmOp.isOutCfgNode() = when (this) {
@@ -18,7 +19,7 @@ private fun WasmOp.isInCfgNode() = when (this) {
 }
 
 private fun WasmOp.pureStacklessInstruction() = when (this) {
-    WasmOp.GET_UNIT, WasmOp.REF_NULL, WasmOp.I32_CONST, WasmOp.I64_CONST, WasmOp.F32_CONST, WasmOp.F64_CONST, WasmOp.LOCAL_GET, WasmOp.GLOBAL_GET -> true
+    WasmOp.REF_NULL, WasmOp.I32_CONST, WasmOp.I64_CONST, WasmOp.F32_CONST, WasmOp.F64_CONST, WasmOp.LOCAL_GET, WasmOp.GLOBAL_GET -> true
     else -> false
 }
 
@@ -30,8 +31,9 @@ class WasmIrExpressionBuilder(
     val expression: MutableList<WasmInstr>
 ) : WasmExpressionBuilder() {
 
-    private val lastInstr: WasmInstr?
-        get() = expression.lastOrNull()
+    private val lastInstructionIndex: Int
+        get() = expression.indexOfLast { it.operator !== WasmOp.PSEUDO_COMMENT_PREVIOUS_INSTR }
+
     private var eatEverythingUntilLevel: Int? = null
 
     private fun addInstruction(op: WasmOp, location: SourceLocation, immediates: Array<out WasmImmediate>) {
@@ -64,16 +66,19 @@ class WasmIrExpressionBuilder(
             }
         }
 
-        val lastInstruction = lastInstr
-        if (lastInstruction == null) {
+        val lastInstructionId = lastInstructionIndex
+
+        if (lastInstructionId == -1) {
             addInstruction(op, location, immediates)
             return
         }
+
+        val lastInstruction = expression[lastInstructionId]
         val lastOperator = lastInstruction.operator
 
         // droppable instructions + drop/unreachable -> nothing
         if ((op == WasmOp.DROP || op == WasmOp.UNREACHABLE) && lastOperator.pureStacklessInstruction()) {
-            expression.removeLast()
+            expression.removeLastFrom(lastInstructionId)
             return
         }
 
@@ -83,7 +88,7 @@ class WasmIrExpressionBuilder(
             if (localSetNumber != null) {
                 val localGetNumber = (immediates.firstOrNull() as? WasmImmediate.LocalIdx)?.value
                 if (localGetNumber == localSetNumber) {
-                    expression.removeLast()
+                    expression.removeLastFrom(lastInstructionId)
                     addInstruction(WasmOp.LOCAL_TEE, location, immediates)
                     return
                 }

@@ -43,10 +43,9 @@ class BodyGenerator(
     private val unitInstanceField by lazy { backendContext.findUnitInstanceField() }
 
     fun WasmExpressionBuilder.buildGetUnit() {
-        buildInstr(
-            WasmOp.GET_UNIT,
-            SourceLocation.NoLocation("GET_UNIT"),
-            WasmImmediate.GlobalIdx(context.referenceGlobalField(unitInstanceField.symbol))
+        buildGetGlobal(
+            context.referenceGlobalField(unitInstanceField.symbol),
+            SourceLocation.NoLocation("GET_UNIT")
         )
     }
 
@@ -178,11 +177,6 @@ class BodyGenerator(
         val field: IrField = expression.symbol.owner
         val receiver: IrExpression? = expression.receiver
         val location = expression.getSourceLocation()
-
-        if (field.isObjectInstanceField() && field.type.makeNotNull().isUnit()) {
-            body.buildGetUnit()
-            return
-        }
 
         if (receiver != null) {
             generateExpression(receiver)
@@ -696,11 +690,12 @@ class BodyGenerator(
 
     private fun visitFunctionReturn(expression: IrReturn) {
         val returnType = expression.returnTargetSymbol.owner.returnType(backendContext)
+        val isGetUnitFunction = expression.returnTargetSymbol.owner == unitGetInstance
 
-        if (returnType == irBuiltIns.unitType && expression.returnTargetSymbol.owner != unitGetInstance) {
-            generateAsStatement(expression.value)
-        } else {
-            generateWithExpectedType(expression.value, returnType)
+        when {
+            isGetUnitFunction -> generateExpression(expression.value)
+            returnType == irBuiltIns.unitType -> generateAsStatement(expression.value)
+            else -> generateWithExpectedType(expression.value, returnType)
         }
 
         if (functionContext.irFunction is IrConstructor) {
