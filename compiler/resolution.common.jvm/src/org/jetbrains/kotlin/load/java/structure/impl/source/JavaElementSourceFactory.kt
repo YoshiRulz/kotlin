@@ -6,12 +6,15 @@
 package org.jetbrains.kotlin.load.java.structure.impl.source
 
 import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiType
+import com.intellij.psi.*
 
 abstract class JavaElementSourceFactory {
     abstract fun <PSI : PsiElement> createPsiSource(psi: PSI): JavaElementPsiSource<PSI>
     abstract fun <TYPE : PsiType> createTypeSource(type: TYPE): JavaElementTypeSource<TYPE>
+    abstract fun <TYPE : PsiType> createVariableReturnTypeSource(psi: JavaElementPsiSource<out PsiVariable>): JavaElementTypeSource<TYPE>
+    abstract fun <TYPE : PsiType> createMethodReturnTypeSource(psi: JavaElementPsiSource<out PsiMethod>): JavaElementTypeSource<TYPE>
+
+    abstract fun <TYPE : PsiType> createExpressionTypeSource(psi: JavaElementPsiSource<out PsiExpression>): JavaElementTypeSource<TYPE>
 
     companion object {
         @JvmStatic
@@ -28,5 +31,23 @@ class JavaFixedElementSourceFactory : JavaElementSourceFactory() {
 
     override fun <TYPE : PsiType> createTypeSource(type: TYPE): JavaElementTypeSource<TYPE> {
         return JavaElementTypeSourceWithFixedType(type, this)
+    }
+
+    override fun <TYPE : PsiType> createVariableReturnTypeSource(psi: JavaElementPsiSource<out PsiVariable>): JavaElementTypeSource<TYPE> {
+        @Suppress("UNCHECKED_CAST")
+        return createTypeSource(psi.psi.type as TYPE)
+    }
+
+
+    override fun <TYPE : PsiType> createExpressionTypeSource(psi: JavaElementPsiSource<out PsiExpression>): JavaElementTypeSource<TYPE> {
+        @Suppress("UNCHECKED_CAST")
+        return createTypeSource(psi.psi.type as TYPE)
+    }
+
+    override fun <TYPE : PsiType> createMethodReturnTypeSource(psi: JavaElementPsiSource<out PsiMethod>): JavaElementTypeSource<TYPE> {
+        val psiType: PsiType = psi.psi.returnType
+            ?: error("Method is not a constructor and has no return type: " + psi.psi.name)
+        @Suppress("UNCHECKED_CAST")
+        return createTypeSource(psiType as TYPE)
     }
 }
