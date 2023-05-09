@@ -136,7 +136,7 @@ internal class LLFirCodeFragmentResovableSession(
 
     private fun buildFirFileFor(element: KtFile, moduleComponents: LLFirModuleResolveComponents): FirFile {
         val codeFragmentModule = element.getKtModule() as KtCodeFragmentModule
-        val debugeeSourceFile = codeFragmentModule.sourceFile
+        val debugeeSourceFile = codeFragmentModule.place.containingFile as KtFile
         val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
         val properties = mutableMapOf<String, FirTypeRef>()
 

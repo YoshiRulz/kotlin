@@ -200,11 +200,6 @@ public interface KtCodeFragmentModule: KtModule {
     val codeFragment: KtCodeFragment
 
     /**
-     * File in context which expression is evaluated.
-     */
-    val sourceFile: KtFile
-
-    /**
      * Coordinate where expression is evaluated.
      */
     val place: PsiElement

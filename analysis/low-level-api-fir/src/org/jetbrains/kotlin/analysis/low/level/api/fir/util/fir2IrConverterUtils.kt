@@ -10,9 +10,12 @@ import org.jetbrains.kotlin.analysis.low.level.api.fir.api.getFirResolveSession
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.getOrBuildFir
 import org.jetbrains.kotlin.analysis.project.structure.getKtModule
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
+import org.jetbrains.kotlin.backend.jvm.JvmIrDeserializerImpl
 import org.jetbrains.kotlin.builtins.DefaultBuiltIns
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.LanguageVersionSettings
+import org.jetbrains.kotlin.config.languageVersionSettings
 import org.jetbrains.kotlin.diagnostics.KtDiagnostic
 import org.jetbrains.kotlin.diagnostics.impl.SimpleDiagnosticsCollectorWithSuppress
 import org.jetbrains.kotlin.fir.FirElement
@@ -184,13 +187,8 @@ private fun createModuleFragmentWithSignaturesIfNeededWorkaround(
 fun compileKt2Ir(
     codeFragment: KtElement,
     languageVersionSettings: LanguageVersionSettings,
-    project: Project,
-    extensions: JvmFir2IrExtensions,
     dianosticErrorProcessing: (Map.Entry<String?, List<KtDiagnostic>>) -> Unit
 ): Fir2IrResult {
-
-    codeFragment.getKtModule(project)
-
     val session = codeFragment.getFirResolveSession()
     val firFile = codeFragment.getOrBuildFir(session)!! as FirFile
 
@@ -209,6 +207,11 @@ fun compileKt2Ir(
     }
 
     val irGenerationExtension = IrGenerationExtension.getInstances(codeFragment.project)
+
+    val compilerConfiguration = CompilerConfiguration().apply {
+        this.languageVersionSettings = languageVersionSettings
+    }
+    val extensions = JvmFir2IrExtensions(compilerConfiguration, JvmIrDeserializerImpl(), JvmIrMangler)
 
     val fir2irResult = createModuleFragmentWithSignaturesIfNeededWorkaround(
         session.useSiteFirSession,
