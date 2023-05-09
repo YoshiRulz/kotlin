@@ -53,10 +53,10 @@ class JsIrBackendFacade(
     val testServices: TestServices,
     private val firstTimeCompilation: Boolean
 ) : AbstractTestFacade<BinaryArtifacts.KLib, BinaryArtifacts.Js>() {
-    override val inputKind: ArtifactKinds.KLib
-        get() = ArtifactKinds.KLib
-    override val outputKind: ArtifactKinds.Js
-        get() = ArtifactKinds.Js
+    override val inputKind: ArtifactKinds.KLib get() = ArtifactKinds.KLib
+    override val outputKind: ArtifactKinds.Js get() = ArtifactKinds.Js
+
+    private val jsIrPathReplacer by lazy { JsIrPathReplacer(testServices) }
 
     constructor(testServices: TestServices) : this(testServices, firstTimeCompilation = true)
 
@@ -198,9 +198,7 @@ class JsIrBackendFacade(
     }
 
     private fun IrModuleFragment.resolveTestPaths() {
-        JsIrPathReplacer(testServices).let {
-            files.forEach(it::lower)
-        }
+        files.forEach(jsIrPathReplacer::lower)
     }
 
     private fun loadIrFromKlib(module: TestModule, configuration: CompilerConfiguration): IrModuleInfo {
@@ -268,8 +266,9 @@ class JsIrBackendFacade(
         return this
     }
 
-    fun File.fixJsFile(newJsTarget: File, moduleId: String, moduleKind: ModuleKind) {
+    fun File.fixJsFile(rootDir: File, newJsTarget: File, moduleId: String, moduleKind: ModuleKind) {
         val newJsCode = ClassicJsBackendFacade.wrapWithModuleEmulationMarkers(readText(), moduleKind, moduleId)
+        val jsCodeWithCorrectImportPath = jsIrPathReplacer.replacePathTokensWithRealPath(newJsCode, newJsTarget, rootDir)
 
         val oldJsMap = File("$absolutePath.map")
         val jsCodeMap = (moduleKind == ModuleKind.PLAIN && oldJsMap.exists()).ifTrue { oldJsMap.readText() }
@@ -277,30 +276,25 @@ class JsIrBackendFacade(
         this.delete()
         oldJsMap.delete()
 
-        newJsTarget.write(newJsCode)
+        newJsTarget.write(jsCodeWithCorrectImportPath)
         jsCodeMap?.let { File("${newJsTarget.absolutePath}.map").write(it) }
     }
 
     private fun CompilationOutputs.writeTo(outputFile: File, moduleId: String, moduleKind: ModuleKind) {
-        val tmpBuildDir = outputFile.parentFile.resolve("tmp-build")
+        val rootDir = outputFile.parentFile
+        val tmpBuildDir = rootDir.resolve("tmp-build")
         // CompilationOutputs keeps the `outputDir` clean by removing all outdated JS and other unknown files.
         // To ensure that useful files around `outputFile`, such as irdump, are not removed, use `tmpBuildDir` instead.
         val allJsFiles = writeAll(tmpBuildDir, outputFile.nameWithoutExtension, false, moduleId, moduleKind).filter {
             it.extension == "js" || it.extension == "mjs"
         }
 
-        val indexValue = dependencies.withIndex().indexOfFirst { !allJsFiles[it.index].path.contains(it.value.first.drop(2)) }
-
-        if (indexValue != -1) {
-            println("Gotcha")
-        }
-
         val mainModuleFile = allJsFiles.last()
-        mainModuleFile.fixJsFile(outputFile, moduleId, moduleKind)
+        mainModuleFile.fixJsFile(rootDir, outputFile, moduleId, moduleKind)
 
         dependencies.map { it.first }.zip(allJsFiles.dropLast(1)).forEach { (depModuleId, builtJsFilePath) ->
             val newFile = outputFile.augmentWithModuleName(depModuleId)
-            builtJsFilePath.fixJsFile(newFile, depModuleId, moduleKind)
+            builtJsFilePath.fixJsFile(rootDir, newFile, depModuleId, moduleKind)
         }
         tmpBuildDir.deleteRecursively()
     }

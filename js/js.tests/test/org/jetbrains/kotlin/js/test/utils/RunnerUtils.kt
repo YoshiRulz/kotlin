@@ -50,7 +50,7 @@ private fun extractJsFiles(
     fun copyInputJsFile(module: TestModule, inputJsFile: TestFile): String {
         val newName = module.getNameFor(inputJsFile, testServices)
         val targetFile = File(outputDir, newName)
-        targetFile.writeText(inputJsFile.originalContent)
+        targetFile.writeText(inputJsFile.originalContent.trim())
         return targetFile.absolutePath
     }
 

@@ -496,7 +496,6 @@ private fun generateWrappedModuleBody(
         JsGenerationGranularity.WHOLE_PROGRAM -> generateSingleWrappedModuleBody(
             mainModuleName,
             moduleKind,
-            granularity,
             program.asFragments(),
             sourceMapsInfo,
             generateCallToMain = true,
@@ -504,7 +503,6 @@ private fun generateWrappedModuleBody(
         )
         JsGenerationGranularity.PER_FILE,
         JsGenerationGranularity.PER_MODULE -> generateMultiWrappedModuleBody(
-            granularity,
             mainModuleName,
             moduleKind,
             program,
@@ -516,7 +514,6 @@ private fun generateWrappedModuleBody(
 }
 
 private fun generateMultiWrappedModuleBody(
-    granularity: JsGenerationGranularity,
     mainModuleName: String,
     moduleKind: ModuleKind,
     program: JsIrProgram,
@@ -533,7 +530,6 @@ private fun generateMultiWrappedModuleBody(
         generateSingleWrappedModuleBody(
             mainModuleName,
             moduleKind,
-            granularity,
             main.fragments,
             sourceMapsInfo,
             generateCallToMain = true,
@@ -549,7 +545,6 @@ private fun generateMultiWrappedModuleBody(
                 val moduleCompilationOutput = generateSingleWrappedModuleBody(
                     moduleName,
                     moduleKind,
-                    granularity,
                     module.fragments,
                     sourceMapsInfo,
                     generateCallToMain = false,
@@ -567,7 +562,6 @@ private fun generateMultiWrappedModuleBody(
 fun generateSingleWrappedModuleBody(
     moduleName: String,
     moduleKind: ModuleKind,
-    granularity: JsGenerationGranularity,
     fragments: List<JsIrProgramFragment>,
     sourceMapsInfo: SourceMapsInfo?,
     generateCallToMain: Boolean,
@@ -577,7 +571,6 @@ fun generateSingleWrappedModuleBody(
     val program = Merger(
         moduleName,
         moduleKind,
-        granularity,
         fragments,
         crossModuleReferences,
         generateRegionComments = true,

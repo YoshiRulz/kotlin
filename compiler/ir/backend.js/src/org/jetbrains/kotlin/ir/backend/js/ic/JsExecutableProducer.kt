@@ -29,7 +29,7 @@ class JsExecutableProducer(
     fun buildExecutable(granularity: JsGenerationGranularity, outJsProgram: Boolean) =
         when (granularity) {
             JsGenerationGranularity.WHOLE_PROGRAM -> buildSingleModuleExecutable(outJsProgram)
-            JsGenerationGranularity.PER_MODULE, JsGenerationGranularity.PER_FILE -> buildMultiModuleExecutable(outJsProgram, granularity)
+            JsGenerationGranularity.PER_MODULE, JsGenerationGranularity.PER_FILE -> buildMultiModuleExecutable(outJsProgram)
         }
 
     private fun buildSingleModuleExecutable(outJsProgram: Boolean): BuildResult {
@@ -37,7 +37,6 @@ class JsExecutableProducer(
         val out = generateSingleWrappedModuleBody(
             moduleName = mainModuleName,
             moduleKind = moduleKind,
-            granularity = JsGenerationGranularity.WHOLE_PROGRAM,
             fragments = modules.flatMap { it.fragments },
             sourceMapsInfo = sourceMapsInfo,
             generateCallToMain = true,
@@ -46,7 +45,7 @@ class JsExecutableProducer(
         return BuildResult(out, listOf(mainModuleName))
     }
 
-    private fun buildMultiModuleExecutable(outJsProgram: Boolean, granularity: JsGenerationGranularity): BuildResult {
+    private fun buildMultiModuleExecutable(outJsProgram: Boolean): BuildResult {
         val rebuildModules = mutableListOf<String>()
         stopwatch.startNext("JS code cache loading")
         val jsMultiModuleCache = JsMultiModuleCache(caches)
@@ -79,7 +78,6 @@ class JsExecutableProducer(
             val compiledModule = generateSingleWrappedModuleBody(
                 moduleName = moduleName,
                 moduleKind = moduleKind,
-                granularity = granularity,
                 associatedModule.fragments,
                 sourceMapsInfo = sourceMapsInfo,
                 generateCallToMain = generateCallToMain,
