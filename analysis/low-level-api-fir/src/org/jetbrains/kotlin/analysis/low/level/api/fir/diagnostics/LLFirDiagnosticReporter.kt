@@ -7,6 +7,8 @@ package org.jetbrains.kotlin.analysis.low.level.api.fir.diagnostics
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.AbstractKtSourceElement
+import org.jetbrains.kotlin.KtFakeSourceElement
+import org.jetbrains.kotlin.KtFakeSourceElementKind
 import org.jetbrains.kotlin.analysis.low.level.api.fir.util.addValueFor
 import org.jetbrains.kotlin.diagnostics.*
 
@@ -17,6 +19,8 @@ internal class LLFirDiagnosticReporter : DiagnosticReporter() {
     override fun report(diagnostic: KtDiagnostic?, context: DiagnosticContext) {
         if (diagnostic == null) return
         if (context.isDiagnosticSuppressed(diagnostic)) return
+        if (diagnostic.element is KtFakeSourceElement
+            && (diagnostic.element as KtFakeSourceElement).kind == KtFakeSourceElementKind.ImplicitImport) return
 
         val psiDiagnostic = when (diagnostic) {
             is KtPsiDiagnostic -> diagnostic
