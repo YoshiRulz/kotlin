@@ -42,6 +42,8 @@ abstract class FirProvider : FirSessionComponent {
 
     abstract fun getFirScriptContainerFile(symbol: FirScriptSymbol): FirFile?
 
+    abstract fun getFirScripByFilePath(path: String): FirScriptSymbol?
+
     abstract fun getFirFilesByPackage(fqName: FqName): List<FirFile>
 
     abstract fun getClassNamesInPackage(fqName: FqName): Set<Name>

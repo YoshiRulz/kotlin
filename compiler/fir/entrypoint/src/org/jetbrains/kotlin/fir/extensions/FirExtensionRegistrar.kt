@@ -9,6 +9,7 @@ import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.SessionConfiguration
 import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtension
+import org.jetbrains.kotlin.fir.backend.Fir2IrScriptConfiguratorExtension
 import org.jetbrains.kotlin.fir.builder.FirScriptConfiguratorExtension
 import org.jetbrains.kotlin.fir.resolve.FirSamConversionTransformerExtension
 import java.util.concurrent.atomic.AtomicBoolean
@@ -32,6 +33,7 @@ abstract class FirExtensionRegistrar : FirExtensionRegistrarAdapter() {
             FirSamConversionTransformerExtension::class,
             FirAssignExpressionAltererExtension::class,
             FirScriptConfiguratorExtension::class,
+            Fir2IrScriptConfiguratorExtension::class,
             FirFunctionTypeKindExtension::class,
             FirDeclarationsForMetadataProviderExtension::class,
         )
@@ -97,6 +99,11 @@ abstract class FirExtensionRegistrar : FirExtensionRegistrarAdapter() {
             registerExtension(FirScriptConfiguratorExtension::class, this)
         }
 
+        @JvmName("plusFir2IrScriptConfiguratorExtension")
+        operator fun (Fir2IrScriptConfiguratorExtension.Factory).unaryPlus() {
+            registerExtension(Fir2IrScriptConfiguratorExtension::class, this)
+        }
+
         @JvmName("plusFunctionTypeKindExtension")
         operator fun (FirFunctionTypeKindExtension.Factory).unaryPlus() {
             registerExtension(FirFunctionTypeKindExtension::class, this)
@@ -157,6 +164,11 @@ abstract class FirExtensionRegistrar : FirExtensionRegistrarAdapter() {
         @JvmName("plusScriptConfiguratorExtension")
         operator fun ((FirSession) -> FirScriptConfiguratorExtension).unaryPlus() {
             FirScriptConfiguratorExtension.Factory { this.invoke(it) }.unaryPlus()
+        }
+
+        @JvmName("plusFir2IrScriptConfiguratorExtension")
+        operator fun ((FirSession) -> Fir2IrScriptConfiguratorExtension).unaryPlus() {
+            Fir2IrScriptConfiguratorExtension.Factory { this.invoke(it) }.unaryPlus()
         }
 
         @JvmName("plusFunctionTypeKindExtension")

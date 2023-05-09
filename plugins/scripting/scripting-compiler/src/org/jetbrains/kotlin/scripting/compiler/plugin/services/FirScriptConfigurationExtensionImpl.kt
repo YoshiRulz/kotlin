@@ -29,14 +29,9 @@ import org.jetbrains.kotlin.fir.types.impl.FirTypeArgumentListImpl
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.scripting.definitions.annotationsForSamWithReceivers
-import org.jetbrains.kotlin.scripting.resolve.KtFileScriptSource
-import org.jetbrains.kotlin.scripting.resolve.VirtualFileScriptSource
 import kotlin.script.experimental.api.*
-import kotlin.script.experimental.host.FileScriptSource
 import kotlin.script.experimental.host.ScriptingHostConfiguration
-import kotlin.script.experimental.host.StringScriptSource
 
 
 class FirScriptConfiguratorExtensionImpl(
@@ -47,14 +42,7 @@ class FirScriptConfiguratorExtensionImpl(
     @OptIn(SymbolInternals::class)
     override fun FirScriptBuilder.configure(fileBuilder: FirFileBuilder) {
 
-        // TODO: rewrite/extract decision logic for clarity
-        val compilationConfiguration = session.scriptDefinitionProviderService?.let { providerService ->
-            fileBuilder.sourceFile?.toSourceCode()?.let { script ->
-                val ktFile = (script as? KtFileScriptSource)?.ktFile ?: error("only PSI scripts are supported at the moment")
-                providerService.configurationProvider?.getScriptConfigurationResult(ktFile)?.valueOrNull()?.configuration
-                    ?: providerService.definitionProvider?.findDefinition(script)?.compilationConfiguration
-            } ?: providerService.definitionProvider?.getDefaultDefinition()?.compilationConfiguration
-        }
+        val compilationConfiguration = session.getScriptCompilationConfiguration(fileBuilder.sourceFile?.toSourceCode())
 
         if (compilationConfiguration != null) {
 
@@ -101,7 +89,7 @@ class FirScriptConfiguratorExtensionImpl(
                 contextReceivers.add(buildContextReceiverWithFqName(FqName.fromSegments(implicitReceiver.typeName.split("."))))
             }
 
-            compilationConfiguration[ScriptCompilationConfiguration.providedProperties]?.forEach { propertyName, propertyType ->
+            compilationConfiguration[ScriptCompilationConfiguration.providedProperties]?.forEach { (propertyName, propertyType) ->
                 val typeRef = buildUserTypeRef {
                     isMarkedNullable = propertyType.isNullable
                     propertyType.typeName.split(".").forEach {
@@ -186,10 +174,3 @@ class FirScriptConfiguratorExtensionImpl(
     }
 }
 
-fun KtSourceFile.toSourceCode(): SourceCode? = when (this) {
-    is KtPsiSourceFile -> (psiFile as? KtFile)?.let(::KtFileScriptSource) ?: VirtualFileScriptSource(psiFile.virtualFile)
-    is KtVirtualFileSourceFile -> VirtualFileScriptSource(virtualFile)
-    is KtIoFileSourceFile -> FileScriptSource(file)
-    is KtInMemoryTextSourceFile -> StringScriptSource(text.toString(), name)
-    else -> null
-}
