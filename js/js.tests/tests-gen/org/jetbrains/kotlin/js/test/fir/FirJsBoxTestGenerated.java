@@ -1234,6 +1234,22 @@ public class FirJsBoxTestGenerated extends AbstractFirJsBoxTest {
     }
 
     @Nested
+    @TestMetadata("js/js.translator/testData/box/dce")
+    @TestDataPath("$PROJECT_ROOT")
+    public class Dce {
+        @Test
+        public void testAllFilesPresentInDce() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("js/js.translator/testData/box/dce"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.JS_IR, true);
+        }
+
+        @Test
+        @TestMetadata("removeUnusedOverride.kt")
+        public void testRemoveUnusedOverride() throws Exception {
+            runTest("js/js.translator/testData/box/dce/removeUnusedOverride.kt");
+        }
+    }
+
+    @Nested
     @TestMetadata("js/js.translator/testData/box/defaultArguments")
     @TestDataPath("$PROJECT_ROOT")
     public class DefaultArguments {
@@ -5142,6 +5158,24 @@ public class FirJsBoxTestGenerated extends AbstractFirJsBoxTest {
         @TestMetadata("overrideAnyMethods.kt")
         public void testOverrideAnyMethods() throws Exception {
             runTest("js/js.translator/testData/box/inheritance/overrideAnyMethods.kt");
+        }
+
+        @Test
+        @TestMetadata("overrideDefaultMethod.kt")
+        public void testOverrideDefaultMethod() throws Exception {
+            runTest("js/js.translator/testData/box/inheritance/overrideDefaultMethod.kt");
+        }
+
+        @Test
+        @TestMetadata("overrideDefaultProperty.kt")
+        public void testOverrideDefaultProperty() throws Exception {
+            runTest("js/js.translator/testData/box/inheritance/overrideDefaultProperty.kt");
+        }
+
+        @Test
+        @TestMetadata("overrideGenericDefaultMethod.kt")
+        public void testOverrideGenericDefaultMethod() throws Exception {
+            runTest("js/js.translator/testData/box/inheritance/overrideGenericDefaultMethod.kt");
         }
 
         @Test
