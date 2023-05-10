@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.test.services.isJsFile
 import org.jetbrains.kotlin.test.services.isMjsFile
 import org.jetbrains.kotlin.test.services.moduleStructure
 import java.io.File
+import kotlin.io.invariantSeparatorsPath
 
 private const val PATH_TO_ROOT_TOKEN = "@PATH_TO_ROOT"
 
@@ -61,7 +62,7 @@ class JsIrPathReplacer(testServices: TestServices) : DeclarationTransformer {
     }
 
     fun replacePathTokensWithRealPath(content: String, file: File, rootDir: File): String {
-        val relativePathToRootDir = file.parentFile.toPath().relativize(rootDir.toPath()).toString().ifEmpty { "." }
+        val relativePathToRootDir = rootDir.relativeTo(file.parentFile).invariantSeparatorsPath.ifEmpty { "." }
         return content.replace("from '$PATH_TO_ROOT_TOKEN/(.+?)';${'$'}".toRegex(RegexOption.MULTILINE)) { result ->
             val importPath = result.groups[1]?.value ?: error("Unexpected import path")
             "from '$relativePathToRootDir/$importPath'\n"
