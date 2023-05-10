@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.gradle.util.replaceText
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.condition.EnabledOnOs
 import org.junit.jupiter.api.condition.OS
+import kotlin.io.path.deleteRecursively
 
 @EnabledOnOs(OS.MAC)
 @DisplayName("Tests for K/N with apple XCFramework")
