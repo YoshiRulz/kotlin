@@ -11,9 +11,13 @@ import org.jetbrains.kotlin.analysis.low.level.api.fir.api.getOrBuildFir
 import org.jetbrains.kotlin.analysis.project.structure.KtCodeFragmentModule
 import org.jetbrains.kotlin.analysis.project.structure.getKtModule
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.backend.jvm.JvmBackendExtension
+import org.jetbrains.kotlin.backend.jvm.JvmGeneratorExtensions
 import org.jetbrains.kotlin.backend.jvm.JvmIrDeserializerImpl
 import org.jetbrains.kotlin.builtins.DefaultBuiltIns
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.codegen.JvmBackendClassResolver
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.config.languageVersionSettings
@@ -26,10 +30,7 @@ import org.jetbrains.kotlin.fir.backend.generators.AnnotationGenerator
 import org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator
 import org.jetbrains.kotlin.fir.backend.generators.DelegatedMemberGenerator
 import org.jetbrains.kotlin.fir.backend.generators.FakeOverrideGenerator
-import org.jetbrains.kotlin.fir.backend.jvm.Fir2IrJvmSpecialAnnotationSymbolProvider
-import org.jetbrains.kotlin.fir.backend.jvm.FirJvmKotlinMangler
-import org.jetbrains.kotlin.fir.backend.jvm.FirJvmVisibilityConverter
-import org.jetbrains.kotlin.fir.backend.jvm.JvmFir2IrExtensions
+import org.jetbrains.kotlin.fir.backend.jvm.*
 import org.jetbrains.kotlin.fir.declarations.FirConstructor
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
@@ -51,13 +52,16 @@ import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmIrMangler
 import org.jetbrains.kotlin.ir.builders.declarations.buildValueParameter
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFactory
+import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.impl.IrExternalPackageFragmentImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrModuleFragmentImpl
+import org.jetbrains.kotlin.ir.linkage.IrProvider
 import org.jetbrains.kotlin.ir.symbols.impl.IrExternalPackageFragmentSymbolImpl
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.KotlinMangler
+import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.load.kotlin.JvmPackagePartSource
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtElement
@@ -131,7 +135,7 @@ private fun createModuleFragmentWithSignaturesIfNeededWorkaround(
         override fun visitResolvedTypeRef(resolvedTypeRef: FirResolvedTypeRef) {
             val symbol =
                 (resolvedTypeRef.type as? ConeLookupTagBasedType)?.lookupTag?.toSymbol(session) ?: return
-            val firClass = symbol.fir as? FirRegularClass ?: return super.visitResolvedTypeRef(resolvedTypeRef) //TODO("$symbol")
+            val firClass = symbol.fir as? FirRegularClass ?: return super.visitResolvedTypeRef(resolvedTypeRef)
             if (components.classifierStorage.getCachedIrClass(firClass) != null)
                 return
             val sig = IdSignature.CommonSignature(firClass.symbol.classId.asFqNameString(), firClass.name.asString(), 0, 0)
@@ -185,10 +189,20 @@ private fun createModuleFragmentWithSignaturesIfNeededWorkaround(
     return Fir2IrResult(irModuleFragment, components, moduleDescriptor)
 }
 
+data class Kt2IrResult(
+    val irModuleFragment: IrModuleFragment,
+    val symbolTable: SymbolTable,
+    val irProviders: List<IrProvider>,
+    val jvmBackendExtension: JvmBackendExtension,
+    val generatorExtensions: JvmGeneratorExtensions,
+    val backendClassResolver: JvmBackendClassResolver,
+    val irPluginContext: IrPluginContext
+)
+
 fun compileKt2Ir(
     codeFragment: KtElement,
     dianosticErrorProcessing: (Map.Entry<String?, List<KtDiagnostic>>) -> Unit
-): Fir2IrResult {
+): Kt2IrResult {
     val session = codeFragment.getFirResolveSession()
     val firFile = codeFragment.getOrBuildFir(session)!! as FirFile
 
@@ -229,5 +243,13 @@ fun compileKt2Ir(
                                   { FirJvmKotlinMangler() }),
         null
     )
-    return fir2irResult
+    return Kt2IrResult(
+        fir2irResult.irModuleFragment,
+        fir2irResult.components.symbolTable,
+        fir2irResult.components.irProviders,
+        FirJvmBackendExtension(fir2irResult.components, null),
+        JvmFir2IrExtensions(compilerConfiguration, JvmIrDeserializerImpl(), JvmIrMangler),
+        FirJvmBackendClassResolver(fir2irResult.components),
+        fir2irResult.pluginContext
+    )
 }
