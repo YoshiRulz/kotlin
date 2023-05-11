@@ -24,6 +24,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.ProjectScope
 import com.intellij.util.io.URLUtil.JAR_PROTOCOL
 import com.intellij.util.io.URLUtil.JAR_SEPARATOR
+import org.jetbrains.kotlin.analysis.api.impl.base.references.HLApiReferenceProviderService
 import org.jetbrains.kotlin.analysis.api.resolve.extensions.KtResolveExtensionProvider
 import org.jetbrains.kotlin.analysis.project.structure.*
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
@@ -39,6 +40,7 @@ import org.jetbrains.kotlin.cli.jvm.modules.JavaModuleGraph
 import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.load.kotlin.MetadataFinderFactory
 import org.jetbrains.kotlin.load.kotlin.VirtualFileFinderFactory
+import org.jetbrains.kotlin.psi.KotlinReferenceProvidersService
 import org.jetbrains.kotlin.resolve.ModuleAnnotationsResolver
 import org.jetbrains.kotlin.resolve.jvm.modules.JavaModuleResolver
 import org.jetbrains.kotlin.utils.addIfNotNull
@@ -67,6 +69,10 @@ object StandaloneProjectFactory {
             KtResolveExtensionProvider.EP_NAME.name,
             KtResolveExtensionProvider::class.java
         )
+
+        project.apply {
+            registerService(KotlinReferenceProvidersService::class.java, HLApiReferenceProviderService::class.java)
+        }
     }
 
     private fun registerJavaPsiFacade(project: MockProject) {

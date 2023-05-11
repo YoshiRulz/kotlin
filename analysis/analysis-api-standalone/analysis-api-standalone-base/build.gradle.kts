@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":compiler:psi"))
     api(project(":compiler:cli-base"))
     api(project(":analysis:analysis-api"))
+    api(project(":analysis:analysis-api-impl-base"))
     api(project(":analysis:analysis-api-providers"))
     api(project(":analysis:project-structure"))
 }
