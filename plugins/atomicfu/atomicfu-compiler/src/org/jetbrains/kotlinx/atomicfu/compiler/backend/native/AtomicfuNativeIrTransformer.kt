@@ -7,13 +7,15 @@ package org.jetbrains.kotlinx.atomicfu.compiler.backend.native
 
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.addExtensionReceiver
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrConst
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
-import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
-import org.jetbrains.kotlin.ir.builders.declarations.buildFun
+import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.*
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrPropertyReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrValueParameterSymbol
 import org.jetbrains.kotlin.ir.types.*
@@ -58,10 +60,10 @@ class AtomicfuNativeIrTransformer(
             toVolatileProperty(parentContainer)
 
         override fun IrProperty.transformStaticAtomic(parentContainer: IrDeclarationContainer) {
-            // static atomics are left as boxes for now
-            // todo: do not transform function calls on them
-
-            // todo: just skip them (as a box) and do not transform any subsequent calls on this atomic
+            toVolatileProperty(parentContainer)
+//            parentContainer.declarations.remove(this)
+//            generateVolatileProperty(this, parentContainer)
+            //parentContainer.declarations.add(volatileProperty)
         }
 
         override fun IrProperty.transformDelegatedAtomic(parentContainer: IrDeclarationContainer) {
@@ -70,19 +72,46 @@ class AtomicfuNativeIrTransformer(
 
         override fun IrProperty.transformAtomicArray(parentContainer: IrDeclarationContainer) {
             // todo: just skip them (as a box) and do not transform any subsequent calls on this array
+            // todo: design API for atomic array intrinsics
         }
 
-        private fun IrProperty.toVolatileProperty(parentClass: IrClass) {
+        private fun generateVolatileProperty(atomicProperty: IrProperty, parentContainer: IrDeclarationContainer) {
+            val atomicField =
+                requireNotNull(atomicProperty.backingField) { "BackingField of atomic property $atomicProperty should not be null" }
+            val fieldType = atomicField.type.atomicToValueType()
+            atomicField.initializer?.expression?.let {
+                val initValue = (it as IrCall).getAtomicFactoryValueArgument()
+                with(atomicSymbols.createBuilder(atomicProperty.symbol)) {
+                    irVolatileField(
+                        Name.identifier(atomicProperty.name.asString() + "\$volatile"),
+                        fieldType,
+                        initValue,
+                        atomicField.annotations,
+                        parentContainer
+                    ).apply {
+                        parent = parentContainer
+                    }
+                }
+//                irBuiltIns.irFactory.buildProperty {
+//                    name = volatileField.name
+//                    visibility = atomicProperty.visibility
+//                    isVar = true
+//                }.apply {
+//                    backingField = volatileField
+//                    //addStaticGetter(irBuiltIns)
+//                    parent = parentContainer
+//                    parentContainer.declarations.add(this)
+//                }
+            }
+        }
+
+        private fun IrProperty.toVolatileProperty(parentContainer: IrDeclarationContainer) {
             // Atomic box is replaced with a volatile property
-            // For now supported for primitive types (int, long, boolean) and for linuxX64 and macosX64
-            // val a = atomic(0)
+            // val a = atomic(0) ->
             // @Volatile var a: Int = 0
-            setVolatileBackingField(parentClass)
-            updateGetter(parentClass, irBuiltIns)
-            updateSetter(parentClass, irBuiltIns)
-//            if (parentClass.name.asString() == "ConcurrentLinkedListNode") {
-//                println("Dumping backingField for ${this.name.asString()}:\n ${this.dump()}")
-//            }
+            setVolatileBackingField(parentContainer)
+            updateGetter(parentContainer, irBuiltIns)
+            updateSetter(parentContainer, irBuiltIns)
         }
     }
 
@@ -181,7 +210,6 @@ class AtomicfuNativeIrTransformer(
             parentFunction: IrFunction?
         ): IrCall {
             with(atomicSymbols.createBuilder(expression.symbol)) {
-
                 /**
                  * Skipping untransformed atomic receivers
                  */
@@ -190,7 +218,6 @@ class AtomicfuNativeIrTransformer(
                     (pf != null && pf.isAtomicExtension() && !pf.isTransformedAtomicExtension())) {
                     return expression
                 }
-
                 requireNotNull(parentFunction) { "Parent function of the call ${expression.render()} is null" }
                 val loopFunc = parentFunction.parentDeclarationContainer.getOrBuildInlineLoopFunction(
                     functionName = functionName,

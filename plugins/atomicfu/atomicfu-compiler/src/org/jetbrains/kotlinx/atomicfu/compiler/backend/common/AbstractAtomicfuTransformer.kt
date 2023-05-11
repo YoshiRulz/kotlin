@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.buildSetField
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.isInitializedInInitBlock
@@ -80,7 +81,7 @@ abstract class AbstractAtomicfuTransformer(
                 //println("-------------------------------- END --------------------------------")
             //}
 //            println("---------- start of the dump ${irFile.name} -------------")
-//            println(irFile.dump())
+            println(irFile.dump())
 //            println("---------- end of the dump -------------")
         }
         println("moduleFragment: ${moduleFragment.name}: End atomic boxes = ${endCounter.counter}")
@@ -152,13 +153,13 @@ abstract class AbstractAtomicfuTransformer(
             val property = this
             val atomicField = requireNotNull(property.backingField) { "BackingField of atomic property $property should not be null" }
             val fieldType = atomicField.type.atomicToValueType()
-            // todo: support late initialization, in case of atomic field, we just leave it untransformed
+            // todo: refactor this, looks ugly
             atomicField.initializer?.expression?.let {
                 val initValue = (it as IrCall).getAtomicFactoryValueArgument()
                 property.backingField = with(atomicSymbols.createBuilder(atomicField.symbol)) {
                     irVolatileField(
                         property.name,
-                        fieldType,
+                        if (fieldType.isBoolean()) irBuiltIns.intType else fieldType, // boolean fields can only be updated with AtomicIntegerFieldUpdater
                         initValue,
                         atomicField.annotations,
                         parentContainer
@@ -166,6 +167,7 @@ abstract class AbstractAtomicfuTransformer(
                 }
                 return property.backingField!!
             }
+            // todo: check correctness of init block initialization
             if (atomicField.isInitializedInInitBlock(parentContainer)) {
                 with(atomicSymbols.createBuilder(atomicField.symbol)) {
                     irVolatileField(

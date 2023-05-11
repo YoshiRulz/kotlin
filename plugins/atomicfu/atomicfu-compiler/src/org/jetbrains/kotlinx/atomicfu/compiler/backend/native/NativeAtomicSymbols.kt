@@ -29,17 +29,17 @@ class NativeAtomicSymbols(
     // AtomicInt class
 
     val compareAndSetFieldIntrinsic =
-        context.referenceFunctions(CallableId(FqName("kotlin.native.concurrent"), Name.identifier("compareAndSetField"))).single()
+        context.referenceFunctions(CallableId(FqName("kotlin.concurrent"), Name.identifier("compareAndSetField"))).single()
 
     val getAndSetFieldIntrinsic =
-        context.referenceFunctions(CallableId(FqName("kotlin.native.concurrent"), Name.identifier("getAndSetField"))).single()
+        context.referenceFunctions(CallableId(FqName("kotlin.concurrent"), Name.identifier("getAndSetField"))).single()
 
     val getAndAddIntFieldIntrinsic =
-        context.referenceFunctions(CallableId(FqName("kotlin.native.concurrent"), Name.identifier("getAndAddField")))
+        context.referenceFunctions(CallableId(FqName("kotlin.concurrent"), Name.identifier("getAndAddField")))
             .single { it.owner.returnType.isInt() }
 
     val getAndAddLongFieldIntrinsic =
-        context.referenceFunctions(CallableId(FqName("kotlin.native.concurrent"), Name.identifier("getAndAddField")))
+        context.referenceFunctions(CallableId(FqName("kotlin.concurrent"), Name.identifier("getAndAddField")))
             .single { it.owner.returnType.isLong() }
 
     val kMutableProperty0Get = irBuiltIns.kMutableProperty0Class.functionByName("get")

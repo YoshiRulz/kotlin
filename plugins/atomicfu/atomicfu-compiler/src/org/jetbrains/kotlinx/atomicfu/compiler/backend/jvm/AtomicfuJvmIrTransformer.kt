@@ -225,6 +225,7 @@ class AtomicfuJvmIrTransformer(
             val atomicArrayField = requireNotNull(property.backingField) { "BackingField of atomic array $property should not be null" }
             val atomicArrayClass = atomicSymbols.getAtomicArrayClassByAtomicfuArrayType(atomicArrayField.type)
             // todo fix this, pass generated array field as the second argument, here is the BUG NOW
+
             val consCall =
                 (atomicArrayField.initializer?.expression ?: updateInitBlockFieldInitialization(parentContainer, atomicArrayField.symbol, atomicArrayField.symbol)?.value)
                     ?: error("Atomic array $property was not initialized")
