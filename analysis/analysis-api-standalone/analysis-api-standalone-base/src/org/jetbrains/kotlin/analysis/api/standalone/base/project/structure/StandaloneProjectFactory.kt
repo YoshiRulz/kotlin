@@ -11,6 +11,7 @@ import com.intellij.core.CoreApplicationEnvironment
 import com.intellij.core.CoreJavaFileManager
 import com.intellij.core.CorePackageIndex
 import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.mock.MockApplication
 import com.intellij.mock.MockProject
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.roots.PackageIndex
@@ -27,6 +28,7 @@ import com.intellij.util.io.URLUtil.JAR_SEPARATOR
 import org.jetbrains.kotlin.analysis.api.impl.base.references.HLApiReferenceProviderService
 import org.jetbrains.kotlin.analysis.api.resolve.extensions.KtResolveExtensionProvider
 import org.jetbrains.kotlin.analysis.project.structure.*
+import org.jetbrains.kotlin.analysis.providers.impl.KotlinFakeClsStubsCache
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.compiler.*
 import org.jetbrains.kotlin.cli.jvm.index.JavaRoot
@@ -56,9 +58,27 @@ object StandaloneProjectFactory {
         val applicationEnvironment =
             KotlinCoreEnvironment.getOrCreateApplicationEnvironmentForTests(applicationDisposable, compilerConfiguration)
 
+        registerApplicationServices(applicationEnvironment.application)
+
         return KotlinCoreProjectEnvironment(projectDisposable, applicationEnvironment).apply {
             registerProjectServices(project)
             registerJavaPsiFacade(project)
+        }
+    }
+
+    private fun registerApplicationServices(application: MockApplication) {
+        if (application.getServiceIfCreated(KotlinFakeClsStubsCache::class.java) != null) {
+            // application services already registered by som other threads, tests
+            return
+        }
+        KotlinCoreEnvironment.underApplicationLock {
+            if (application.getServiceIfCreated(KotlinFakeClsStubsCache::class.java) != null) {
+                // application services already registered by som other threads, tests
+                return
+            }
+            application.apply {
+                registerService(KotlinFakeClsStubsCache::class.java, KotlinFakeClsStubsCache())
+            }
         }
     }
 
