@@ -113,6 +113,19 @@ class KotlinMetadataTargetConfigurator :
         }
     }
 
+    override fun configureCompilations(target: KotlinMetadataTarget) {
+        super.configureCompilations(target)
+
+        target.compilations
+            .withType<KotlinSharedNativeCompilation>()
+            .configureEach { compilation ->
+                KotlinNativeTargetConfigurator.configureCompilationModuleName(
+                    target.project,
+                    compilation
+                )
+            }
+    }
+
     override fun setupCompilationDependencyFiles(compilation: KotlinCompilation<KotlinCommonOptions>) {
         val project = compilation.target.project
 

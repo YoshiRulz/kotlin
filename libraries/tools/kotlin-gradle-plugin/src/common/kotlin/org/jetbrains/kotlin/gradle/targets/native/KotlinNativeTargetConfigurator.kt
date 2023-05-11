@@ -183,6 +183,17 @@ open class KotlinNativeTargetConfigurator<T : KotlinNativeTarget> : AbstractKotl
     // endregion.
 
     // region Configuration.
+    override fun configureCompilations(target: T) {
+        super.configureCompilations(target)
+
+        target.compilations.configureEach { compilation ->
+            configureCompilationModuleName(
+                target.project,
+                compilation
+            )
+        }
+    }
+
     override fun configurePlatformSpecificModel(target: T) {
         configureBinaries(target)
         configureFrameworkExport(target)
@@ -396,7 +407,6 @@ open class KotlinNativeTargetConfigurator<T : KotlinNativeTarget> : AbstractKotl
                 it.enabled = konanTarget.enabledOnCurrentHost
 
                 it.destinationDirectory.set(project.klibOutputDirectory(compilationInfo).resolve("klib"))
-                it.compilerOptions.moduleName.set(project.klibModuleName(it.baseName))
                 val propertiesProvider = PropertiesProvider(project)
                 if (propertiesProvider.useK2 == true) {
                     it.compilerOptions.useK2.set(true)
@@ -503,6 +513,21 @@ open class KotlinNativeTargetConfigurator<T : KotlinNativeTarget> : AbstractKotl
                 artifacts.add(klibArtifact)
                 attributes.attribute(project.artifactTypeAttribute, NativeArtifactFormat.KLIB)
             }
+        }
+
+        internal fun configureCompilationModuleName(
+            project: Project,
+            compilation: AbstractKotlinNativeCompilation
+        ) {
+            val baseName = if (compilation.isMain()) {
+                project.name
+            } else {
+                "${project.name}_${compilation.compilationName}"
+            }
+
+            compilation.compilerOptions.options.moduleName.convention(
+                project.klibModuleName(baseName)
+            )
         }
     }
 }
