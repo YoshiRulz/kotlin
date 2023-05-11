@@ -203,6 +203,9 @@ internal fun createInitialConfigurations(
     val initialScriptCompilationConfiguration =
         scriptCompilationConfiguration.withUpdatesFromCompilerConfiguration(kotlinCompilerConfiguration)
 
+    // this is the socond processing of the same args from script configuration, the first happens inside createInitialComopilerConfiguration
+    // but this one important for the error reporting
+    // TODO: rewrite to avoid double processing of the options
     initialScriptCompilationConfiguration[ScriptCompilationConfiguration.compilerOptions]?.let { compilerOptions ->
         kotlinCompilerConfiguration.updateWithCompilerOptions(compilerOptions, messageCollector, ignoredOptionsReportingState, false)
     }
