@@ -53,6 +53,7 @@ projectTest(parallel = true) {
     doFirst {
         systemProperty("testJsr223RuntimeClasspath", testRuntimeProvider.get())
         systemProperty("testCompilationClasspath", testCompilationClasspathProvider.get())
+        systemProperty("kotlin.script.base.compiler.arguments", "-Xskip-metadata-version-check")
     }
 }
 
@@ -60,4 +61,7 @@ projectTest(taskName = "embeddableTest", parallel = true) {
     workingDir = rootDir
     dependsOn(embeddableTestRuntime)
     classpath = embeddableTestRuntime
+    doFirst {
+        systemProperty("kotlin.script.base.compiler.arguments", "-Xskip-metadata-version-check")
+    }
 }

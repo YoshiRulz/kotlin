@@ -30,10 +30,13 @@ projectTest(parallel = true) {
         systemProperty("kotlin.script.test.kotlinx.serialization.plugin.classpath", localKotlinxSerializationPluginClasspath.asPath)
     }
     workingDir = rootDir
+    systemProperty("kotlin.script.base.compiler.arguments", "-Xskip-metadata-version-check")
+    systemProperty("kotlin.script.test.base.compiler.arguments", "-Xskip-metadata-version-check")
 }
 
 projectTest(taskName = "testWithK2", parallel = true) {
     dependsOn(":dist")
     workingDir = rootDir
-    systemProperty("kotlin.script.base.compiler.arguments", "-language-version 2.0")
+    systemProperty("kotlin.script.base.compiler.arguments", "-language-version 2.0 -Xskip-metadata-version-check")
+    systemProperty("kotlin.script.test.base.compiler.arguments", "-language-version 2.0 -Xskip-metadata-version-check")
 }

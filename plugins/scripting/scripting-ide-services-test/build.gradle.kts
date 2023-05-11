@@ -59,6 +59,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>> {
 projectTest(parallel = true) {
     dependsOn(":kotlin-compiler:distKotlinc")
     workingDir = rootDir
+    systemProperty("kotlin.script.base.compiler.arguments", "-Xskip-metadata-version-check")
 }
 
 // This doesn;t work now due to conflicts between embeddable compiler contents and intellij sdk modules
@@ -67,6 +68,7 @@ projectTest(taskName = "embeddableTest", parallel = true) {
     workingDir = rootDir
     dependsOn(embeddableTestRuntime)
     classpath = embeddableTestRuntime
+    systemProperty("kotlin.script.base.compiler.arguments", "-Xskip-metadata-version-check")
 
     exclude("**/JvmReplIdeTest.class")
 }
