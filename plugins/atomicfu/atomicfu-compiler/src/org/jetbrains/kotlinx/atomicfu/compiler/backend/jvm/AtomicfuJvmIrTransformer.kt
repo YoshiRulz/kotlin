@@ -105,7 +105,7 @@ class AtomicfuJvmIrTransformer(
             // class A$ParentFile$VolatileWrapper { volatile var a: Int = 0 }
             // val a$FU = AtomicIntegerFieldUpdater.newUpdater(A$ParentFile$VolatileWrapper::class, "a")
             val property = this
-            property.setVolatileBackingField(parentClass)
+            backingField = buildVolatileBackingField(property, parentClass)
             updateGetter(parentClass, irBuiltIns)
             parentClass.addJavaAtomicFieldUpdater(property).also {
                 registerAtomicHandler(it)
@@ -134,9 +134,9 @@ class AtomicfuJvmIrTransformer(
                         // var a by atomic(0) ->
                         // volatile var a: Int = 0
                         // todo: make this function look more consistent
-                        val volatileField = this.setVolatileBackingField(parent).also {
-                            parent.declarations.add(it)
-                        }
+
+                        val volatileField = buildVolatileBackingField(this, parent)
+                        parent.declarations.add(volatileField)
                         backingField = null
                         getter?.transformAccessor(volatileField, getter?.dispatchReceiverParameter?.capture())
                         setter?.transformAccessor(volatileField, setter?.dispatchReceiverParameter?.capture())
@@ -225,11 +225,10 @@ class AtomicfuJvmIrTransformer(
             val atomicArrayField = requireNotNull(property.backingField) { "BackingField of atomic array $property should not be null" }
             val atomicArrayClass = atomicSymbols.getAtomicArrayClassByAtomicfuArrayType(atomicArrayField.type)
             // todo fix this, pass generated array field as the second argument, here is the BUG NOW
-
-            val consCall =
-                (atomicArrayField.initializer?.expression ?: updateInitBlockFieldInitialization(parentContainer, atomicArrayField.symbol, atomicArrayField.symbol)?.value)
-                    ?: error("Atomic array $property was not initialized")
-            val size = (consCall as IrFunctionAccessExpression).getArraySizeArgument()
+            val initializer = atomicArrayField.initializer?.expression
+            val isInitializedInInitBlock = atomicArrayField.isInitializedInInitBlock(parentContainer)
+            if (initializer == null && !isInitializedInInitBlock) error("Atomic array $property was not initialized")
+            val size = initializer?.let { (it as IrConstructorCall).getArraySizeArgument() }
             return with(atomicSymbols.createBuilder(atomicArrayField.symbol)) {
                 irJavaAtomicArrayField(
                     atomicArrayField.name,
@@ -238,10 +237,62 @@ class AtomicfuJvmIrTransformer(
                     atomicArrayField.isStatic,
                     atomicArrayField.annotations,
                     size,
-                    consCall.dispatchReceiver,
+                    initializer.dispatchReceiver,
                     parentContainer
-                )
+                ).also {
+                    if (isInitializedInInitBlock) {
+                        updateInitBlockFieldInitialization(parentContainer, atomicArrayField.symbol, it.symbol)
+                    }
+                }
             }
+        }
+
+        private fun updateInitBlockArrayInitialization(
+            parentContainer: IrDeclarationContainer,
+            oldFieldSymbol: IrFieldSymbol,
+            volatileFieldSymbol: IrFieldSymbol
+        ): IrSetField? {
+            for (declaration in parentContainer.declarations) {
+                if (declaration is IrAnonymousInitializer) {
+                    declaration.body.statements.singleOrNull {
+                        it is IrSetField && it.symbol == oldFieldSymbol
+                    }?.let {
+                        it as IrSetField
+                        val size = (it.value as IrConstructorCall).getArraySizeArgument()
+                        with(atomicSymbols.createBuilder(volatileFieldSymbol)) {
+                            irJavaAtomicArrayField(
+                                oldFieldSymbol.owner.name,
+                                atomicArrayClass,
+                                oldFieldSymbol.owner.isFinal,
+                                oldFieldSymbol.owner.isStatic,
+                                oldFieldSymbol.owner.annotations,
+                                size,
+
+                            )
+                        }
+                        with(atomicSymbols.createBuilder(volatileFieldSymbol) {
+                            irJavaAtomicArrayField(
+                                atomicArrayField.name,oldFiel
+                                atomicArrayClass,
+                                atomicArrayField.isFinal,
+                                atomicArrayField.isStatic,
+                                atomicArrayField.annotations,
+                                size,
+                                initializer.dispatchReceiver,
+                                parentContainer
+                            )
+
+                        }
+                        // todo IrExpressionBodyImpl(
+                        //                newJavaAtomicArray(arrayClass, size, dispatchReceiver)
+                        //            )
+                        val irSetField = buildSetField(volatileFieldSymbol, it.receiver, initializationValue)
+                        declaration.body.statements.add(irSetField)
+                        declaration.body.statements.remove(it)
+                    }
+                }
+            }
+            return null
         }
 
         private fun buildWrapperClass(atomicProperty: IrProperty, parentContainer: IrDeclarationContainer): IrClass =

@@ -7,15 +7,12 @@ package org.jetbrains.kotlinx.atomicfu.compiler.backend.native
 
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.addExtensionReceiver
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrConst
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.*
-import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrPropertyReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrValueParameterSymbol
 import org.jetbrains.kotlin.ir.types.*
@@ -109,7 +106,7 @@ class AtomicfuNativeIrTransformer(
             // Atomic box is replaced with a volatile property
             // val a = atomic(0) ->
             // @Volatile var a: Int = 0
-            setVolatileBackingField(parentContainer)
+            backingField = buildVolatileBackingField(this, parentContainer)
             updateGetter(parentContainer, irBuiltIns)
             updateSetter(parentContainer, irBuiltIns)
         }

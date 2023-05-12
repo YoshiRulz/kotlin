@@ -19,7 +19,6 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
-import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.buildSetField
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.isInitializedInInitBlock
@@ -146,44 +145,30 @@ abstract class AbstractAtomicfuTransformer(
 
         abstract fun IrProperty.transformAtomicArray(parentContainer: IrDeclarationContainer)
 
-        protected fun IrProperty.setVolatileBackingField(parentContainer: IrDeclarationContainer): IrField {
+        // returns the volatile field
+        protected fun buildVolatileBackingField(atomicProperty: IrProperty, parentContainer: IrDeclarationContainer): IrField {
             // Generate a new backing field for the given property: a volatile variable of the atomic value type
             // val a = atomic(0)
             // volatile var a: Int = 0
-            val property = this
-            val atomicField = requireNotNull(property.backingField) { "BackingField of atomic property $property should not be null" }
+            val atomicField = requireNotNull(atomicProperty.backingField) { "BackingField of atomic property $atomicProperty should not be null" }
             val fieldType = atomicField.type.atomicToValueType()
-            // todo: refactor this, looks ugly
-            atomicField.initializer?.expression?.let {
-                val initValue = (it as IrCall).getAtomicFactoryValueArgument()
-                property.backingField = with(atomicSymbols.createBuilder(atomicField.symbol)) {
-                    irVolatileField(
-                        property.name,
-                        if (fieldType.isBoolean()) irBuiltIns.intType else fieldType, // boolean fields can only be updated with AtomicIntegerFieldUpdater
-                        initValue,
-                        atomicField.annotations,
-                        parentContainer
-                    )
-                }
-                return property.backingField!!
-            }
-            // todo: check correctness of init block initialization
-            if (atomicField.isInitializedInInitBlock(parentContainer)) {
-                with(atomicSymbols.createBuilder(atomicField.symbol)) {
-                    irVolatileField(
-                        property.name,
-                        fieldType,
-                        null,
-                        atomicField.annotations,
-                        parentContainer
-                    ).also {
+            val initializer = atomicField.initializer?.expression
+            val initValue = initializer?.let { (it as IrCall).getAtomicFactoryValueArgument() }
+            val isInitializedInInitBlock = atomicField.isInitializedInInitBlock(parentContainer)
+            if (initializer == null && !isInitializedInInitBlock) error("Atomic property ${atomicProperty.dump()} should be initialized")
+            return with(atomicSymbols.createBuilder(atomicField.symbol)) {
+                irVolatileField(
+                    atomicProperty.name,
+                    if (fieldType.isBoolean()) irBuiltIns.intType else fieldType, // boolean fields can only be updated with AtomicIntegerFieldUpdater
+                    initValue,
+                    atomicField.annotations,
+                    parentContainer
+                ).also {
+                    if (isInitializedInInitBlock) {
                         updateInitBlockFieldInitialization(parentContainer, atomicField.symbol, it.symbol)
-                        property.backingField = it
-                        return it
                     }
                 }
             }
-            error("Atomic property ${this.dump()} should be initialized")
         }
 
         protected fun updateInitBlockFieldInitialization(
