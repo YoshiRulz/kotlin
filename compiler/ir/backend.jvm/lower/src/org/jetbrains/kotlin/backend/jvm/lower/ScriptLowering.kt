@@ -257,49 +257,49 @@ private class ScriptsToClassesLowering(val context: JvmBackendContext, val inner
 
         (irScript.constructor?.patchForClass() as? IrConstructor
             ?: createConstructor(irScriptClass, irScript, implicitReceiversFieldsWithParameters)).also { constructor ->
-                val explicitParamsStartIndex = if (irScript.earlierScriptsParameter == null) 0 else 1
-                val explicitParameters = constructor.valueParameters.subList(
-                    explicitParamsStartIndex,
-                    irScript.explicitCallParameters.size + explicitParamsStartIndex
-                )
-                constructor.body = context.createIrBuilder(constructor.symbol).irBlockBody {
-                    val baseClassCtor = irScript.baseClass?.classOrNull?.owner?.constructors?.firstOrNull()
-                    // TODO: process situation with multiple constructors (should probably be an error)
-                    if (baseClassCtor == null) {
-                        +irDelegatingConstructorCall(context.irBuiltIns.anyClass.owner.constructors.single())
-                    } else {
-                        +irDelegatingConstructorCall(baseClassCtor).also {
-                            explicitParameters.forEachIndexed { idx, valueParameter ->
-                                it.putValueArgument(
-                                    idx,
-                                    IrGetValueImpl(
-                                        valueParameter.startOffset, valueParameter.endOffset,
-                                        valueParameter.type,
-                                        valueParameter.symbol
-                                    )
+            val explicitParamsStartIndex = if (irScript.earlierScriptsParameter == null) 0 else 1
+            val explicitParameters = constructor.valueParameters.subList(
+                explicitParamsStartIndex,
+                irScript.explicitCallParameters.size + explicitParamsStartIndex
+            )
+            constructor.body = context.createIrBuilder(constructor.symbol).irBlockBody {
+                val baseClassCtor = irScript.baseClass?.classOrNull?.owner?.constructors?.firstOrNull()
+                // TODO: process situation with multiple constructors (should probably be an error)
+                if (baseClassCtor == null) {
+                    +irDelegatingConstructorCall(context.irBuiltIns.anyClass.owner.constructors.single())
+                } else {
+                    +irDelegatingConstructorCall(baseClassCtor).also {
+                        explicitParameters.forEachIndexed { idx, valueParameter ->
+                            it.putValueArgument(
+                                idx,
+                                IrGetValueImpl(
+                                    valueParameter.startOffset, valueParameter.endOffset,
+                                    valueParameter.type,
+                                    valueParameter.symbol
                                 )
-                            }
+                            )
                         }
                     }
-                    if (earlierScriptField != null) {
-                        +irSetField(irGet(irScriptClass.thisReceiver!!), earlierScriptField, irGet(irScript.earlierScriptsParameter!!))
-                    }
-                    implicitReceiversFieldsWithParameters.forEach { (field, correspondingParameter) ->
-                        +irSetField(
-                            irGet(irScriptClass.thisReceiver!!),
-                            field,
-                            irGet(correspondingParameter.patchForClass() as IrValueParameter)
-                        )
-                    }
-                    +IrInstanceInitializerCallImpl(
-                        irScript.startOffset, irScript.endOffset,
-                        irScriptClass.symbol,
-                        context.irBuiltIns.unitType
+                }
+                if (earlierScriptField != null) {
+                    +irSetField(irGet(irScriptClass.thisReceiver!!), earlierScriptField, irGet(irScript.earlierScriptsParameter!!))
+                }
+                implicitReceiversFieldsWithParameters.forEach { (field, correspondingParameter) ->
+                    +irSetField(
+                        irGet(irScriptClass.thisReceiver!!),
+                        field,
+                        irGet(correspondingParameter.patchForClass() as IrValueParameter)
                     )
                 }
-                irScriptClass.declarations.add(constructor)
-                constructor.parent = irScriptClass
+                +IrInstanceInitializerCallImpl(
+                    irScript.startOffset, irScript.endOffset,
+                    irScriptClass.symbol,
+                    context.irBuiltIns.unitType
+                )
             }
+            irScriptClass.declarations.add(constructor)
+            constructor.parent = irScriptClass
+        }
 
         var hasMain = false
         irScript.statements.forEach { scriptStatement ->
@@ -689,10 +689,16 @@ private class ScriptToClassTransformer(
             expression.putTypeArgument(i, expression.getTypeArgument(i)?.remapType())
         }
         if (expression.dispatchReceiver == null && (expression.symbol.owner as? IrDeclaration)?.needsScriptReceiver() == true) {
+            val memberAccessTargetReceiverType = (expression.symbol.owner as? IrFunction)?.dispatchReceiverParameter?.type
             expression.dispatchReceiver =
-                getAccessCallForScriptInstance(
-                    data, expression.startOffset, expression.endOffset, expression.origin, originalReceiverParameter = null
-                )
+                if (memberAccessTargetReceiverType != null && memberAccessTargetReceiverType != scriptClassReceiver.type)
+                    getAccessCallForImplicitReceiver(
+                        data, expression, memberAccessTargetReceiverType, expression.origin, originalReceiverParameter = null
+                    )
+                else
+                    getAccessCallForScriptInstance(
+                        data, expression.startOffset, expression.endOffset, expression.origin, originalReceiverParameter = null
+                    )
         }
         return super.visitMemberAccess(expression, data) as IrExpression
     }
