@@ -72,45 +72,6 @@ import org.jetbrains.kotlin.types.ConstantValueKind
 
 internal val FirSession.codeFragmentSymbolProvider: LLFirCodeFragmentSymbolProvider by FirSession.sessionComponentAccessor()
 
-private class DebuggeeSourceFileImportsFetcher(val file: KtFile) : KtVisitorVoid() {
-    private val pathSegments = file.packageFqName.pathSegments().map { it.identifier }.toTypedArray()
-    val fqNames = mutableSetOf<FqName>()
-
-    /**
-     * TODO: add imports from source file.
-     */
-    var scopeFqName = pathSegments
-    private inline fun scope(name: String, body: () -> Unit) {
-        val oldScope = scopeFqName
-        scopeFqName = arrayOf(*scopeFqName, name)
-        body()
-        scopeFqName = oldScope
-    }
-
-    override fun visitElement(element: PsiElement) {
-        element.acceptChildren(this)
-    }
-
-    override fun visitClassOrObject(classOrObject: KtClassOrObject) {
-        classOrObject.name ?: return
-        scope(classOrObject.name!!) {
-            fqNames += FqName.fromSegments(scopeFqName.toList())
-            classOrObject.companionObjects.forEach {
-                it.acceptChildren(this)
-            }
-            classOrObject.acceptChildren(this)
-        }
-    }
-
-    override fun visitProperty(property: KtProperty) {
-        fqNames += FqName.fromSegments(listOf(*scopeFqName, property.name))
-    }
-
-    override fun visitNamedFunction(function: KtNamedFunction) {
-        fqNames += FqName.fromSegments(listOf(*scopeFqName, function.name))
-    }
-}
-
 internal class LabeledThis(val name: String?, val type: FirTypeRef)
 
 internal class LLFirCodeFragmentResovableSession(
@@ -206,8 +167,6 @@ internal class LLFirCodeFragmentResovableSession(
             }
         })
 
-        val importsFetcher = DebuggeeSourceFileImportsFetcher(debugeeSourceFile)
-        debugeeSourceFile.accept(importsFetcher)
         val builder = object : RawFirBuilder(
             moduleComponents.session,
             moduleComponents.scopeProvider,
@@ -336,13 +295,6 @@ internal class LLFirCodeFragmentResovableSession(
                                 isAllUnder = importDirective.isAllUnder
                                 aliasName = importDirective.aliasName?.let { Name.identifier(it) }
                                 aliasSource = importDirective.alias?.nameIdentifier?.toFirSourceElement()
-                            }
-                        }
-                        importsFetcher.fqNames.forEach { fqName ->
-                            imports += buildImport {
-                                source = file.toFirSourceElement()
-                                importedFqName = fqName
-                                isAllUnder = false
                             }
                         }
                         for (declaration in file.declarations) {
