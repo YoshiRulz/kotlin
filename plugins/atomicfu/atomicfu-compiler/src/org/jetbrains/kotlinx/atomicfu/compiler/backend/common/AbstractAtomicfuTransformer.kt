@@ -21,7 +21,7 @@ import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
 import org.jetbrains.kotlinx.atomicfu.compiler.backend.buildSetField
-import org.jetbrains.kotlinx.atomicfu.compiler.backend.isInitializedInInitBlock
+import org.jetbrains.kotlinx.atomicfu.compiler.backend.getInitBlockForField
 
 private const val ATOMICFU = "atomicfu"
 private const val ATOMIC_ARRAY_RECEIVER_SUFFIX = "\$array"
@@ -145,7 +145,6 @@ abstract class AbstractAtomicfuTransformer(
 
         abstract fun IrProperty.transformAtomicArray(parentContainer: IrDeclarationContainer)
 
-        // returns the volatile field
         protected fun buildVolatileBackingField(atomicProperty: IrProperty, parentContainer: IrDeclarationContainer): IrField {
             // Generate a new backing field for the given property: a volatile variable of the atomic value type
             // val a = atomic(0)
@@ -153,43 +152,43 @@ abstract class AbstractAtomicfuTransformer(
             val atomicField = requireNotNull(atomicProperty.backingField) { "BackingField of atomic property $atomicProperty should not be null" }
             val fieldType = atomicField.type.atomicToValueType()
             val initializer = atomicField.initializer?.expression
-            val initValue = initializer?.let { (it as IrCall).getAtomicFactoryValueArgument() }
-            val isInitializedInInitBlock = atomicField.isInitializedInInitBlock(parentContainer)
-            if (initializer == null && !isInitializedInInitBlock) error("Atomic property ${atomicProperty.dump()} should be initialized")
+            val initBlock = if (initializer == null) atomicField.getInitBlockForField(parentContainer) else null
+            val atomicFactoryCall = initializer
+                ?: initBlock?.getValueFromInitBlock(atomicField.symbol)
+                ?: error("Atomic property ${atomicProperty.dump()} should be initialized")
+            require(atomicFactoryCall is IrCall) { "Atomic property ${atomicProperty.render()} should be initialized with atomic factory call" }
+            val initValue = atomicFactoryCall.getAtomicFactoryValueArgument()
             return with(atomicSymbols.createBuilder(atomicField.symbol)) {
                 irVolatileField(
                     atomicProperty.name,
                     if (fieldType.isBoolean()) irBuiltIns.intType else fieldType, // boolean fields can only be updated with AtomicIntegerFieldUpdater
-                    initValue,
+                    if (initializer == null) null else initValue,
                     atomicField.annotations,
                     parentContainer
                 ).also {
-                    if (isInitializedInInitBlock) {
-                        updateInitBlockFieldInitialization(parentContainer, atomicField.symbol, it.symbol)
-                    }
+                    initBlock?.updateFieldInitialization(atomicField.symbol, it.symbol, initValue)
                 }
             }
         }
 
-        protected fun updateInitBlockFieldInitialization(
-            parentContainer: IrDeclarationContainer,
+        protected fun IrAnonymousInitializer.getValueFromInitBlock(
+            oldFieldSymbol: IrFieldSymbol
+        ): IrExpression? =
+            body.statements.singleOrNull { it is IrSetField && it.symbol == oldFieldSymbol }?.let { (it as IrSetField).value }
+
+        protected fun IrAnonymousInitializer.updateFieldInitialization(
             oldFieldSymbol: IrFieldSymbol,
-            volatileFieldSymbol: IrFieldSymbol
-        ): IrSetField? {
-            for (declaration in parentContainer.declarations) {
-                if (declaration is IrAnonymousInitializer) {
-                    declaration.body.statements.singleOrNull {
-                        it is IrSetField && it.symbol == oldFieldSymbol
-                    }?.let {
-                        it as IrSetField
-                        val initializationValue = (it.value as IrCall).getAtomicFactoryValueArgument() //test this
-                        val irSetField = buildSetField(volatileFieldSymbol, it.receiver, initializationValue)
-                        declaration.body.statements.add(irSetField)
-                        declaration.body.statements.remove(it)
-                    }
-                }
+            volatileFieldSymbol: IrFieldSymbol,
+            initExpr: IrExpression
+        ) {
+            body.statements.singleOrNull {
+                it is IrSetField && it.symbol == oldFieldSymbol
+            }?.let {
+                it as IrSetField
+                val irSetField = pluginContext.buildSetField(volatileFieldSymbol, it.receiver, initExpr)
+                body.statements.add(irSetField)
+                body.statements.remove(it)
             }
-            return null
         }
 
         protected fun IrCall.getAtomicFactoryValueArgument() =
@@ -349,7 +348,7 @@ abstract class AbstractAtomicfuTransformer(
             isArrayReceiver: Boolean
         ): IrSimpleFunction =
             findDeclaration {
-                it.name.asString().contains("${declaration.name.asString()}\$$ATOMICFU") &&
+                it.name.asString() == mangleAtomicExtensionName(declaration.name.asString(), isArrayReceiver) &&
                         it.isTransformedAtomicExtension()
             } ?: error("Could not find corresponding transformed declaration for the atomic extension ${declaration.render()}, $isArrayReceiver")
 

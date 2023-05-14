@@ -218,81 +218,35 @@ class AtomicfuJvmIrTransformer(
             }
         }
 
-        private fun buildJavaAtomicArrayField(
-            property: IrProperty,
-            parentContainer: IrDeclarationContainer
-        ): IrField {
-            val atomicArrayField = requireNotNull(property.backingField) { "BackingField of atomic array $property should not be null" }
-            val atomicArrayClass = atomicSymbols.getAtomicArrayClassByAtomicfuArrayType(atomicArrayField.type)
-            // todo fix this, pass generated array field as the second argument, here is the BUG NOW
+        private fun buildJavaAtomicArrayField(atomicProperty: IrProperty, parentContainer: IrDeclarationContainer): IrField {
+            // Generate a new backing field for the given atomic array: a volatile variable of the atomic value type
+            // val intArr = AtomicIntArray(45)
+            // val intArr = AtomicIntegerArray(45)
+            val atomicArrayField = requireNotNull(atomicProperty.backingField) { "BackingField of atomic array $atomicProperty should not be null" }
             val initializer = atomicArrayField.initializer?.expression
-            val isInitializedInInitBlock = atomicArrayField.isInitializedInInitBlock(parentContainer)
-            if (initializer == null && !isInitializedInInitBlock) error("Atomic array $property was not initialized")
-            val size = initializer?.let { (it as IrConstructorCall).getArraySizeArgument() }
+            val initBlock = if (initializer == null) atomicArrayField.getInitBlockForField(parentContainer) else null
+            val atomicFactoryCall = initializer
+                ?: initBlock?.getValueFromInitBlock(atomicArrayField.symbol)
+                ?: error("Atomic property ${atomicProperty.dump()} should be initialized")
+            require(atomicFactoryCall is IrFunctionAccessExpression) { "Atomic array ${atomicProperty.render()} should be initialized with kotlinx.atomicfu.Atomic*Array(size) call" }
+            val arraySize = atomicFactoryCall.getArraySizeArgument()
             return with(atomicSymbols.createBuilder(atomicArrayField.symbol)) {
                 irJavaAtomicArrayField(
                     atomicArrayField.name,
-                    atomicArrayClass,
+                    atomicSymbols.getAtomicArrayClassByAtomicfuArrayType(atomicArrayField.type),
                     atomicArrayField.isFinal,
                     atomicArrayField.isStatic,
                     atomicArrayField.annotations,
-                    size,
-                    initializer.dispatchReceiver,
+                    arraySize,
+                    atomicFactoryCall.dispatchReceiver,
                     parentContainer
                 ).also {
-                    if (isInitializedInInitBlock) {
-                        updateInitBlockFieldInitialization(parentContainer, atomicArrayField.symbol, it.symbol)
-                    }
+                    // todo: we shouldn't initialize the field and leave the initialization in the init block
+                    val initExpr = it.initializer?.expression ?: error("Initializer of the generated field ${it.render()} can not be null")
+                    if (initializer == null) it.initializer = null
+                    initBlock?.updateFieldInitialization(atomicArrayField.symbol, it.symbol, initExpr)
                 }
             }
-        }
-
-        private fun updateInitBlockArrayInitialization(
-            parentContainer: IrDeclarationContainer,
-            oldFieldSymbol: IrFieldSymbol,
-            volatileFieldSymbol: IrFieldSymbol
-        ): IrSetField? {
-            for (declaration in parentContainer.declarations) {
-                if (declaration is IrAnonymousInitializer) {
-                    declaration.body.statements.singleOrNull {
-                        it is IrSetField && it.symbol == oldFieldSymbol
-                    }?.let {
-                        it as IrSetField
-                        val size = (it.value as IrConstructorCall).getArraySizeArgument()
-                        with(atomicSymbols.createBuilder(volatileFieldSymbol)) {
-                            irJavaAtomicArrayField(
-                                oldFieldSymbol.owner.name,
-                                atomicArrayClass,
-                                oldFieldSymbol.owner.isFinal,
-                                oldFieldSymbol.owner.isStatic,
-                                oldFieldSymbol.owner.annotations,
-                                size,
-
-                            )
-                        }
-                        with(atomicSymbols.createBuilder(volatileFieldSymbol) {
-                            irJavaAtomicArrayField(
-                                atomicArrayField.name,oldFiel
-                                atomicArrayClass,
-                                atomicArrayField.isFinal,
-                                atomicArrayField.isStatic,
-                                atomicArrayField.annotations,
-                                size,
-                                initializer.dispatchReceiver,
-                                parentContainer
-                            )
-
-                        }
-                        // todo IrExpressionBodyImpl(
-                        //                newJavaAtomicArray(arrayClass, size, dispatchReceiver)
-                        //            )
-                        val irSetField = buildSetField(volatileFieldSymbol, it.receiver, initializationValue)
-                        declaration.body.statements.add(irSetField)
-                        declaration.body.statements.remove(it)
-                    }
-                }
-            }
-            return null
         }
 
         private fun buildWrapperClass(atomicProperty: IrProperty, parentContainer: IrDeclarationContainer): IrClass =
@@ -555,7 +509,7 @@ class AtomicfuJvmIrTransformer(
         }
 
         override fun IrFunction.isTransformedAtomicExtension(): Boolean {
-            val isArrayReceiver = name.asString().endsWith(ATOMIC_ARRAY_RECEIVER_SUFFIX)
+            val isArrayReceiver = name.asString().endsWith("$ATOMICFU$ATOMIC_ARRAY_RECEIVER_SUFFIX")
             return if (isArrayReceiver) checkSyntheticArrayElementExtensionParameter() else checkSyntheticAtomicExtensionParameters()
         }
 

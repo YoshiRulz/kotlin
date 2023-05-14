@@ -149,7 +149,6 @@ class AtomicfuNativeIrTransformer(
                     (pf != null && pf.isAtomicExtension() && !pf.isTransformedAtomicExtension())) {
                     return expression
                 }
-
                 requireNotNull(parentFunction) { "Parent function of the call ${expression.render()} is null" }
                 // skip untransformed atomic fields and array elements
                 return getPropertyRefReceiver(getPropertyReceiver, parentFunction)?.let { propertyRef ->

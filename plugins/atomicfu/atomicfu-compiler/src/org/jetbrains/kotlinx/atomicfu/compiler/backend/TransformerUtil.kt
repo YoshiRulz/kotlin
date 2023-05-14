@@ -63,7 +63,8 @@ internal fun buildCall(
 internal fun IrFactory.buildBlockBody(statements: List<IrStatement>) =
     createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET, statements)
 
-internal fun buildSetField(
+// todo: make both function common
+internal fun IrPluginContext.buildSetField(
     symbol: IrFieldSymbol,
     receiver: IrExpression?,
     value: IrExpression,
@@ -75,7 +76,7 @@ internal fun buildSetField(
         symbol,
         receiver,
         value,
-        value.type,
+        irBuiltIns.unitType,
         IrStatementOrigin.GET_PROPERTY,
         superQualifierSymbol
     )
@@ -145,7 +146,8 @@ internal fun IrPluginContext.buildSetterType(valueType: IrType): IrSimpleType =
         listOf(valueType, irBuiltIns.unitType)
     )
 
-private fun buildSetField(backingField: IrField, ownerClass: IrExpression?, value: IrGetValue): IrSetField {
+// todo: unite both function, make arguments consistent
+private fun IrPluginContext.buildSetField(backingField: IrField, ownerClass: IrExpression?, value: IrGetValue): IrSetField {
     val receiver = if (ownerClass is IrTypeOperatorCall) ownerClass.argument as IrGetValue else ownerClass
     return buildSetField(
         symbol = backingField.symbol,
@@ -471,13 +473,13 @@ internal fun IdSignature.getDeclarationNameBySignature(): String? {
     return commonSignature?.declarationFqName
 }
 
-internal fun IrField.isInitializedInInitBlock(parentContainer: IrDeclarationContainer): Boolean {
+internal fun IrField.getInitBlockForField(parentContainer: IrDeclarationContainer): IrAnonymousInitializer? {
     for (declaration in parentContainer.declarations) {
         if (declaration is IrAnonymousInitializer) {
-            if (declaration.body.statements.any { it is IrSetField && it.symbol == this.symbol }) return true
+            if (declaration.body.statements.any { it is IrSetField && it.symbol == this.symbol }) return declaration
         }
     }
-    return false
+    return null
 }
 
 // reused from: kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/util/IrUtils.kt#remapTypeParameters
