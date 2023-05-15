@@ -389,11 +389,13 @@ private fun resolveCodeFragment(
     val debugeeSourceFile = codeFragmentModule.rawContext.containingFile as KtFile
     val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
     val place = codeFragmentModule.rawContext.calculateAcceptablePlace()
-    val placementContext =  debugeeSourceFile.findDescendantOfType<KtElement>{ (it.startOffset >= place.startOffset && it.endOffset <= place.endOffset) }
+    val placementContext =
+        debugeeSourceFile.findDescendantOfType<KtElement> { (it.startOffset >= place.startOffset && it.endOffset <= place.endOffset) }
+    val bodyCodeFragment = codeFragment.findDescendantOfType<KtElement> { it is KtBlockExpression || it is KtExpression }
     val convertedFirExpression = OnAirResolver(debugeeSourceFile).resolve(
         debugeeFileFirSession,
         placementContext!!,
-        codeFragment.children.first() as KtElement
+        bodyCodeFragment!!
     )
 
     convertedFirExpression?.accept(object : FirVisitorVoid() {
@@ -427,6 +429,9 @@ private fun resolveCodeFragment(
     })
 }
 
+/**
+ * This function calculates the place where code fragment could be injected.
+ */
 private fun PsiElement.calculateAcceptablePlace(): PsiElement = when {
     this is KtKeywordToken ||
             this is KtNameReferenceExpression ||
