@@ -261,6 +261,8 @@ abstract class BasePrimitivesGenerator(private val writer: PrintWriter) : BuiltI
                 generateToString(thisKind)
                 generateEquals(thisKind)
                 generateAdditionalMethods(thisKind)
+
+                constructor { visibility = "private" }
             }.modifyGeneratedClass(thisKind)
         }
     }

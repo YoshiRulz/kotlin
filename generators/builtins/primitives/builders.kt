@@ -78,6 +78,7 @@ internal class FileBuilder : PrimitiveBuilder {
     private val suppresses: MutableList<String> = mutableListOf()
     private val imports: MutableList<String> = mutableListOf()
     private val classes: MutableList<ClassBuilder> = mutableListOf()
+    private val methods: MutableList<MethodBuilder> = mutableListOf()
 
     fun suppress(suppress: String) {
         suppresses += suppress
@@ -91,6 +92,12 @@ internal class FileBuilder : PrimitiveBuilder {
         val classBuilder = ClassBuilder()
         classes += classBuilder.apply(init)
         return classBuilder
+    }
+
+    fun method(init: MethodBuilder.() -> Unit): MethodBuilder {
+        val methodBuilder = MethodBuilder()
+        methods += methodBuilder.apply(init)
+        return methodBuilder
     }
 
     override fun build(): String {
@@ -114,20 +121,22 @@ internal class FileBuilder : PrimitiveBuilder {
             }
 
             append(classes.joinToString(separator = END_LINE) { it.build() })
+            append(methods.joinToString(separator = END_LINE) { it.build() })
         }
     }
 }
 
 internal class ClassBuilder : AnnotatedAndDocumented(), PrimitiveBuilder {
     var isFinal: Boolean = false
+    var isValue: Boolean = false
     var name: String = ""
-    private var constructorParam: MethodParameterBuilder? = null
+    var parentList: List<String>? = null
+    private var constructor: ConstructorBuilder? = null
     private var companionObject: CompanionObjectBuilder? = null
     private val methods: MutableList<MethodBuilder> = mutableListOf()
 
-    fun constructorParam(init: MethodParameterBuilder.() -> Unit) {
-        throwIfAlreadyInitialized(constructorParam, "constructorParam", "ClassBuilder")
-        constructorParam = MethodParameterBuilder().apply(init)
+    fun constructor(init: ConstructorBuilder.() -> Unit) {
+        constructor = ConstructorBuilder().apply(init)
     }
 
     fun companionObject(init: CompanionObjectBuilder.() -> Unit): CompanionObjectBuilder {
@@ -149,7 +158,21 @@ internal class ClassBuilder : AnnotatedAndDocumented(), PrimitiveBuilder {
 
             append("public ")
             if (isFinal) append("final ")
-            appendLine("class $name private constructor(${constructorParam?.build() ?: ""}) : Number(), Comparable<$name> {")
+            if (isValue) append("value ")
+
+            append("class $name ")
+
+            constructor?.let { append("${it.build()} ") }
+
+            val parents = parentList ?: listOf("Number()", "Comparable<$name>")
+
+            if (parents.isNotEmpty()) {
+                append(": ")
+                append(parents.joinToString(", "))
+                append(" ")
+            }
+
+            appendLine("{")
 
             companionObject?.let { appendLine(it.build().shift()) }
             appendLine(methods.joinToString(separator = END_LINE + END_LINE) { it.build().shift() })
@@ -188,6 +211,8 @@ internal class MethodSignatureBuilder : PrimitiveBuilder {
     var isOperator: Boolean = false
 
     var methodName: String? = null
+    var extensionReceiver: String? = null
+
     private var parameter: MethodParameterBuilder? = null
     var returnType: String? = null
 
@@ -215,7 +240,7 @@ internal class MethodSignatureBuilder : PrimitiveBuilder {
             if (isInline) append("inline ")
             if (isInfix) append("infix ")
             if (isOperator) append("operator ")
-            append("fun $methodName(${parameter?.build() ?: ""}): $returnType")
+            append("fun ${extensionReceiver?.let { "$it." }.orEmpty()}$methodName(${parameter?.build() ?: ""}): $returnType")
         }
     }
 }
@@ -232,6 +257,23 @@ internal class MethodParameterBuilder : PrimitiveBuilder {
         throwIfWasNotInitialized(name, "name", "MethodParameterBuilder")
         throwIfWasNotInitialized(type, "type", "MethodParameterBuilder")
         return "$name: $type"
+    }
+}
+
+internal class ConstructorBuilder : AnnotatedAndDocumented(), PrimitiveBuilder {
+    var visibility: String = "private"
+    private var constructorParam: MethodParameterBuilder? = null
+
+    override fun build(): String {
+        return buildString {
+            annotations.forEach { append("@$it ") }
+            append("$visibility constructor(${constructorParam?.build() ?: ""})")
+        }
+    }
+
+    fun param(init: MethodParameterBuilder.() -> Unit) {
+        throwIfAlreadyInitialized(constructorParam, "constructorParam", "ClassBuilder")
+        constructorParam = MethodParameterBuilder().apply(init)
     }
 }
 

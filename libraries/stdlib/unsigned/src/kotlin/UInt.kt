@@ -14,7 +14,6 @@ import kotlin.jvm.*
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @JvmInline
 public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi internal constructor(@PublishedApi internal val data: Int) : Comparable<UInt> {
-
     companion object {
         /**
          * A constant holding the minimum value an instance of UInt can have.
@@ -73,12 +72,15 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
     /** Adds the other value to this value. */
     @kotlin.internal.InlineOnly
     public inline operator fun plus(other: UByte): UInt = this.plus(other.toUInt())
+
     /** Adds the other value to this value. */
     @kotlin.internal.InlineOnly
     public inline operator fun plus(other: UShort): UInt = this.plus(other.toUInt())
+
     /** Adds the other value to this value. */
     @kotlin.internal.InlineOnly
     public inline operator fun plus(other: UInt): UInt = UInt(this.data.plus(other.data))
+
     /** Adds the other value to this value. */
     @kotlin.internal.InlineOnly
     public inline operator fun plus(other: ULong): ULong = this.toULong().plus(other)
@@ -86,12 +88,15 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
     /** Subtracts the other value from this value. */
     @kotlin.internal.InlineOnly
     public inline operator fun minus(other: UByte): UInt = this.minus(other.toUInt())
+
     /** Subtracts the other value from this value. */
     @kotlin.internal.InlineOnly
     public inline operator fun minus(other: UShort): UInt = this.minus(other.toUInt())
+
     /** Subtracts the other value from this value. */
     @kotlin.internal.InlineOnly
     public inline operator fun minus(other: UInt): UInt = UInt(this.data.minus(other.data))
+
     /** Subtracts the other value from this value. */
     @kotlin.internal.InlineOnly
     public inline operator fun minus(other: ULong): ULong = this.toULong().minus(other)
@@ -99,12 +104,15 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
     /** Multiplies this value by the other value. */
     @kotlin.internal.InlineOnly
     public inline operator fun times(other: UByte): UInt = this.times(other.toUInt())
+
     /** Multiplies this value by the other value. */
     @kotlin.internal.InlineOnly
     public inline operator fun times(other: UShort): UInt = this.times(other.toUInt())
+
     /** Multiplies this value by the other value. */
     @kotlin.internal.InlineOnly
     public inline operator fun times(other: UInt): UInt = UInt(this.data.times(other.data))
+
     /** Multiplies this value by the other value. */
     @kotlin.internal.InlineOnly
     public inline operator fun times(other: ULong): ULong = this.toULong().times(other)
@@ -112,12 +120,15 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
     /** Divides this value by the other value, truncating the result to an integer that is closer to zero. */
     @kotlin.internal.InlineOnly
     public inline operator fun div(other: UByte): UInt = this.div(other.toUInt())
+
     /** Divides this value by the other value, truncating the result to an integer that is closer to zero. */
     @kotlin.internal.InlineOnly
     public inline operator fun div(other: UShort): UInt = this.div(other.toUInt())
+
     /** Divides this value by the other value, truncating the result to an integer that is closer to zero. */
     @kotlin.internal.InlineOnly
     public inline operator fun div(other: UInt): UInt = uintDivide(this, other)
+
     /** Divides this value by the other value, truncating the result to an integer that is closer to zero. */
     @kotlin.internal.InlineOnly
     public inline operator fun div(other: ULong): ULong = this.toULong().div(other)
@@ -129,6 +140,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline operator fun rem(other: UByte): UInt = this.rem(other.toUInt())
+
     /**
      * Calculates the remainder of truncating division of this value (dividend) by the other value (divisor).
      *
@@ -136,6 +148,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline operator fun rem(other: UShort): UInt = this.rem(other.toUInt())
+
     /**
      * Calculates the remainder of truncating division of this value (dividend) by the other value (divisor).
      *
@@ -143,6 +156,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline operator fun rem(other: UInt): UInt = uintRemainder(this, other)
+
     /**
      * Calculates the remainder of truncating division of this value (dividend) by the other value (divisor).
      *
@@ -158,6 +172,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun floorDiv(other: UByte): UInt = this.floorDiv(other.toUInt())
+
     /**
      * Divides this value by the other value, flooring the result to an integer that is closer to negative infinity.
      *
@@ -165,6 +180,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun floorDiv(other: UShort): UInt = this.floorDiv(other.toUInt())
+
     /**
      * Divides this value by the other value, flooring the result to an integer that is closer to negative infinity.
      *
@@ -172,6 +188,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun floorDiv(other: UInt): UInt = div(other)
+
     /**
      * Divides this value by the other value, flooring the result to an integer that is closer to negative infinity.
      *
@@ -189,6 +206,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun mod(other: UByte): UByte = this.mod(other.toUInt()).toUByte()
+
     /**
      * Calculates the remainder of flooring division of this value (dividend) by the other value (divisor).
      *
@@ -198,6 +216,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun mod(other: UShort): UShort = this.mod(other.toUInt()).toUShort()
+
     /**
      * Calculates the remainder of flooring division of this value (dividend) by the other value (divisor).
      *
@@ -207,6 +226,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun mod(other: UInt): UInt = rem(other)
+
     /**
      * Calculates the remainder of flooring division of this value (dividend) by the other value (divisor).
      *
@@ -268,12 +288,15 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
     /** Performs a bitwise AND operation between the two values. */
     @kotlin.internal.InlineOnly
     public inline infix fun and(other: UInt): UInt = UInt(this.data and other.data)
+
     /** Performs a bitwise OR operation between the two values. */
     @kotlin.internal.InlineOnly
     public inline infix fun or(other: UInt): UInt = UInt(this.data or other.data)
+
     /** Performs a bitwise XOR operation between the two values. */
     @kotlin.internal.InlineOnly
     public inline infix fun xor(other: UInt): UInt = UInt(this.data xor other.data)
+
     /** Inverts the bits in this value. */
     @kotlin.internal.InlineOnly
     public inline fun inv(): UInt = UInt(data.inv())
@@ -289,6 +312,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun toByte(): Byte = data.toByte()
+
     /**
      * Converts this [UInt] value to [Short].
      *
@@ -300,6 +324,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun toShort(): Short = data.toShort()
+
     /**
      * Converts this [UInt] value to [Int].
      *
@@ -310,6 +335,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun toInt(): Int = data
+
     /**
      * Converts this [UInt] value to [Long].
      *
@@ -331,6 +357,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun toUByte(): UByte = data.toUByte()
+
     /**
      * Converts this [UInt] value to [UShort].
      *
@@ -341,9 +368,11 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun toUShort(): UShort = data.toUShort()
+
     /** Returns this value. */
     @kotlin.internal.InlineOnly
     public inline fun toUInt(): UInt = this
+
     /**
      * Converts this [UInt] value to [ULong].
      *
@@ -364,6 +393,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
      */
     @kotlin.internal.InlineOnly
     public inline fun toFloat(): Float = this.toDouble().toFloat()
+
     /**
      * Converts this [UInt] value to [Double].
      *
@@ -373,9 +403,7 @@ public value class UInt @kotlin.internal.IntrinsicConstEvaluation @PublishedApi 
     public inline fun toDouble(): Double = uintToDouble(data)
 
     public override fun toString(): String = toLong().toString()
-
 }
-
 /**
  * Converts this [Byte] value to [UInt].
  *
@@ -423,7 +451,6 @@ public inline fun Int.toUInt(): UInt = UInt(this)
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
 public inline fun Long.toUInt(): UInt = UInt(this.toInt())
-
 /**
  * Converts this [Float] value to [UInt].
  *

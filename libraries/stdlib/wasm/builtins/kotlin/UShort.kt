@@ -5,35 +5,36 @@
 
 // Auto-generated file. DO NOT EDIT!
 
+@file:Suppress("OVERRIDE_BY_INLINE", "NOTHING_TO_INLINE", "unused", "UNUSED_PARAMETER")
+
 package kotlin
 
-import kotlin.experimental.*
-import kotlin.jvm.*
+import kotlin.wasm.internal.*
 
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
-@JvmInline
-public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi internal constructor(@PublishedApi internal val data: Byte) : Comparable<UByte> {
+@WasmAutoboxed
+public value class UShort @kotlin.internal.IntrinsicConstEvaluation @PublishedApi internal constructor(@PublishedApi internal val data: Short) : Comparable<UShort> {
     companion object {
         /**
-         * A constant holding the minimum value an instance of UByte can have.
+         * A constant holding the minimum value an instance of UShort can have.
          */
-        public const val MIN_VALUE: UByte = UByte(0)
+        public const val MIN_VALUE: UShort = UShort(0)
 
         /**
-         * A constant holding the maximum value an instance of UByte can have.
+         * A constant holding the maximum value an instance of UShort can have.
          */
-        public const val MAX_VALUE: UByte = UByte(-1)
+        public const val MAX_VALUE: UShort = UShort(-1)
 
         /**
-         * The number of bytes used to represent an instance of UByte in a binary form.
+         * The number of bytes used to represent an instance of UShort in a binary form.
          */
-        public const val SIZE_BYTES: Int = 1
+        public const val SIZE_BYTES: Int = 2
 
         /**
-         * The number of bits used to represent an instance of UByte in a binary form.
+         * The number of bits used to represent an instance of UShort in a binary form.
          */
-        public const val SIZE_BITS: Int = 8
+        public const val SIZE_BITS: Int = 16
     }
 
     /**
@@ -42,8 +43,18 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * or a positive number if it's greater than other.
      */
     @kotlin.internal.InlineOnly
+    public operator fun compareTo(other: UByte): Int =
+        this.toUByte().compareTo(other)
+
+    /**
+     * Compares this value with the specified value for order.
+     * Returns zero if this value is equal to the specified other value, a negative number if it's less than other,
+     * or a positive number if it's greater than other.
+     */
+    @kotlin.internal.InlineOnly
     @Suppress("OVERRIDE_BY_INLINE")
-    public override inline operator fun compareTo(other: UByte): Int = this.toInt().compareTo(other.toInt())
+    public override inline operator fun compareTo(other: UShort): Int =
+        this.toInt().compareTo(other.toInt())
 
     /**
      * Compares this value with the specified value for order.
@@ -51,7 +62,8 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * or a positive number if it's greater than other.
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun compareTo(other: UShort): Int = this.toInt().compareTo(other.toInt())
+    public operator fun compareTo(other: UInt): Int =
+        this.toUInt().compareTo(other)
 
     /**
      * Compares this value with the specified value for order.
@@ -59,15 +71,8 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * or a positive number if it's greater than other.
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun compareTo(other: UInt): Int = this.toUInt().compareTo(other)
-
-    /**
-     * Compares this value with the specified value for order.
-     * Returns zero if this value is equal to the specified other value, a negative number if it's less than other,
-     * or a positive number if it's greater than other.
-     */
-    @kotlin.internal.InlineOnly
-    public inline operator fun compareTo(other: ULong): Int = this.toULong().compareTo(other)
+    public operator fun compareTo(other: ULong): Int =
+        this.toULong().compareTo(other)
 
     /** Adds the other value to this value. */
     @kotlin.internal.InlineOnly
@@ -243,7 +248,7 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * @sample samples.misc.Builtins.inc
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun inc(): UByte = UByte(data.inc())
+    public inline operator fun inc(): UShort = UShort(data.inc())
 
     /**
      * Returns this value decremented by one.
@@ -251,11 +256,11 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * @sample samples.misc.Builtins.dec
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun dec(): UByte = UByte(data.dec())
+    public inline operator fun dec(): UShort = UShort(data.dec())
 
     /** Creates a range from this value to the specified [other] value. */
     @kotlin.internal.InlineOnly
-    public inline operator fun rangeTo(other: UByte): UIntRange = UIntRange(this.toUInt(), other.toUInt())
+    public inline operator fun rangeTo(other: UShort): UIntRange = UIntRange(this.toUInt(), other.toUInt())
 
     /**
      * Creates a range from this value up to but excluding the specified [other] value.
@@ -265,117 +270,118 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
     @SinceKotlin("1.9")
     @WasExperimental(ExperimentalStdlibApi::class)
     @kotlin.internal.InlineOnly
-    public inline operator fun rangeUntil(other: UByte): UIntRange = this.toUInt() until other.toUInt()
+    public inline operator fun rangeUntil(other: UShort): UIntRange = this.toUInt() until other.toUInt()
 
     /** Performs a bitwise AND operation between the two values. */
     @kotlin.internal.InlineOnly
-    public inline infix fun and(other: UByte): UByte = UByte(this.data and other.data)
+    public inline infix fun and(other: UShort): UShort = UShort(this.data and other.data)
 
     /** Performs a bitwise OR operation between the two values. */
     @kotlin.internal.InlineOnly
-    public inline infix fun or(other: UByte): UByte = UByte(this.data or other.data)
+    public inline infix fun or(other: UShort): UShort = UShort(this.data or other.data)
 
     /** Performs a bitwise XOR operation between the two values. */
     @kotlin.internal.InlineOnly
-    public inline infix fun xor(other: UByte): UByte = UByte(this.data xor other.data)
+    public inline infix fun xor(other: UShort): UShort = UShort(this.data xor other.data)
 
     /** Inverts the bits in this value. */
     @kotlin.internal.InlineOnly
-    public inline fun inv(): UByte = UByte(data.inv())
+    public inline fun inv(): UShort = UShort(data.inv())
 
     /**
-     * Converts this [UByte] value to [Byte].
+     * Converts this [UShort] value to [Byte].
      *
      * If this value is less than or equals to [Byte.MAX_VALUE], the resulting `Byte` value represents
-     * the same numerical value as this `UByte`. Otherwise the result is negative.
+     * the same numerical value as this `UShort`.
      *
-     * The resulting `Byte` value has the same binary representation as this `UByte` value.
+     * The resulting `Byte` value is represented by the least significant 8 bits of this `UShort` value.
+     * Note that the resulting `Byte` value may be negative.
      */
     @kotlin.internal.InlineOnly
-    public inline fun toByte(): Byte = data
+    public inline fun toByte(): Byte = data.toByte()
 
     /**
-     * Converts this [UByte] value to [Short].
+     * Converts this [UShort] value to [Short].
      *
-     * The resulting `Short` value represents the same numerical value as this `UByte`.
+     * If this value is less than or equals to [Short.MAX_VALUE], the resulting `Short` value represents
+     * the same numerical value as this `UShort`. Otherwise the result is negative.
      *
-     * The least significant 8 bits of the resulting `Short` value are the same as the bits of this `UByte` value,
-     * whereas the most significant 8 bits are filled with zeros.
+     * The resulting `Short` value has the same binary representation as this `UShort` value.
      */
     @kotlin.internal.InlineOnly
-    public inline fun toShort(): Short = data.toShort() and 0xFF
+    public inline fun toShort(): Short = data
 
     /**
-     * Converts this [UByte] value to [Int].
+     * Converts this [UShort] value to [Int].
      *
-     * The resulting `Int` value represents the same numerical value as this `UByte`.
+     * The resulting `Int` value represents the same numerical value as this `UShort`.
      *
-     * The least significant 8 bits of the resulting `Int` value are the same as the bits of this `UByte` value,
-     * whereas the most significant 24 bits are filled with zeros.
+     * The least significant 16 bits of the resulting `Int` value are the same as the bits of this `UShort` value,
+     * whereas the most significant 16 bits are filled with zeros.
      */
     @kotlin.internal.InlineOnly
-    public inline fun toInt(): Int = data.toInt() and 0xFF
+    public inline fun toInt(): Int = data.toInt() and 0xFFFF
 
     /**
-     * Converts this [UByte] value to [Long].
+     * Converts this [UShort] value to [Long].
      *
-     * The resulting `Long` value represents the same numerical value as this `UByte`.
+     * The resulting `Long` value represents the same numerical value as this `UShort`.
      *
-     * The least significant 8 bits of the resulting `Long` value are the same as the bits of this `UByte` value,
-     * whereas the most significant 56 bits are filled with zeros.
+     * The least significant 16 bits of the resulting `Long` value are the same as the bits of this `UShort` value,
+     * whereas the most significant 48 bits are filled with zeros.
      */
     @kotlin.internal.InlineOnly
-    public inline fun toLong(): Long = data.toLong() and 0xFF
+    public inline fun toLong(): Long = data.toLong() and 0xFFFF
+
+    /**
+     * Converts this [UShort] value to [UByte].
+     *
+     * If this value is less than or equals to [UByte.MAX_VALUE], the resulting `UByte` value represents
+     * the same numerical value as this `UShort`.
+     *
+     * The resulting `UByte` value is represented by the least significant 8 bits of this `UShort` value.
+     */
+    @kotlin.internal.InlineOnly
+    public inline fun toUByte(): UByte = data.toUByte()
 
     /** Returns this value. */
     @kotlin.internal.InlineOnly
-    public inline fun toUByte(): UByte = this
+    public inline fun toUShort(): UShort = this
 
     /**
-     * Converts this [UByte] value to [UShort].
+     * Converts this [UShort] value to [UInt].
      *
-     * The resulting `UShort` value represents the same numerical value as this `UByte`.
+     * The resulting `UInt` value represents the same numerical value as this `UShort`.
      *
-     * The least significant 8 bits of the resulting `UShort` value are the same as the bits of this `UByte` value,
-     * whereas the most significant 8 bits are filled with zeros.
+     * The least significant 16 bits of the resulting `UInt` value are the same as the bits of this `UShort` value,
+     * whereas the most significant 16 bits are filled with zeros.
      */
     @kotlin.internal.InlineOnly
-    public inline fun toUShort(): UShort = UShort(data.toShort() and 0xFF)
+    public inline fun toUInt(): UInt = UInt(data.toInt() and 0xFFFF)
 
     /**
-     * Converts this [UByte] value to [UInt].
+     * Converts this [UShort] value to [ULong].
      *
-     * The resulting `UInt` value represents the same numerical value as this `UByte`.
+     * The resulting `ULong` value represents the same numerical value as this `UShort`.
      *
-     * The least significant 8 bits of the resulting `UInt` value are the same as the bits of this `UByte` value,
-     * whereas the most significant 24 bits are filled with zeros.
+     * The least significant 16 bits of the resulting `ULong` value are the same as the bits of this `UShort` value,
+     * whereas the most significant 48 bits are filled with zeros.
      */
     @kotlin.internal.InlineOnly
-    public inline fun toUInt(): UInt = UInt(data.toInt() and 0xFF)
+    public inline fun toULong(): ULong = ULong(data.toLong() and 0xFFFF)
 
     /**
-     * Converts this [UByte] value to [ULong].
+     * Converts this [UShort] value to [Float].
      *
-     * The resulting `ULong` value represents the same numerical value as this `UByte`.
-     *
-     * The least significant 8 bits of the resulting `ULong` value are the same as the bits of this `UByte` value,
-     * whereas the most significant 56 bits are filled with zeros.
-     */
-    @kotlin.internal.InlineOnly
-    public inline fun toULong(): ULong = ULong(data.toLong() and 0xFF)
-
-    /**
-     * Converts this [UByte] value to [Float].
-     *
-     * The resulting `Float` value represents the same numerical value as this `UByte`.
+     * The resulting `Float` value represents the same numerical value as this `UShort`.
      */
     @kotlin.internal.InlineOnly
     public inline fun toFloat(): Float = this.toInt().toFloat()
 
     /**
-     * Converts this [UByte] value to [Double].
+     * Converts this [UShort] value to [Double].
      *
-     * The resulting `Double` value represents the same numerical value as this `UByte`.
+     * The resulting `Double` value represents the same numerical value as this `UShort`.
      */
     @kotlin.internal.InlineOnly
     public inline fun toDouble(): Double = this.toInt().toDouble()
@@ -383,49 +389,49 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
     public override fun toString(): String = toInt().toString()
 }
 /**
- * Converts this [Byte] value to [UByte].
+ * Converts this [Byte] value to [UShort].
  *
- * If this value is positive, the resulting `UByte` value represents the same numerical value as this `Byte`.
+ * If this value is positive, the resulting `UShort` value represents the same numerical value as this `Byte`.
  *
- * The resulting `UByte` value has the same binary representation as this `Byte` value.
+ * The least significant 8 bits of the resulting `UShort` value are the same as the bits of this `Byte` value,
+ * whereas the most significant 8 bits are filled with the sign bit of this value.
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-public inline fun Byte.toUByte(): UByte = UByte(this)
+public inline fun Byte.toUShort(): UShort = UShort(this.toShort())
 /**
- * Converts this [Short] value to [UByte].
+ * Converts this [Short] value to [UShort].
  *
- * If this value is positive and less than or equals to [UByte.MAX_VALUE], the resulting `UByte` value represents
- * the same numerical value as this `Short`.
+ * If this value is positive, the resulting `UShort` value represents the same numerical value as this `Short`.
  *
- * The resulting `UByte` value is represented by the least significant 8 bits of this `Short` value.
+ * The resulting `UShort` value has the same binary representation as this `Short` value.
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-public inline fun Short.toUByte(): UByte = UByte(this.toByte())
+public inline fun Short.toUShort(): UShort = UShort(this)
 /**
- * Converts this [Int] value to [UByte].
+ * Converts this [Int] value to [UShort].
  *
- * If this value is positive and less than or equals to [UByte.MAX_VALUE], the resulting `UByte` value represents
+ * If this value is positive and less than or equals to [UShort.MAX_VALUE], the resulting `UShort` value represents
  * the same numerical value as this `Int`.
  *
- * The resulting `UByte` value is represented by the least significant 8 bits of this `Int` value.
+ * The resulting `UShort` value is represented by the least significant 16 bits of this `Int` value.
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-public inline fun Int.toUByte(): UByte = UByte(this.toByte())
+public inline fun Int.toUShort(): UShort = UShort(this.toShort())
 /**
- * Converts this [Long] value to [UByte].
+ * Converts this [Long] value to [UShort].
  *
- * If this value is positive and less than or equals to [UByte.MAX_VALUE], the resulting `UByte` value represents
+ * If this value is positive and less than or equals to [UShort.MAX_VALUE], the resulting `UShort` value represents
  * the same numerical value as this `Long`.
  *
- * The resulting `UByte` value is represented by the least significant 8 bits of this `Long` value.
+ * The resulting `UShort` value is represented by the least significant 16 bits of this `Long` value.
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-public inline fun Long.toUByte(): UByte = UByte(this.toByte())
+public inline fun Long.toUShort(): UShort = UShort(this.toShort())

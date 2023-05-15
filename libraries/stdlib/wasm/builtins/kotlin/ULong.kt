@@ -5,14 +5,15 @@
 
 // Auto-generated file. DO NOT EDIT!
 
+@file:Suppress("OVERRIDE_BY_INLINE", "NOTHING_TO_INLINE", "unused", "UNUSED_PARAMETER")
+
 package kotlin
 
-import kotlin.experimental.*
-import kotlin.jvm.*
+import kotlin.wasm.internal.*
 
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
-@JvmInline
+@WasmAutoboxed
 public value class ULong @kotlin.internal.IntrinsicConstEvaluation @PublishedApi internal constructor(@PublishedApi internal val data: Long) : Comparable<ULong> {
     companion object {
         /**
@@ -42,7 +43,8 @@ public value class ULong @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * or a positive number if it's greater than other.
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun compareTo(other: UByte): Int = this.compareTo(other.toULong())
+    public operator fun compareTo(other: UByte): Int =
+        this.toUByte().compareTo(other)
 
     /**
      * Compares this value with the specified value for order.
@@ -50,7 +52,8 @@ public value class ULong @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * or a positive number if it's greater than other.
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun compareTo(other: UShort): Int = this.compareTo(other.toULong())
+    public operator fun compareTo(other: UShort): Int =
+        this.toUShort().compareTo(other)
 
     /**
      * Compares this value with the specified value for order.
@@ -58,7 +61,8 @@ public value class ULong @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * or a positive number if it's greater than other.
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun compareTo(other: UInt): Int = this.compareTo(other.toULong())
+    public operator fun compareTo(other: UInt): Int =
+        this.toUInt().compareTo(other)
 
     /**
      * Compares this value with the specified value for order.
@@ -67,7 +71,8 @@ public value class ULong @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      */
     @kotlin.internal.InlineOnly
     @Suppress("OVERRIDE_BY_INLINE")
-    public override inline operator fun compareTo(other: ULong): Int = ulongCompare(this.data, other.data)
+    public override inline operator fun compareTo(other: ULong): Int =
+        wasm_u64_compareTo(this, other)
 
     /** Adds the other value to this value. */
     @kotlin.internal.InlineOnly

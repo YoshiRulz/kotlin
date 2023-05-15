@@ -21,9 +21,11 @@ class WasmPrimitivesGenerator(writer: PrintWriter) : BasePrimitivesGenerator(wri
     override fun ClassBuilder.modifyGeneratedClass(thisKind: PrimitiveType) {
         annotations += "WasmAutoboxed"
         // used here little hack with name extension just to avoid creation of specialized "ConstructorParameterDescription"
-        constructorParam {
-            name = "private val value"
-            type = thisKind.capitalized
+        constructor {
+            param {
+                name = "private val value"
+                type = thisKind.capitalized
+            }
         }
     }
 

@@ -5,14 +5,15 @@
 
 // Auto-generated file. DO NOT EDIT!
 
+@file:Suppress("OVERRIDE_BY_INLINE", "NOTHING_TO_INLINE", "unused", "UNUSED_PARAMETER")
+
 package kotlin
 
-import kotlin.experimental.*
-import kotlin.jvm.*
+import kotlin.wasm.internal.*
 
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
-@JvmInline
+@WasmAutoboxed
 public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi internal constructor(@PublishedApi internal val data: Byte) : Comparable<UByte> {
     companion object {
         /**
@@ -43,7 +44,8 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      */
     @kotlin.internal.InlineOnly
     @Suppress("OVERRIDE_BY_INLINE")
-    public override inline operator fun compareTo(other: UByte): Int = this.toInt().compareTo(other.toInt())
+    public override inline operator fun compareTo(other: UByte): Int =
+        wasm_u32_compareTo(this.toInt(), other.toInt())
 
     /**
      * Compares this value with the specified value for order.
@@ -51,7 +53,8 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * or a positive number if it's greater than other.
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun compareTo(other: UShort): Int = this.toInt().compareTo(other.toInt())
+    public operator fun compareTo(other: UShort): Int =
+        this.toUShort().compareTo(other)
 
     /**
      * Compares this value with the specified value for order.
@@ -59,7 +62,8 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * or a positive number if it's greater than other.
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun compareTo(other: UInt): Int = this.toUInt().compareTo(other)
+    public operator fun compareTo(other: UInt): Int =
+        this.toUInt().compareTo(other)
 
     /**
      * Compares this value with the specified value for order.
@@ -67,7 +71,8 @@ public value class UByte @kotlin.internal.IntrinsicConstEvaluation @PublishedApi
      * or a positive number if it's greater than other.
      */
     @kotlin.internal.InlineOnly
-    public inline operator fun compareTo(other: ULong): Int = this.toULong().compareTo(other)
+    public operator fun compareTo(other: ULong): Int =
+        this.toULong().compareTo(other)
 
     /** Adds the other value to this value. */
     @kotlin.internal.InlineOnly
