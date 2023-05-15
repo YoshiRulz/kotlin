@@ -24,9 +24,7 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.diagnostics.KtPsiDiagnostic
-import org.jetbrains.kotlin.fir.FirElement
-import org.jetbrains.kotlin.fir.FirFunctionTarget
-import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.builder.BodyBuildingMode
 import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.builder.buildFileAnnotationsContainer
@@ -156,60 +154,7 @@ internal class LLFirCodeFragmentResovableSession(
                             packageFqName = FqName.ROOT
                             source = file.packageDirective?.toKtPsiSourceElement()
                         }
-                        annotationsContainer = buildFileAnnotationsContainer {
-                            moduleData = baseModuleData
-                            containingFileSymbol = this@buildFile.symbol
-                            source = file.toKtPsiSourceElement()
-                            /**
-                             * applying Suppress("INVISIBLE_*) to file, supposed to instruct frontend to ignore `private`
-                             * modifier.
-                             * TODO: investigate why it's not enough for
-                             * [org.jetbrains.kotlin.idea.k2.debugger.test.cases.K2EvaluateExpressionTestGenerated.SingleBreakpoint.CompilingEvaluator.InaccessibleMembers]
-                             */
-                            annotations += buildAnnotationCall {
-                                source = file.toFirSourceElement()
-                                val annotationClassIdLookupTag = ClassId(
-                                    StandardNames.FqNames.suppress.parent(),
-                                    StandardNames.FqNames.suppress.shortName()
-                                ).toLookupTag()
-                                val annotationType = ConeClassLikeTypeImpl(
-                                    annotationClassIdLookupTag,
-                                    emptyArray(),
-                                    isNullable = false
-                                )
-                                calleeReference = buildResolvedNamedReference {
-                                    val annotationTypeSymbol = (annotationType.toSymbol(useSiteFirSession) as? FirRegularClassSymbol)
-                                        ?: return@buildAnnotationCall
-
-                                    val constructorSymbol =
-                                        annotationTypeSymbol.unsubstitutedScope(
-                                            useSiteFirSession,
-                                            useSiteFirSession.getScopeSession(),
-                                            withForcedTypeCalculator = false,
-                                            memberRequiredPhase = null
-                                        )
-                                            .getDeclaredConstructors().firstOrNull() ?: return@buildAnnotationCall
-                                    resolvedSymbol = constructorSymbol
-                                    name = constructorSymbol.name
-                                }
-                                argumentList = buildArgumentList {
-                                    arguments += buildVarargArgumentsExpression {
-                                        initialiazeSuppressAnnotionArguments()
-                                    }
-                                }
-                                useSiteTarget = AnnotationUseSiteTarget.FILE
-                                annotationTypeRef = buildResolvedTypeRef {
-                                    source = file.toFirSourceElement()
-                                    type = annotationType
-                                }
-                                argumentMapping = buildAnnotationArgumentMapping {
-                                    mapping[Name.identifier("names")] = buildVarargArgumentsExpression {
-                                        initialiazeSuppressAnnotionArguments()
-                                    }
-                                }
-                                annotationResolvePhase = FirAnnotationResolvePhase.Types
-                            }
-                        }
+                        annotationsContainer = buildAnnotationContainerForFile(moduleData, "INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 
                         for (importDirective in file.importDirectives) {
                             imports += buildImport {
@@ -361,19 +306,73 @@ internal class LLFirCodeFragmentResovableSession(
         return firFile
     }
 
-    private fun FirVarargArgumentsExpressionBuilder.initialiazeSuppressAnnotionArguments() {
+    private fun FirFileBuilder.buildAnnotationContainerForFile(
+        moduleData: FirModuleData,
+        vararg diagnostics: String
+    ): FirFileAnnotationsContainer {
+        return buildFileAnnotationsContainer {
+            this.moduleData = moduleData
+            containingFileSymbol = this@buildAnnotationContainerForFile.symbol
+            /**
+             * applying Suppress("INVISIBLE_*) to file, supposed to instruct frontend to ignore `private`
+             * modifier.
+             * TODO: investigate why it's not enough for
+             * [org.jetbrains.kotlin.idea.k2.debugger.test.cases.K2EvaluateExpressionTestGenerated.SingleBreakpoint.CompilingEvaluator.InaccessibleMembers]
+             */
+            annotations += buildAnnotationCall {
+                val annotationClassIdLookupTag = ClassId(
+                    StandardNames.FqNames.suppress.parent(),
+                    StandardNames.FqNames.suppress.shortName()
+                ).toLookupTag()
+                val annotationType = ConeClassLikeTypeImpl(
+                    annotationClassIdLookupTag,
+                    emptyArray(),
+                    isNullable = false
+                )
+                calleeReference = buildResolvedNamedReference {
+                    val annotationTypeSymbol = (annotationType.toSymbol(useSiteFirSession) as? FirRegularClassSymbol)
+                        ?: return@buildAnnotationCall
+
+                    val constructorSymbol =
+                        annotationTypeSymbol.unsubstitutedScope(
+                            useSiteFirSession,
+                            useSiteFirSession.getScopeSession(),
+                            withForcedTypeCalculator = false,
+                            memberRequiredPhase = null
+                        )
+                            .getDeclaredConstructors().firstOrNull() ?: return@buildAnnotationCall
+                    resolvedSymbol = constructorSymbol
+                    name = constructorSymbol.name
+                }
+                argumentList = buildArgumentList {
+                    arguments += buildVarargArgumentsExpression {
+                        initialiazeSuppressAnnotionArguments(*diagnostics)
+                    }
+                }
+                useSiteTarget = AnnotationUseSiteTarget.FILE
+                annotationTypeRef = buildResolvedTypeRef {
+                    type = annotationType
+                }
+                argumentMapping = buildAnnotationArgumentMapping {
+                    mapping[Name.identifier("names")] = buildVarargArgumentsExpression {
+                        initialiazeSuppressAnnotionArguments(*diagnostics)
+                    }
+                }
+                annotationResolvePhase = FirAnnotationResolvePhase.Types
+            }
+        }
+    }
+
+    private fun FirVarargArgumentsExpressionBuilder.initialiazeSuppressAnnotionArguments(vararg diagnostics: String) {
         varargElementType =
             this@LLFirCodeFragmentResovableSession.useSiteFirSession.builtinTypes.stringType
-        arguments += buildConstExpression(
-            null,
-            ConstantValueKind.String,
-            "INVISIBLE_REFERENCE"
-        )
-        arguments += buildConstExpression(
-            null,
-            ConstantValueKind.String,
-            "INVISIBLE_MEMBER"
-        )
+        diagnostics.forEach {
+            arguments += buildConstExpression(
+                null,
+                ConstantValueKind.String,
+                it
+            )
+        }
     }
 }
 
