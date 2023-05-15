@@ -133,8 +133,6 @@ class AtomicfuJvmIrTransformer(
                         // 2. transform getter/setter
                         // var a by atomic(0) ->
                         // volatile var a: Int = 0
-                        // todo: make this function look more consistent
-
                         val volatileField = buildVolatileBackingField(this, parent)
                         parent.declarations.add(volatileField)
                         backingField = null
@@ -268,7 +266,6 @@ class AtomicfuJvmIrTransformer(
                 }
             }
 
-        // todo rename
         private fun IrProperty.isTopLevel(): Boolean =
             parent is IrClass && (parent as IrClass).name.asString().endsWith(VOLATILE_WRAPPER_SUFFIX)
     }

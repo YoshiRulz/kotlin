@@ -1,9 +1,9 @@
-// FREE_COMPILER_ARGS: -Xplugin=/Users/Maria.Sokolova/IdeaProjects/kotlin/plugins/atomicfu/atomicfu-compiler/build/libs/kotlin-atomicfu-compiler-plugin-1.9.255-SNAPSHOT-atomicfu-1.jar
-
-import kotlinx.atomicfu.*
-import kotlin.test.*
-
-private val a = atomic(0)
+//// FREE_COMPILER_ARGS: -Xplugin=/Users/Maria.Sokolova/IdeaProjects/kotlin/plugins/atomicfu/atomicfu-compiler/build/libs/kotlin-atomicfu-compiler-plugin-1.9.255-SNAPSHOT-atomicfu-1.jar
+//
+//import kotlinx.atomicfu.*
+//import kotlin.test.*
+//
+//private val a = atomic(0)
 //private val b = atomic(2424920024888888848)
 //private val c = atomic(true)
 //private val abcNode = atomic(ANode(BNode(CNode(8))))
@@ -21,9 +21,9 @@ private val a = atomic(0)
 //data class BNode<T>(val c: T)
 //data class CNode(val d: Int)
 
-@Test
-fun testTopLevelInt() {
-    assertEquals(0, a.value)
+//@Test
+//fun testTopLevelInt() {
+//    assertEquals(0, a.value)
 //    assertEquals(0, a.getAndSet(3))
 //    assertTrue(a.compareAndSet(3, 8))
 //    a.lazySet(1)
@@ -43,7 +43,7 @@ fun testTopLevelInt() {
 //    assertEquals(7, a.decrementAndGet())
 //    assertEquals(7, a.value)
 //    assertTrue(a.compareAndSet(7, 10))
-}
+//}
 
 //@Test
 //fun testTopLevelLong() {

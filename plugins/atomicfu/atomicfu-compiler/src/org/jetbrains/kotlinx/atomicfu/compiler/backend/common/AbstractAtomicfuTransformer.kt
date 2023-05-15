@@ -69,19 +69,8 @@ abstract class AbstractAtomicfuTransformer(
         for (irFile in moduleFragment.files) {
             irFile.transform(endCounter, null)
             if (moduleFragment.name.asString().contains("nativeBox")) {
-                if (irFile.dump().contains("kotlinx.atomicfu")) {
-                    // todo a more intellectual test that leaves atomic arrays and extensions that are called on untransformed properties
-                    println("Atomicfu reference detected in tests in irFile: \n ${irFile.dump()}")
-                }
+                println(irFile.dump())
             }
-            //if (irFile.name == "BufferedChannel.kt") {
-                //println("-------------------------------- AAAAAAAAAAA FILE RENDER: --------------------------------")
-                //error(irFile.dump())
-                //println("-------------------------------- END --------------------------------")
-            //}
-//            println("---------- start of the dump ${irFile.name} -------------")
-            println(irFile.dump())
-//            println("---------- end of the dump -------------")
         }
         println("moduleFragment: ${moduleFragment.name}: End atomic boxes = ${endCounter.counter}")
     }
@@ -161,7 +150,10 @@ abstract class AbstractAtomicfuTransformer(
             return with(atomicSymbols.createBuilder(atomicField.symbol)) {
                 irVolatileField(
                     atomicProperty.name,
-                    if (fieldType.isBoolean()) irBuiltIns.intType else fieldType, // boolean fields can only be updated with AtomicIntegerFieldUpdater
+                    // todo: for JVM AtomicBoolean is transformed to volatile Int field (boolean fields can only be updated with AtomicIntegerFieldUpdater)
+                    // todo: for Native AtomicBoolean should be a volatile Boolean field
+                    //if (fieldType.isBoolean()) irBuiltIns.intType else fieldType,
+                    fieldType,
                     if (initializer == null) null else initValue,
                     atomicField.annotations,
                     parentContainer

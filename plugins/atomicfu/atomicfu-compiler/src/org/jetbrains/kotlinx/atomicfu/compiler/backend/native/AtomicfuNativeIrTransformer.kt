@@ -13,6 +13,8 @@ import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.*
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrPropertyReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrValueParameterSymbol
 import org.jetbrains.kotlin.ir.types.*
@@ -57,10 +59,8 @@ class AtomicfuNativeIrTransformer(
             toVolatileProperty(parentContainer)
 
         override fun IrProperty.transformStaticAtomic(parentContainer: IrDeclarationContainer) {
+            // todo: just skip them (as a box) and do not transform any subsequent calls on this array
             toVolatileProperty(parentContainer)
-//            parentContainer.declarations.remove(this)
-//            generateVolatileProperty(this, parentContainer)
-            //parentContainer.declarations.add(volatileProperty)
         }
 
         override fun IrProperty.transformDelegatedAtomic(parentContainer: IrDeclarationContainer) {
@@ -70,36 +70,6 @@ class AtomicfuNativeIrTransformer(
         override fun IrProperty.transformAtomicArray(parentContainer: IrDeclarationContainer) {
             // todo: just skip them (as a box) and do not transform any subsequent calls on this array
             // todo: design API for atomic array intrinsics
-        }
-
-        private fun generateVolatileProperty(atomicProperty: IrProperty, parentContainer: IrDeclarationContainer) {
-            val atomicField =
-                requireNotNull(atomicProperty.backingField) { "BackingField of atomic property $atomicProperty should not be null" }
-            val fieldType = atomicField.type.atomicToValueType()
-            atomicField.initializer?.expression?.let {
-                val initValue = (it as IrCall).getAtomicFactoryValueArgument()
-                with(atomicSymbols.createBuilder(atomicProperty.symbol)) {
-                    irVolatileField(
-                        Name.identifier(atomicProperty.name.asString() + "\$volatile"),
-                        fieldType,
-                        initValue,
-                        atomicField.annotations,
-                        parentContainer
-                    ).apply {
-                        parent = parentContainer
-                    }
-                }
-//                irBuiltIns.irFactory.buildProperty {
-//                    name = volatileField.name
-//                    visibility = atomicProperty.visibility
-//                    isVar = true
-//                }.apply {
-//                    backingField = volatileField
-//                    //addStaticGetter(irBuiltIns)
-//                    parent = parentContainer
-//                    parentContainer.declarations.add(this)
-//                }
-            }
         }
 
         private fun IrProperty.toVolatileProperty(parentContainer: IrDeclarationContainer) {
@@ -240,7 +210,7 @@ class AtomicfuNativeIrTransformer(
         }
 
         override fun visitGetValue(expression: IrGetValue, data: IrFunction?): IrExpression {
-            // TODO: abstract out or leave like this: needs refactor and verification!!!!!
+            // TODO: abstract out
             // For transformed atomic extension functions
             // replace old value parameters with the new parameters of the transformed declaration:
             // inline fun foo$atomicfu(dispatchReceiver: Any?, handler: j.u.c.a.AtomicIntegerFieldUpdater, arg': Int) {
@@ -319,7 +289,6 @@ class AtomicfuNativeIrTransformer(
             getPropertyReceiver: IrExpression,
             parentFunction: IrFunction?
         ): IrExpression {
-            // todo: not support
             return expression
         }
 

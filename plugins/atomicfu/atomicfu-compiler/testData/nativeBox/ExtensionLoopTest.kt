@@ -2,6 +2,7 @@
 //
 //import kotlinx.atomicfu.*
 //import kotlin.test.*
+//
 //class ExtensionLoopTest {
 //    val a = atomic(0)
 //    val a1 = atomic(1)
@@ -36,13 +37,13 @@
 //        return if (compareAndSet(cur, to)) value + 1 else incrementAndGet()
 //    }
 //
-////    private inline fun AtomicInt.extensionLoopMixedReceivers(first: Int, second: Int): Int {
-////        loop { cur ->
-////            compareAndSet(cur, first)
-////            a.compareAndSet(first, second)
-////            return value
-////        }
-////    }
+//    private inline fun AtomicInt.extensionLoopMixedReceivers(first: Int, second: Int): Int {
+//        loop { cur ->
+//            compareAndSet(cur, first)
+//            a.compareAndSet(first, second)
+//            return value
+//        }
+//    }
 //
 //    private inline fun AtomicInt.extensionLoopRecursive(to: Int): Int {
 //        loop { cur ->
