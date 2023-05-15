@@ -172,7 +172,7 @@ open class IrMangleComputer(
         }
 
         override fun visitPackageFragment(declaration: IrPackageFragment) {
-            declaration.fqName.let { if (!it.isRoot) builder.appendName(it.asString()) }
+            declaration.packageFqName.let { if (!it.isRoot) builder.appendName(it.asString()) }
         }
 
         override fun visitProperty(declaration: IrProperty) {
