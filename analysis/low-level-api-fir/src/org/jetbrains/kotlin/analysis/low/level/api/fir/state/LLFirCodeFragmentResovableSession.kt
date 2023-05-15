@@ -60,6 +60,7 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
+import org.jetbrains.kotlin.psi.psiUtil.findDescendantOfType
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.toKtPsiSourceElement
 import org.jetbrains.kotlin.types.ConstantValueKind
@@ -387,8 +388,8 @@ private fun resolveCodeFragment(
     val codeFragmentModule = codeFragment.getKtModule() as KtCodeFragmentModule
     val debugeeSourceFile = codeFragmentModule.rawContext.containingFile as KtFile
     val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
-    val placementContext = calculateAirContext(debugeeSourceFile, codeFragmentModule)
-
+    val place = codeFragmentModule.rawContext.calculateAcceptablePlace()
+    val placementContext =  debugeeSourceFile.findDescendantOfType<KtElement>{ (it.startOffset >= place.startOffset && it.endOffset <= place.endOffset) }
     val convertedFirExpression = OnAirResolver(debugeeSourceFile).resolve(
         debugeeFileFirSession,
         placementContext!!,
@@ -426,39 +427,12 @@ private fun resolveCodeFragment(
     })
 }
 
-/**
- * calculates gut context to place code fragment for later resolving.
- */
-private fun calculateAirContext(
-    debugeeSourceFile: KtFile,
-    codeFragmentModule: KtCodeFragmentModule
-): KtElement? {
-
-    var contexCandidate: KtElement? = null
-    debugeeSourceFile.accept(object : KtVisitorVoid() {
-        val place = codeFragmentModule.rawContext.calculateAcceptablePlace()
-        override fun visitElement(element: PsiElement) {
-            if (contexCandidate == null)
-                element.acceptChildren(this)
-        }
-
-        override fun visitKtElement(element: KtElement) {
-            if (contexCandidate == null && element.startOffset >= place.startOffset && element.endOffset <= place.endOffset) {
-                contexCandidate = element
-            } else {
-                element.acceptChildren(this)
-            }
-        }
-
-        fun PsiElement.calculateAcceptablePlace(): PsiElement = when {
-            this is KtKeywordToken ||
-                    this is KtNameReferenceExpression ||
-                    this is LeafPsiElement && (elementType == IDENTIFIER || elementType is KtKeywordToken) -> context!!.calculateAcceptablePlace()
-            context is KtCallExpression -> context!!.calculateAcceptablePlace()
-            else -> this
-        }
-    })
-    return contexCandidate
+private fun PsiElement.calculateAcceptablePlace(): PsiElement = when {
+    this is KtKeywordToken ||
+            this is KtNameReferenceExpression ||
+            this is LeafPsiElement && (elementType == IDENTIFIER || elementType is KtKeywordToken) -> context!!.calculateAcceptablePlace()
+    context is KtCallExpression -> context!!.calculateAcceptablePlace()
+    else -> this
 }
 
 private class OnAirResolver(val debugeeSourceFile: KtFile) {
