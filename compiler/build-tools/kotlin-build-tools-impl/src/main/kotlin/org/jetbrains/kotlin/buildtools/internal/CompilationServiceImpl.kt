@@ -6,9 +6,29 @@
 package org.jetbrains.kotlin.buildtools.internal
 
 import org.jetbrains.kotlin.buildtools.api.CompilationService
+import org.jetbrains.kotlin.buildtools.api.CompilerExecutionStrategyConfig
+import org.jetbrains.kotlin.buildtools.api.jvm.*
+import java.io.File
 
 internal class CompilationServiceImpl : CompilationService {
-    override fun compile() {
+    override fun calculateClasspathSnapshot(classpathEntry: File): ClasspathEntrySnapshot {
+        TODO("Not yet implemented: KT-57565")
+    }
+
+    override fun saveSnapshot(snapshot: ClasspathEntrySnapshot, path: File) {
+        TODO("Not yet implemented: KT-57565")
+    }
+
+    override fun generateCompilerExecutionStrategyConfig() = CompilerExecutionStrategyConfigImpl()
+
+    override fun generateJvmCompilationConfig() = JvmCompilationConfigImpl()
+
+    override fun compileJvm(
+        strategyConfig: CompilerExecutionStrategyConfig,
+        compilationConfig: JvmCompilationConfig,
+        sources: Iterable<File>,
+        arguments: List<String>
+    ) {
         println("I'm simulating compilation, nothing more yet")
     }
 }

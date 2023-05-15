@@ -1,11 +1,20 @@
 public abstract interface class org/jetbrains/kotlin/buildtools/api/CompilationService {
 	public static final field Companion Lorg/jetbrains/kotlin/buildtools/api/CompilationService$Companion;
-	public abstract fun compile ()V
+	public abstract fun calculateClasspathSnapshot (Ljava/io/File;)Lorg/jetbrains/kotlin/buildtools/api/jvm/ClasspathEntrySnapshot;
+	public abstract fun compileJvm (Lorg/jetbrains/kotlin/buildtools/api/CompilerExecutionStrategyConfig;Lorg/jetbrains/kotlin/buildtools/api/jvm/JvmCompilationConfig;Ljava/lang/Iterable;Ljava/util/List;)V
+	public abstract fun generateCompilerExecutionStrategyConfig ()Lorg/jetbrains/kotlin/buildtools/api/CompilerExecutionStrategyConfig;
+	public abstract fun generateJvmCompilationConfig ()Lorg/jetbrains/kotlin/buildtools/api/jvm/JvmCompilationConfig;
 	public static fun loadImplementation (Ljava/lang/ClassLoader;)Lorg/jetbrains/kotlin/buildtools/api/CompilationService;
+	public abstract fun saveSnapshot (Lorg/jetbrains/kotlin/buildtools/api/jvm/ClasspathEntrySnapshot;Ljava/io/File;)V
 }
 
 public final class org/jetbrains/kotlin/buildtools/api/CompilationService$Companion {
 	public final fun loadImplementation (Ljava/lang/ClassLoader;)Lorg/jetbrains/kotlin/buildtools/api/CompilationService;
+}
+
+public abstract interface class org/jetbrains/kotlin/buildtools/api/CompilerExecutionStrategyConfig {
+	public abstract fun useDaemonStrategy (Ljava/util/List;Ljava/io/File;Ljava/util/List;)V
+	public abstract fun useInProcessStrategy ()V
 }
 
 public abstract interface class org/jetbrains/kotlin/buildtools/api/KotlinLogger {
@@ -20,5 +29,61 @@ public abstract interface class org/jetbrains/kotlin/buildtools/api/KotlinLogger
 
 public final class org/jetbrains/kotlin/buildtools/api/SharedApiClassesClassLoader {
 	public static final fun newInstance ()Ljava/lang/ClassLoader;
+}
+
+public abstract interface class org/jetbrains/kotlin/buildtools/api/jvm/ClassSnapshot {
+}
+
+public abstract interface class org/jetbrains/kotlin/buildtools/api/jvm/ClasspathEntrySnapshot {
+	public abstract fun getClassSnapshots ()Ljava/util/LinkedHashMap;
+}
+
+public final class org/jetbrains/kotlin/buildtools/api/jvm/ClasspathSnapshotBasedIncrementalCompilationApproachParameters : org/jetbrains/kotlin/buildtools/api/jvm/IncrementalCompilationApproachParameters {
+	public fun <init> (Ljava/util/List;Ljava/io/File;)V
+	public final fun getCurrentClasspathSnapshotFiles ()Ljava/util/List;
+	public final fun getPreviousClasspathSnapshotFile ()Ljava/io/File;
+}
+
+public abstract interface class org/jetbrains/kotlin/buildtools/api/jvm/ClasspathSnapshotBasedIncrementalJvmCompilationConfig : org/jetbrains/kotlin/buildtools/api/jvm/IncrementalJvmCompilationConfig {
+	public abstract fun noClasspathSnapshotsChanges ()V
+}
+
+public abstract interface class org/jetbrains/kotlin/buildtools/api/jvm/IncrementalCompilationApproachParameters {
+}
+
+public abstract interface class org/jetbrains/kotlin/buildtools/api/jvm/IncrementalJvmCompilationConfig {
+	public abstract fun getKeepIncrementalCompilationCachesInMemory ()Z
+	public abstract fun getPreciseCompilationResultsBackup ()Z
+	public abstract fun getUsePreciseJavaTracking ()Z
+	public abstract fun nonIncremental ()V
+	public abstract fun setKeepIncrementalCompilationCachesInMemory (Z)V
+	public abstract fun setPreciseCompilationResultsBackup (Z)V
+	public abstract fun setUsePreciseJavaTracking (Z)V
+}
+
+public abstract interface class org/jetbrains/kotlin/buildtools/api/jvm/JvmCompilationConfig {
+	public fun classpathSnapshotBasedIncrementalCompilationDefaults ()Lorg/jetbrains/kotlin/buildtools/api/jvm/IncrementalJvmCompilationConfig;
+	public abstract fun getKotlinScriptExtensions ()Ljava/util/List;
+	public abstract fun getLogger ()Lorg/jetbrains/kotlin/buildtools/api/KotlinLogger;
+	public abstract fun setKotlinScriptExtensions (Ljava/util/List;)V
+	public abstract fun setLogger (Lorg/jetbrains/kotlin/buildtools/api/KotlinLogger;)V
+	public fun useIncrementalCompilation (Ljava/io/File;Ljava/io/File;Lorg/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges;Lorg/jetbrains/kotlin/buildtools/api/jvm/IncrementalCompilationApproachParameters;Lorg/jetbrains/kotlin/buildtools/api/jvm/IncrementalJvmCompilationConfig;)V
+}
+
+public abstract interface class org/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges {
+}
+
+public final class org/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges$Known : org/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges {
+	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public final fun getModifiedFiles ()Ljava/util/List;
+	public final fun getRemovedFiles ()Ljava/util/List;
+}
+
+public final class org/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges$ToBeCalculated : org/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges {
+	public static final field INSTANCE Lorg/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges$ToBeCalculated;
+}
+
+public final class org/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges$Unknown : org/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges {
+	public static final field INSTANCE Lorg/jetbrains/kotlin/buildtools/api/jvm/SourcesChanges$Unknown;
 }
 
