@@ -27,6 +27,9 @@ import com.intellij.util.io.URLUtil.JAR_PROTOCOL
 import com.intellij.util.io.URLUtil.JAR_SEPARATOR
 import org.jetbrains.kotlin.analysis.api.impl.base.references.HLApiReferenceProviderService
 import org.jetbrains.kotlin.analysis.api.resolve.extensions.KtResolveExtensionProvider
+import org.jetbrains.kotlin.analysis.decompiler.stub.file.ClsKotlinBinaryClassCache
+import org.jetbrains.kotlin.analysis.decompiler.stub.file.DummyFileAttributeService
+import org.jetbrains.kotlin.analysis.decompiler.stub.file.FileAttributeService
 import org.jetbrains.kotlin.analysis.project.structure.*
 import org.jetbrains.kotlin.analysis.providers.impl.KotlinFakeClsStubsCache
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
@@ -77,7 +80,9 @@ object StandaloneProjectFactory {
                 return
             }
             application.apply {
-                registerService(KotlinFakeClsStubsCache::class.java, KotlinFakeClsStubsCache())
+                registerService(KotlinFakeClsStubsCache::class.java, KotlinFakeClsStubsCache::class.java)
+                registerService(ClsKotlinBinaryClassCache::class.java)
+                registerService(FileAttributeService::class.java, DummyFileAttributeService::class.java)
             }
         }
     }
