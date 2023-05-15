@@ -34,7 +34,6 @@ import org.jetbrains.kotlin.fir.builder.buildPackageDirective
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirFile
-import org.jetbrains.kotlin.fir.declarations.FirPropertyAccessor
 import org.jetbrains.kotlin.fir.declarations.builder.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedDeclarationStatusImpl
@@ -44,8 +43,6 @@ import org.jetbrains.kotlin.fir.pipeline.runResolution
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
-import org.jetbrains.kotlin.fir.render
-import org.jetbrains.kotlin.fir.resolve.dfa.symbol
 import org.jetbrains.kotlin.fir.scopes.getDeclaredConstructors
 import org.jetbrains.kotlin.fir.scopes.impl.declaredMemberScope
 import org.jetbrains.kotlin.fir.scopes.kotlinScopeProvider
@@ -95,77 +92,12 @@ internal class LLFirCodeFragmentResovableSession(
         return (element as? KtFile)?.let { moduleComponents.cache.fileCached(it) { buildFirFileFor(element, moduleComponents) } }
     }
 
-    private fun buildFirFileFor(element: KtFile, moduleComponents: LLFirModuleResolveComponents): FirFile {
-        val codeFragmentModule = element.getKtModule() as KtCodeFragmentModule
-        val debugeeSourceFile = codeFragmentModule.place.containingFile as KtFile
-        val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
-        val properties = mutableMapOf<String, FirTypeRef>()
+    private fun buildFirFileFor(codeFragment: KtFile, moduleComponents: LLFirModuleResolveComponents): FirFile {
+        val codeFragmentModule = codeFragment.getKtModule() as KtCodeFragmentModule
+        val argumentReferences = mutableMapOf<String, FirTypeRef>()
+        val receiverReferences = mutableMapOf<KtThisExpression, LabeledThis>()
 
-        val needle = run {
-            var needle_: KtElement? = null
-            debugeeSourceFile.accept(object : KtVisitorVoid() {
-                val place = codeFragmentModule.place.placeCalculator()
-                override fun visitElement(element: PsiElement) {
-                    if (needle_ == null)
-                        element.acceptChildren(this)
-                }
-
-                override fun visitKtElement(element: KtElement) {
-                    if (needle_ == null && element.startOffset >= place.startOffset && element.endOffset <= place.endOffset) {
-                        needle_ = element
-                    } else {
-                        element.acceptChildren(this)
-                    }
-                }
-
-                fun PsiElement.placeCalculator(): PsiElement = when {
-                    this is KtKeywordToken ||
-                            this is KtNameReferenceExpression ||
-                            this is LeafPsiElement && (elementType == IDENTIFIER || elementType is KtKeywordToken) -> context!!.placeCalculator()
-                    context is KtCallExpression -> context!!.placeCalculator()
-                    else -> this
-                }
-            })
-            needle_
-        }
-
-        val convertedFirExpression = OnAirResolver(debugeeSourceFile).resolve(
-            debugeeFileFirSession,
-            needle!!,
-            element.children.first() as KtElement
-        )
-
-        val thisAccessors = mutableMapOf<KtThisExpression, LabeledThis>()
-
-        convertedFirExpression?.accept(object : FirVisitorVoid() {
-            override fun visitElement(element: FirElement) {
-                element.acceptChildren(this)
-            }
-
-            override fun visitThisReference(thisReference: FirThisReference) {
-                thisReference.source?.psi?.let {
-                    thisAccessors.getOrPut(it as KtThisExpression) {
-                        when (thisReference.boundSymbol) {
-                            is FirAnonymousFunctionSymbol -> {
-                                val symbol = thisReference.boundSymbol as FirAnonymousFunctionSymbol
-                                LabeledThis(
-                                    symbol.label!!.name,
-                                    symbol.receiverParameter!!.typeRef
-                                )
-                            }
-                            else -> TODO()
-                        }
-                    }
-                }
-                super.visitThisReference(thisReference)
-            }
-
-            override fun visitPropertyAccessExpression(propertyAccessExpression: FirPropertyAccessExpression) {
-                val name = (propertyAccessExpression.calleeReference as? FirNamedReference)?.name?.asString()
-                    ?: return super.visitPropertyAccessExpression(propertyAccessExpression)
-                properties[name] = propertyAccessExpression.typeRef
-            }
-        })
+        resolveCodeFragment(codeFragment, receiverReferences, argumentReferences)
 
         val builder = object : RawFirBuilder(
             moduleComponents.session,
@@ -173,22 +105,13 @@ internal class LLFirCodeFragmentResovableSession(
             bodyBuildingMode = BodyBuildingMode.NORMAL
         ) {
             fun build() = object : Visitor() {
-                internal var generatedFunctionBuilder: FirSimpleFunctionBuilder? = null
+                var generatedFunctionBuilder: FirSimpleFunctionBuilder? = null
                 override fun visitPropertyAccessor(accessor: KtPropertyAccessor, data: Unit?): FirElement {
                     return super.visitPropertyAccessor(accessor, data)
                 }
 
-                /**
-                 * TODO: add differenciation of `this`:
-                 * expression: {
-                 *      this.apply {
-                 *          doSmth(this)
-                 *      }
-                 * }
-                 * first `this` from debugee context, and second from expression's one.
-                 */
                 override fun visitThisExpression(expression: KtThisExpression, data: Unit): FirElement {
-                    thisAccessors.get(expression)?.let {
+                    receiverReferences.get(expression)?.let {
                         val parameterName =
                             it.name?.let { label -> Name.identifier(label) } ?: Name.identifier("<this>")
                         val thisParameter =
@@ -213,7 +136,7 @@ internal class LLFirCodeFragmentResovableSession(
                         return buildPropertyAccessExpression {
                             typeRef = it.type
                             calleeReference = buildResolvedNamedReference {
-                                name = parameterName // TODO: add alias names here.
+                                name = parameterName
                                 resolvedSymbol = thisParameter.symbol
                             }
                         }
@@ -356,7 +279,7 @@ internal class LLFirCodeFragmentResovableSession(
                                             ?.declaredMemberScope(useSiteFirSession)
                                             ?.getDeclaredConstructors()
                                             ?.firstOrNull { it.valueParameterSymbols.isEmpty() }
-                                            ?: error("shouldn't be here") //.toRegularClassSymbol(useSiteFirSession)!!
+                                            ?: error("shouldn't be here")
                                         this@buildResolvedNamedReference.name = superClassConstructorSymbol.name
                                         resolvedSymbol = superClassConstructorSymbol
                                     }
@@ -385,7 +308,7 @@ internal class LLFirCodeFragmentResovableSession(
                                         ?: FirImplicitUnitTypeRef(file.toKtPsiSourceElement())
                                 }
                                 returnTypeRef = dangingReturnType
-                                valueParameters += properties.map {
+                                valueParameters += argumentReferences.map {
                                     buildValueParameter {
                                         val parameterName = Name.identifier(it.key)
                                         this.name = parameterName
@@ -431,7 +354,7 @@ internal class LLFirCodeFragmentResovableSession(
                         this@LLFirCodeFragmentResovableSession.useSiteFirSession.codeFragmentSymbolProvider.register(generatedClass)
                     }
                 }
-            }.convertElement(element)
+            }.convertElement(codeFragment)
         }
         val firFile = builder.build()
         FirLazyBodiesCalculator.calculateLazyBodies(firFile as FirFile)
@@ -454,7 +377,86 @@ internal class LLFirCodeFragmentResovableSession(
     }
 }
 
-internal class OnAirResolver(val debugeeSourceFile: KtFile) {
+private fun resolveCodeFragment(
+    codeFragment: KtFile,
+    receiverReferences: MutableMap<KtThisExpression, LabeledThis>,
+    argumentReferences: MutableMap<String, FirTypeRef>
+) {
+    val codeFragmentModule = codeFragment.getKtModule() as KtCodeFragmentModule
+    val debugeeSourceFile = codeFragmentModule.place.containingFile as KtFile
+    val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
+    val placementContext = calculateAirContext(debugeeSourceFile, codeFragmentModule)
+
+    val convertedFirExpression = OnAirResolver(debugeeSourceFile).resolve(
+        debugeeFileFirSession,
+        placementContext!!,
+        codeFragment.children.first() as KtElement
+    )
+
+    convertedFirExpression?.accept(object : FirVisitorVoid() {
+        override fun visitElement(element: FirElement) {
+            element.acceptChildren(this)
+        }
+
+        override fun visitThisReference(thisReference: FirThisReference) {
+            thisReference.source?.psi?.let {
+                receiverReferences.getOrPut(it as KtThisExpression) {
+                    when (thisReference.boundSymbol) {
+                        is FirAnonymousFunctionSymbol -> {
+                            val symbol = thisReference.boundSymbol as FirAnonymousFunctionSymbol
+                            LabeledThis(
+                                symbol.label!!.name,
+                                symbol.receiverParameter!!.typeRef
+                            )
+                        }
+                        else -> TODO()
+                    }
+                }
+            }
+            super.visitThisReference(thisReference)
+        }
+
+        override fun visitPropertyAccessExpression(propertyAccessExpression: FirPropertyAccessExpression) {
+            val name = (propertyAccessExpression.calleeReference as? FirNamedReference)?.name?.asString()
+                ?: return super.visitPropertyAccessExpression(propertyAccessExpression)
+            argumentReferences[name] = propertyAccessExpression.typeRef
+        }
+    })
+}
+
+private fun calculateAirContext(
+    debugeeSourceFile: KtFile,
+    codeFragmentModule: KtCodeFragmentModule
+): KtElement? {
+
+    var contexCandidate: KtElement? = null
+    debugeeSourceFile.accept(object : KtVisitorVoid() {
+        val place = codeFragmentModule.place.calculateAcceptablePlace()
+        override fun visitElement(element: PsiElement) {
+            if (contexCandidate == null)
+                element.acceptChildren(this)
+        }
+
+        override fun visitKtElement(element: KtElement) {
+            if (contexCandidate == null && element.startOffset >= place.startOffset && element.endOffset <= place.endOffset) {
+                contexCandidate = element
+            } else {
+                element.acceptChildren(this)
+            }
+        }
+
+        fun PsiElement.calculateAcceptablePlace(): PsiElement = when {
+            this is KtKeywordToken ||
+                    this is KtNameReferenceExpression ||
+                    this is LeafPsiElement && (elementType == IDENTIFIER || elementType is KtKeywordToken) -> context!!.calculateAcceptablePlace()
+            context is KtCallExpression -> context!!.calculateAcceptablePlace()
+            else -> this
+        }
+    })
+    return contexCandidate
+}
+
+private class OnAirResolver(val debugeeSourceFile: KtFile) {
     fun resolve(session: LLFirResolveSession, place: KtElement, expression: KtElement): FirElement? {
         var convertedElement: FirElement? = null
         val builder = object : RawFirBuilder(session.useSiteFirSession, session.useSiteFirSession.kotlinScopeProvider) {
