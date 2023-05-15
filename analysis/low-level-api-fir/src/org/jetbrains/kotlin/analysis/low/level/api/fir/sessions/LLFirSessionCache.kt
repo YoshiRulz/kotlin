@@ -146,7 +146,7 @@ fun createEmptySession(): FirSession {
         val scopeProvider = FirKotlinScopeProvider(::wrapScopeWithJvmMapped)
         val globalResolveComponents = LLFirGlobalResolveComponents(project)
         val components = LLFirModuleResolveComponents(
-            module.place.containingFile.getKtModule(module.project),
+            module.rawContext.containingFile.getKtModule(module.project),
             globalResolveComponents,
             scopeProvider
         )

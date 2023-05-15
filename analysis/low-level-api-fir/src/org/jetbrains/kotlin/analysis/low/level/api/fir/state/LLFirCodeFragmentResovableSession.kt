@@ -385,7 +385,7 @@ private fun resolveCodeFragment(
     argumentReferences: MutableMap<String, FirTypeRef>
 ) {
     val codeFragmentModule = codeFragment.getKtModule() as KtCodeFragmentModule
-    val debugeeSourceFile = codeFragmentModule.place.containingFile as KtFile
+    val debugeeSourceFile = codeFragmentModule.rawContext.containingFile as KtFile
     val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
     val placementContext = calculateAirContext(debugeeSourceFile, codeFragmentModule)
 
@@ -436,7 +436,7 @@ private fun calculateAirContext(
 
     var contexCandidate: KtElement? = null
     debugeeSourceFile.accept(object : KtVisitorVoid() {
-        val place = codeFragmentModule.place.calculateAcceptablePlace()
+        val place = codeFragmentModule.rawContext.calculateAcceptablePlace()
         override fun visitElement(element: PsiElement) {
             if (contexCandidate == null)
                 element.acceptChildren(this)

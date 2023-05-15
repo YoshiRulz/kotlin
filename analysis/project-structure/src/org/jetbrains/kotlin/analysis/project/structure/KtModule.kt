@@ -14,8 +14,6 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.psi.KtCodeFragment
 import org.jetbrains.kotlin.psi.KtFile
-import org.jetbrains.kotlin.psi.KtParameter
-import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.resolve.PlatformDependentAnalyzerServices
 import java.nio.file.Path
 
@@ -205,9 +203,9 @@ public interface KtCodeFragmentModule : KtModule {
     public val languageVersionSettings: LanguageVersionSettings
 
     /**
-     * Coordinate where expression is evaluated.
+     * initial context for expression evaluation, later needs to be recalculated.
      */
-    val place: PsiElement
+    val rawContext: PsiElement
 
     /**
      * Classname of generated from expression, expected by evaluator.
