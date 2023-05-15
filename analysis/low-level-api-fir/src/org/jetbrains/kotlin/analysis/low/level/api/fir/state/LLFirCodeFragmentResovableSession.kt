@@ -327,7 +327,7 @@ internal class LLFirCodeFragmentResovableSession(
                                     isOperator = false
                                     isStatic = true
                                 }
-                                dispatchReceiverType = null//currentDispatchReceiverType()
+                                dispatchReceiverType = null
                                 body = buildBlock {
                                     statements += when (danglingExpression) {
                                         is FirBlock -> {
@@ -377,6 +377,9 @@ internal class LLFirCodeFragmentResovableSession(
     }
 }
 
+/**
+ * Resolve types, arguments and receivers of code fragment in context of source code.
+ */
 private fun resolveCodeFragment(
     codeFragment: KtFile,
     receiverReferences: MutableMap<KtThisExpression, LabeledThis>,
@@ -424,6 +427,9 @@ private fun resolveCodeFragment(
     })
 }
 
+/**
+ * calculates gut context to place code fragment for later resolving.
+ */
 private fun calculateAirContext(
     debugeeSourceFile: KtFile,
     codeFragmentModule: KtCodeFragmentModule
