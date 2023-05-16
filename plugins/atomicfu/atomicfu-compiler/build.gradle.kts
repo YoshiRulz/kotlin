@@ -111,8 +111,8 @@ dependencies {
 
     atomicfuJsClasspath("org.jetbrains.kotlinx:atomicfu-js:0.17.1") { isTransitive = false }
     atomicfuJsIrRuntimeForTests(project(":kotlinx-atomicfu-runtime"))  { isTransitive = false }
-    atomicfuJvmClasspath("org.jetbrains.kotlinx:atomicfu:0.18.3") { isTransitive = false }
-    atomicfuNativeKlib("org.jetbrains.kotlinx:atomicfu:0.18.3") { isTransitive = false }
+    atomicfuJvmClasspath("org.jetbrains.kotlinx:atomicfu:0.20.2") { isTransitive = false }
+    atomicfuNativeKlib("org.jetbrains.kotlinx:atomicfu:0.20.2") { isTransitive = false }
 
     embedded(project(":kotlinx-atomicfu-runtime")) {
         attributes {
