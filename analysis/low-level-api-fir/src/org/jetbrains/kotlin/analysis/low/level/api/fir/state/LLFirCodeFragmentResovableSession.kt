@@ -41,6 +41,8 @@ import org.jetbrains.kotlin.fir.pipeline.runResolution
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
+import org.jetbrains.kotlin.fir.resolve.ScopeSession
+import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.FirBodyResolveProcessor
 import org.jetbrains.kotlin.fir.scopes.getDeclaredConstructors
 import org.jetbrains.kotlin.fir.scopes.impl.declaredMemberScope
 import org.jetbrains.kotlin.fir.scopes.kotlinScopeProvider
@@ -62,6 +64,7 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.findDescendantOfType
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
+import org.jetbrains.kotlin.resolve.BodyResolver
 import org.jetbrains.kotlin.toKtPsiSourceElement
 import org.jetbrains.kotlin.types.ConstantValueKind
 
@@ -387,13 +390,11 @@ private fun resolveCodeFragment(
 ) {
     val codeFragmentModule = codeFragment.getKtModule() as KtCodeFragmentModule
     val debugeeSourceFile = codeFragmentModule.rawContext.containingFile as KtFile
-    val debugeeFileFirSession = debugeeSourceFile.getFirResolveSession()
     val place = codeFragmentModule.rawContext.calculateAcceptablePlace()
     val placementContext =
         debugeeSourceFile.findDescendantOfType<KtElement> { (it.startOffset >= place.startOffset && it.endOffset <= place.endOffset) }
     val bodyCodeFragment = codeFragment.findDescendantOfType<KtElement> { it is KtBlockExpression || it is KtExpression }
     val convertedFirExpression = OnAirResolver(debugeeSourceFile).resolve(
-        debugeeFileFirSession,
         placementContext!!,
         bodyCodeFragment!!
     )
@@ -441,7 +442,8 @@ private fun PsiElement.calculateAcceptablePlace(): PsiElement = when {
 }
 
 private class OnAirResolver(val debugeeSourceFile: KtFile) {
-    fun resolve(session: LLFirResolveSession, place: KtElement, expression: KtElement): FirElement? {
+    fun resolve(place: KtElement, expression: KtElement): FirElement? {
+        val session = debugeeSourceFile.getFirResolveSession()
         var convertedElement: FirElement? = null
         val builder = object : RawFirBuilder(session.useSiteFirSession, session.useSiteFirSession.kotlinScopeProvider) {
             fun build() = object : Visitor() {
