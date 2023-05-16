@@ -85,7 +85,7 @@ class JvmMappedScope(
             // For final classes we don't need to load HIDDEN members at all because they might not be overridden
             val signaturePrefix = firJavaClass.symbol.classId.toString()
             val names = (JvmBuiltInsSignatures.VISIBLE_METHOD_SIGNATURES).filter { signature ->
-                signature in JvmBuiltInsSignatures.MUTABLE_METHOD_SIGNATURES == isMutable &&
+                signature in JvmBuiltInsSignatures.MUTABLE_METHOD_SIGNATURES == isMutableContainer &&
                         signature.startsWith(signaturePrefix)
             }.map { signature ->
                 // +1 to delete dot before function name
