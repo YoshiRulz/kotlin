@@ -41,8 +41,6 @@ import org.jetbrains.kotlin.fir.pipeline.runResolution
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
-import org.jetbrains.kotlin.fir.resolve.ScopeSession
-import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.FirBodyResolveProcessor
 import org.jetbrains.kotlin.fir.scopes.getDeclaredConstructors
 import org.jetbrains.kotlin.fir.scopes.impl.declaredMemberScope
 import org.jetbrains.kotlin.fir.scopes.kotlinScopeProvider
@@ -64,7 +62,6 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.findDescendantOfType
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
-import org.jetbrains.kotlin.resolve.BodyResolver
 import org.jetbrains.kotlin.toKtPsiSourceElement
 import org.jetbrains.kotlin.types.ConstantValueKind
 
@@ -98,8 +95,8 @@ internal class LLFirCodeFragmentResovableSession(
         val codeFragmentModule = codeFragment.getKtModule() as KtCodeFragmentModule
         val argumentReferences = mutableMapOf<String, FirTypeRef>()
         val receiverReferences = mutableMapOf<KtThisExpression, LabeledThis>()
-
-        resolveCodeFragment(codeFragment, receiverReferences, argumentReferences)
+        val bodyCodeFragment = codeFragment.findDescendantOfType<KtExpression> { it is KtBlockExpression }!!
+        resolveCodeFragment(bodyCodeFragment, receiverReferences, argumentReferences)
 
         val builder = object : RawFirBuilder(
             moduleComponents.session,
@@ -244,11 +241,7 @@ internal class LLFirCodeFragmentResovableSession(
                                 this.name = functionName
                                 symbol = FirNamedFunctionSymbol(CallableId(FqName.ROOT, null, functionName))
                                 generatedFunctionBuilder = this
-                                val danglingExpression = file.children.filter {
-                                    it is KtExpression || it is KtBlockExpression
-                                }.map {
-                                    super.convertElement(it as KtElement)
-                                }.single()
+                                val danglingExpression = super.convertElement(bodyCodeFragment)
 
                                 val dangingReturnType = when (danglingExpression) {
                                     is FirBlock -> (danglingExpression.statements.last() as? FirExpression)?.typeRef
@@ -384,19 +377,18 @@ internal class LLFirCodeFragmentResovableSession(
  * Resolve types, arguments and receivers of code fragment in context of source code.
  */
 private fun resolveCodeFragment(
-    codeFragment: KtFile,
+    bodyCodeFragment: KtExpression,
     receiverReferences: MutableMap<KtThisExpression, LabeledThis>,
     argumentReferences: MutableMap<String, FirTypeRef>
-) {
-    val codeFragmentModule = codeFragment.getKtModule() as KtCodeFragmentModule
+) : FirElement {
+    val codeFragmentModule = bodyCodeFragment.getKtModule() as KtCodeFragmentModule
     val debugeeSourceFile = codeFragmentModule.rawContext.containingFile as KtFile
     val place = codeFragmentModule.rawContext.calculateAcceptablePlace()
     val placementContext =
         debugeeSourceFile.findDescendantOfType<KtElement> { (it.startOffset >= place.startOffset && it.endOffset <= place.endOffset) }
-    val bodyCodeFragment = codeFragment.findDescendantOfType<KtElement> { it is KtBlockExpression || it is KtExpression }
     val convertedFirExpression = OnAirResolver(debugeeSourceFile).resolve(
         placementContext!!,
-        bodyCodeFragment!!
+        bodyCodeFragment
     )
 
     convertedFirExpression?.accept(object : FirVisitorVoid() {
@@ -428,6 +420,7 @@ private fun resolveCodeFragment(
             argumentReferences[name] = propertyAccessExpression.typeRef
         }
     })
+    return convertedFirExpression!!
 }
 
 /**
