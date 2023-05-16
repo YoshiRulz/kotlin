@@ -32,6 +32,9 @@ import org.jetbrains.kotlin.ir.types.makeNotNull as irMakeNotNull
 import org.jetbrains.kotlin.ir.types.makeNullable as irMakeNullable
 import org.jetbrains.kotlin.ir.types.isMarkedNullable as irIsMarkedNullable
 import org.jetbrains.kotlin.types.model.*
+import org.jetbrains.kotlin.utils.addToStdlib.UnsafeCastFunction
+import org.jetbrains.kotlin.utils.addToStdlib.castAll
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import org.jetbrains.kotlin.utils.memoryOptimizedFilterIsInstance
 import org.jetbrains.kotlin.utils.memoryOptimizedMap
 import org.jetbrains.kotlin.utils.compactIfPossible
@@ -588,6 +591,23 @@ interface IrTypeSystemContext : TypeSystemContext, TypeSystemCommonSuperTypesCon
 
     override fun KotlinTypeMarker.isTypeVariableType(): Boolean {
         return false
+    }
+
+    @OptIn(UnsafeCastFunction::class)
+    override fun typeSubstitutorByTypeConstructor(map: Map<TypeConstructorMarker, KotlinTypeMarker>): TypeSubstitutorMarker {
+        val typeParameters = map.keys.toList().castAll<IrTypeParameterSymbol>()
+        val typeArguments = map.values.toList().castAll<IrTypeArgument>()
+        return IrTypeSubstitutor(typeParameters, typeArguments, irBuiltIns)
+    }
+
+    override fun createEmptySubstitutor(): TypeSubstitutorMarker {
+        return IrTypeSubstitutor(emptyList(), emptyList(), irBuiltIns)
+    }
+
+    override fun TypeSubstitutorMarker.safeSubstitute(type: KotlinTypeMarker): KotlinTypeMarker {
+        require(this is AbstractIrTypeSubstitutor)
+        require(type is IrType)
+        return substitute(type)
     }
 }
 
