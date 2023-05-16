@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.analysis.api.lifetime.withValidityAssertion
 import org.jetbrains.kotlin.analysis.api.symbols.KtCallableSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KtClassLikeSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KtEnumEntrySymbol
+import org.jetbrains.kotlin.kdoc.psi.impl.KDocName
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtFile
@@ -85,7 +86,7 @@ public interface KtReferenceShortenerMixIn : KtAnalysisSessionMixIn {
 
     /**
      * Collects possible references to shorten. By default, it shortens a fully-qualified members to the outermost class and does not
-     * shorten enum entries.
+     * shorten enum entries. In case of KDoc shortens reference only if it is already imported.
      */
     public fun collectPossibleReferenceShortenings(
         file: KtFile,
@@ -126,4 +127,5 @@ public interface ShortenCommand {
     public val isEmpty: Boolean
     public fun getTypesToShorten(): List<SmartPsiElementPointer<KtUserType>>
     public fun getQualifiersToShorten(): List<SmartPsiElementPointer<KtDotQualifiedExpression>>
+    public fun getKDocQualifiersToShorten(): List<SmartPsiElementPointer<KDocName>>
 }

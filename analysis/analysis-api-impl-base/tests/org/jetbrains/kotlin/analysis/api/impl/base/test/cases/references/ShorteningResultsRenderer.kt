@@ -24,5 +24,10 @@ internal object ShorteningResultsRenderer {
                 appendLine("[qualifier] $it")
             }
         }
+        shortening.getKDocQualifiersToShorten().forEach { kdoc ->
+            kdoc.element?.text?.let {
+                appendLine("[kdoc] $it")
+            }
+        }
     }
 }
