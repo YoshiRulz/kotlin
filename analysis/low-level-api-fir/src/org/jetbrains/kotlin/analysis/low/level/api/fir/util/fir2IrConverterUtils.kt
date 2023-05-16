@@ -9,7 +9,7 @@ import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.getFirResolveSession
 import org.jetbrains.kotlin.analysis.low.level.api.fir.api.getOrBuildFir
 import org.jetbrains.kotlin.analysis.project.structure.KtCodeFragmentModule
-import org.jetbrains.kotlin.analysis.project.structure.getKtModule
+import org.jetbrains.kotlin.analysis.project.structure.ProjectStructureProvider.Companion.getModule
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.jvm.JvmBackendExtension
@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.codegen.JvmBackendClassResolver
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.config.languageVersionSettings
+import org.jetbrains.kotlin.constant.EvaluatedConstTracker
 import org.jetbrains.kotlin.diagnostics.KtDiagnostic
 import org.jetbrains.kotlin.diagnostics.impl.SimpleDiagnosticsCollectorWithSuppress
 import org.jetbrains.kotlin.fir.FirElement
@@ -39,6 +40,7 @@ import org.jetbrains.kotlin.fir.descriptors.FirPackageFragmentDescriptor
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 import org.jetbrains.kotlin.fir.pipeline.runCheckers
 import org.jetbrains.kotlin.fir.pipeline.runResolution
+import org.jetbrains.kotlin.fir.pipeline.signatureComposerForJvmFir2Ir
 import org.jetbrains.kotlin.fir.references.toResolvedCallableSymbol
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.getContainingClass
@@ -75,17 +77,16 @@ private fun createModuleFragmentWithSignaturesIfNeededWorkaround(
     session: FirSession,
     scopeSession: ScopeSession,
     firFiles: List<FirFile>,
-    languageVersionSettings: LanguageVersionSettings,
+    fir2IrConfiguration: Fir2IrConfiguration,
     fir2IrExtensions: Fir2IrExtensions,
     irMangler: KotlinMangler.IrMangler,
     irFactory: IrFactory,
     visibilityConverter: Fir2IrVisibilityConverter,
     specialSymbolProvider: Fir2IrSpecialSymbolProvider,
     irGenerationExtensions: Collection<IrGenerationExtension>,
-    generateSignatures: Boolean,
     kotlinBuiltIns: KotlinBuiltIns,
     commonMemberStorage: Fir2IrCommonMemberStorage,
-    initializedIrBuiltIns: IrBuiltInsOverFir?
+    initializedIrBuiltIns: IrBuiltInsOverFir?,
 ): Fir2IrResult {
     val moduleDescriptor = FirModuleDescriptor(session, kotlinBuiltIns)
     val components = Fir2IrComponentsStorage(
@@ -93,9 +94,9 @@ private fun createModuleFragmentWithSignaturesIfNeededWorkaround(
         scopeSession,
         commonMemberStorage.symbolTable,
         irFactory,
-        commonMemberStorage.signatureComposer,
+        commonMemberStorage.firSignatureComposer,
         fir2IrExtensions,
-        generateSignatures
+        fir2IrConfiguration
     )
     val converter = Fir2IrConverter(moduleDescriptor, components)
 
@@ -107,7 +108,7 @@ private fun createModuleFragmentWithSignaturesIfNeededWorkaround(
     components.visibilityConverter = visibilityConverter
     components.typeConverter = Fir2IrTypeConverter(components)
     val irBuiltIns = initializedIrBuiltIns ?: IrBuiltInsOverFir(
-        components, languageVersionSettings, moduleDescriptor, irMangler,
+        components, fir2IrConfiguration.languageVersionSettings, moduleDescriptor, irMangler,
         true
     )
     components.irBuiltIns = irBuiltIns
@@ -196,14 +197,14 @@ data class Kt2IrResult(
     val jvmBackendExtension: JvmBackendExtension,
     val generatorExtensions: JvmGeneratorExtensions,
     val backendClassResolver: JvmBackendClassResolver,
-    val irPluginContext: IrPluginContext
+    val irPluginContext: IrPluginContext,
 )
 
 fun compileKt2Ir(
     codeFragment: KtElement,
-    dianosticErrorProcessing: (Map.Entry<String?, List<KtDiagnostic>>) -> Unit
+    dianosticErrorProcessing: (Map.Entry<String?, List<KtDiagnostic>>) -> Unit,
 ): Kt2IrResult {
-    val session = codeFragment.getFirResolveSession()
+    val session = getModule(codeFragment.project, codeFragment, null).getFirResolveSession(codeFragment.project)
     val firFile = codeFragment.getOrBuildFir(session)!! as FirFile
 
     val (scope, firFiles) = session.useSiteFirSession.runResolution(
@@ -221,7 +222,7 @@ fun compileKt2Ir(
 
     val irGenerationExtension = IrGenerationExtension.getInstances(codeFragment.project)
 
-    val languageVersionSettings = (codeFragment.getKtModule(codeFragment.project) as KtCodeFragmentModule).languageVersionSettings
+    val languageVersionSettings = (getModule(codeFragment.project, codeFragment, null) as KtCodeFragmentModule).languageVersionSettings
     val compilerConfiguration = CompilerConfiguration().apply {
         this.languageVersionSettings = languageVersionSettings
     }
@@ -230,17 +231,18 @@ fun compileKt2Ir(
     val fir2irResult = createModuleFragmentWithSignaturesIfNeededWorkaround(
         session.useSiteFirSession,
         scope, firFiles,
-        languageVersionSettings,
+        Fir2IrConfiguration(languageVersionSettings, false, EvaluatedConstTracker.create()),
         extensions,
         JvmIrMangler,
-        IrFactoryImpl, FirJvmVisibilityConverter,
+        IrFactoryImpl,
+        FirJvmVisibilityConverter,
         Fir2IrJvmSpecialAnnotationSymbolProvider(),
         irGenerationExtension,
-        false,
         DefaultBuiltIns.Instance,
-        Fir2IrCommonMemberStorage(true,
-                                  null, //{ JvmIdSignatureDescriptor(JvmDescriptorMangler(null)) },
-                                  { FirJvmKotlinMangler() }),
+        Fir2IrCommonMemberStorage(
+            signatureComposerForJvmFir2Ir(false),
+            FirJvmKotlinMangler()
+        ),
         null
     )
     return Kt2IrResult(

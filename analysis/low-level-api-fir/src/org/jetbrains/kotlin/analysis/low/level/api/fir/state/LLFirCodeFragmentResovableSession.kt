@@ -16,7 +16,7 @@ import org.jetbrains.kotlin.analysis.low.level.api.fir.providers.LLFirCodeFragme
 import org.jetbrains.kotlin.analysis.low.level.api.fir.sessions.LLFirSession
 import org.jetbrains.kotlin.analysis.project.structure.KtCodeFragmentModule
 import org.jetbrains.kotlin.analysis.project.structure.KtModule
-import org.jetbrains.kotlin.analysis.project.structure.getKtModule
+import org.jetbrains.kotlin.analysis.project.structure.ProjectStructureProvider.Companion.getModule
 import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.EffectiveVisibility
@@ -92,7 +92,7 @@ internal class LLFirCodeFragmentResovableSession(
     }
 
     private fun buildFirFileFor(codeFragment: KtFile, moduleComponents: LLFirModuleResolveComponents): FirFile {
-        val codeFragmentModule = codeFragment.getKtModule() as KtCodeFragmentModule
+        val codeFragmentModule = getModule(codeFragment) as KtCodeFragmentModule
         val argumentReferences = mutableMapOf<String, FirTypeRef>()
         val receiverReferences = mutableMapOf<KtThisExpression, LabeledThis>()
         val bodyCodeFragment = codeFragment.findDescendantOfType<KtExpression> { it is KtBlockExpression }!!
@@ -299,8 +299,7 @@ internal class LLFirCodeFragmentResovableSession(
             }.convertElement(codeFragment)
         }
         val firFile = builder.build()
-        FirLazyBodiesCalculator.calculateLazyBodies(firFile as FirFile)
-        return firFile
+        return firFile as FirFile
     }
 
     private fun FirFileBuilder.buildAnnotationContainerForFile(
@@ -381,7 +380,7 @@ private fun resolveCodeFragment(
     receiverReferences: MutableMap<KtThisExpression, LabeledThis>,
     argumentReferences: MutableMap<String, FirTypeRef>
 ) : FirElement {
-    val codeFragmentModule = bodyCodeFragment.getKtModule() as KtCodeFragmentModule
+    val codeFragmentModule = getModule(bodyCodeFragment.project, bodyCodeFragment, null) as KtCodeFragmentModule
     val debugeeSourceFile = codeFragmentModule.rawContext.containingFile as KtFile
     val place = codeFragmentModule.rawContext.calculateAcceptablePlace()
     val placementContext =
@@ -436,7 +435,7 @@ private fun PsiElement.calculateAcceptablePlace(): PsiElement = when {
 
 private class OnAirResolver(val debugeeSourceFile: KtFile) {
     fun resolve(place: KtElement, expression: KtElement): FirElement? {
-        val session = debugeeSourceFile.getFirResolveSession()
+        val session = getModule(debugeeSourceFile.project, debugeeSourceFile, null).getFirResolveSession(debugeeSourceFile.project)
         var convertedElement: FirElement? = null
         val builder = object : RawFirBuilder(session.useSiteFirSession, session.useSiteFirSession.kotlinScopeProvider) {
             fun build() = object : Visitor() {

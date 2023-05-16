@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.analysis.low.level.api.fir.project.structure.*
 import org.jetbrains.kotlin.analysis.low.level.api.fir.providers.*
 import org.jetbrains.kotlin.analysis.low.level.api.fir.util.checkCanceled
 import org.jetbrains.kotlin.analysis.project.structure.*
+import org.jetbrains.kotlin.analysis.project.structure.ProjectStructureProvider.Companion.getModule
 import org.jetbrains.kotlin.analysis.providers.createAnnotationResolver
 import org.jetbrains.kotlin.analysis.providers.createDeclarationProvider
 import org.jetbrains.kotlin.analysis.providers.createPackageProvider
@@ -75,7 +76,7 @@ internal class LLFirSessionCache(private val project: Project) {
     private fun <T : KtModule> getCachedSession(
         module: T,
         storage: ConcurrentMap<KtModule, CachedValue<LLFirSession>>,
-        factory: (T) -> LLFirSession
+        factory: (T) -> LLFirSession,
     ): LLFirSession {
         checkCanceled()
 
@@ -140,13 +141,13 @@ fun createEmptySession(): FirSession {
 }
 
     private fun createCodeFragmentResolvableSession(
-        module: KtCodeFragmentModule
+        module: KtCodeFragmentModule,
     ): LLFirCodeFragmentResolvableModuleSession {
         val builtinsSession = LLFirBuiltinsSessionFactory.getInstance(project).getBuiltinsSession(JvmPlatforms.unspecifiedJvmPlatform)
         val scopeProvider = FirKotlinScopeProvider(::wrapScopeWithJvmMapped)
         val globalResolveComponents = LLFirGlobalResolveComponents(project)
         val components = LLFirModuleResolveComponents(
-            module.rawContext.containingFile.getKtModule(module.project),
+            getModule(project, module.rawContext, null),
             globalResolveComponents,
             scopeProvider
         )
@@ -176,7 +177,7 @@ fun createEmptySession(): FirSession {
             val provider = LLFirProvider(
                 this,
                 components,
-                project.createDeclarationProvider(module.contentScope),
+                project.createDeclarationProvider(module.contentScope, module),
                 project.createPackageProvider(module.contentScope),
                 canContainKotlinPackage = true,
             )
