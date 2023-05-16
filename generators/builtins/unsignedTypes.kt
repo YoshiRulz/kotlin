@@ -205,7 +205,7 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
         generateFloorDivMod("mod")
     }
 
-    internal open fun MethodBuilder.modifyGeneratedBinaryOperation(operatorName: String, otherType: UnsignedType) {}
+    internal open fun MethodBuilder.modifyGeneratedBinaryOperation() {}
 
     private fun ClassBuilder.generateOperator(operatorName: String) {
         for (otherType in UnsignedType.values()) {
@@ -235,11 +235,11 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
                 } else {
                     "${convert("this", type, opReturnType)}.$operatorName(${convert("other", otherType, opReturnType)})"
                 }.addAsSingleLineBody()
-            }.modifyGeneratedBinaryOperation(operatorName, otherType)
+            }.modifyGeneratedBinaryOperation()
         }
     }
 
-    internal open fun MethodBuilder.modifyGeneratedFloorDivModOperator(operatorName: String, otherType: UnsignedType) {}
+    internal open fun MethodBuilder.modifyGeneratedFloorDivModOperator() {}
 
     private fun ClassBuilder.generateFloorDivMod(operatorName: String) {
         for (otherType in UnsignedType.values()) {
@@ -271,7 +271,7 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
                         operationType, opReturnType
                     )
                 }.addAsSingleLineBody()
-            }.modifyGeneratedFloorDivModOperator(operatorName, otherType)
+            }.modifyGeneratedFloorDivModOperator()
         }
     }
 
@@ -293,9 +293,7 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
         }
     }
 
-    internal open fun MethodBuilder.modifyGeneratedRangeTo(rangeType: String) {
-
-    }
+    internal open fun MethodBuilder.modifyGeneratedRangeTo() {}
 
     private fun ClassBuilder.generateRangeTo() {
         val rangeElementType = maxByDomainCapacity(type, UnsignedType.UINT)
@@ -316,7 +314,7 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
                 }
             }
             "$rangeType(${convert("this")}, ${convert("other")})".addAsSingleLineBody()
-        }.modifyGeneratedRangeTo(rangeType)
+        }.modifyGeneratedRangeTo()
     }
 
     internal open fun MethodBuilder.modifyGeneratedRangeUntil() {}
@@ -350,7 +348,7 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
         }.modifyGeneratedRangeUntil()
     }
 
-    internal open fun MethodBuilder.modifyGeneratedBitShiftOperators(operatorName: String) {}
+    internal open fun MethodBuilder.modifyGeneratedBitShiftOperators() {}
 
     private fun ClassBuilder.generateBitShiftOperators() {
         fun ClassBuilder.generateShiftOperator(operatorName: String, implementation: String = operatorName) {
@@ -370,7 +368,7 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
                     }
                 }
                 "$className(data $implementation bitCount)".addAsSingleLineBody()
-            }.modifyGeneratedBitShiftOperators(operatorName)
+            }.modifyGeneratedBitShiftOperators()
         }
 
         generateShiftOperator("shl")
@@ -511,7 +509,7 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
         }
     }
 
-    internal open fun MethodBuilder.modifyGeneratedFloatingConversions(primitiveType: PrimitiveType) {}
+    internal open fun MethodBuilder.modifyGeneratedFloatingConversions() {}
 
     private fun ClassBuilder.generateFloatingConversions() {
         for (otherType in PrimitiveType.floatingPoint) {
@@ -542,7 +540,7 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
                     else ->
                         "this.toInt().to$otherName()"
                 }.addAsSingleLineBody()
-            }.modifyGeneratedFloatingConversions(otherType)
+            }.modifyGeneratedFloatingConversions()
         }
     }
 

@@ -6,8 +6,19 @@
 package org.jetbrains.kotlin.generators.builtins.numbers.primitives
 
 import org.jetbrains.kotlin.generators.builtins.PrimitiveType
+import org.jetbrains.kotlin.generators.builtins.UnsignedType
 
 internal const val END_LINE = "\n"
+
+internal fun UnsignedType.castToIfNecessary(otherType: UnsignedType): String {
+    if (this == otherType) return ""
+
+    if (this.ordinal < otherType.ordinal) {
+        return ".to${otherType.capitalized}()"
+    }
+
+    return ""
+}
 
 internal fun PrimitiveType.castToIfNecessary(otherType: PrimitiveType): String {
     if (this !in PrimitiveType.onlyNumeric || otherType !in PrimitiveType.onlyNumeric) {

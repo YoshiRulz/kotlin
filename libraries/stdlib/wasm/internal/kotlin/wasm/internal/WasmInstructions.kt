@@ -317,11 +317,20 @@ internal external fun wasm_i32_wrap_i64(a: Long): Int
 @WasmOp(WasmOp.I64_EXTEND_I32_S)
 internal external fun wasm_i64_extend_i32_s(a: Int): Long
 
+@WasmOp(WasmOp.I64_EXTEND_I32_U)
+internal external fun wasm_i64_extend_i32_u(a: Int): ULong
+
 @WasmOp(WasmOp.F32_CONVERT_I32_S)
 internal external fun wasm_f32_convert_i32_s(a: Int): Float
 
 @WasmOp(WasmOp.F32_CONVERT_I64_S)
 internal external fun wasm_f32_convert_i64_s(a: Long): Float
+
+@WasmOp(WasmOp.F32_CONVERT_I32_U)
+internal external fun wasm_f32_convert_i32_u(a: Int): Float
+
+@WasmOp(WasmOp.F32_CONVERT_I64_U)
+internal external fun wasm_f32_convert_i64_u(a: Long): Float
 
 @WasmOp(WasmOp.F32_DEMOTE_F64)
 internal external fun wasm_f32_demote_f64(a: Double): Float
@@ -331,6 +340,12 @@ internal external fun wasm_f64_convert_i32_s(a: Int): Double
 
 @WasmOp(WasmOp.F64_CONVERT_I64_S)
 internal external fun wasm_f64_convert_i64_s(a: Long): Double
+
+@WasmOp(WasmOp.F64_CONVERT_I32_U)
+internal external fun wasm_f64_convert_i32_u(a: Int): Double
+
+@WasmOp(WasmOp.F64_CONVERT_I64_U)
+internal external fun wasm_f64_convert_i64_u(a: Long): Double
 
 @WasmOp(WasmOp.F64_PROMOTE_F32)
 internal external fun wasm_f64_promote_f32(a: Float): Double
@@ -353,11 +368,23 @@ internal external fun wasm_i32_trunc_sat_f32_s(a: Float): Int
 @WasmOp(WasmOp.I32_TRUNC_SAT_F64_S)
 internal external fun wasm_i32_trunc_sat_f64_s(a: Double): Int
 
+@WasmOp(WasmOp.I32_TRUNC_SAT_F32_U)
+internal external fun wasm_i32_trunc_sat_f32_u(a: Float): Int
+
+@WasmOp(WasmOp.I32_TRUNC_SAT_F64_U)
+internal external fun wasm_i32_trunc_sat_f64_u(a: Double): Int
+
 @WasmOp(WasmOp.I64_TRUNC_SAT_F32_S)
 internal external fun wasm_i64_trunc_sat_f32_s(a: Float): Long
 
 @WasmOp(WasmOp.I64_TRUNC_SAT_F64_S)
 internal external fun wasm_i64_trunc_sat_f64_s(a: Double): Long
+
+@WasmOp(WasmOp.I64_TRUNC_SAT_F32_U)
+internal external fun wasm_i64_trunc_sat_f32_u(a: Float): Long
+
+@WasmOp(WasmOp.I64_TRUNC_SAT_F64_U)
+internal external fun wasm_i64_trunc_sat_f64_u(a: Double): Long
 
 @WasmOp(WasmOp.I32_LOAD)
 internal external fun wasm_i32_load(x: Int): Int

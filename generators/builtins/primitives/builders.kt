@@ -293,6 +293,9 @@ internal class MethodBuilder : AnnotatedAndDocumented(), PrimitiveBuilder {
     val parameterType: String
         get() = signature?.parameterType ?: throwNotInitialized("type", "MethodParameterBuilder")
 
+    val inline: Boolean
+        get() = signature?.isInline ?: false
+
     fun signature(init: MethodSignatureBuilder.() -> Unit): MethodSignatureBuilder {
         throwIfAlreadyInitialized(signature, "signature", "MethodBuilder")
         val signatureBuilder = MethodSignatureBuilder()
