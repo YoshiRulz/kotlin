@@ -36,8 +36,15 @@ import org.jetbrains.kotlin.load.java.SpecialGenericSignatures
 import org.jetbrains.kotlin.load.java.getPropertyNamesCandidatesByAccessorName
 import org.jetbrains.kotlin.load.kotlin.SignatureBuildingComponents
 import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
 
+/**
+ * @param firKotlinClass Kotlin version of built-in class mapped to some JDK class (e.g. kotlin.collections.List)
+ * @param firJavaClass JDK version of some built-in class (e.g. java.util.List)
+ * @param declaredMemberScope basic/common declared scope (without any additional members) of a Kotlin version
+ * @param javaMappedClassUseSiteScope use-site scope of JDK class
+ */
 class JvmMappedScope(
     private val session: FirSession,
     private val firKotlinClass: FirRegularClass,
@@ -60,7 +67,17 @@ class JvmMappedScope(
         session.declaredMemberScope(it)
     }
 
-    private val isMutable = JavaToKotlinClassMap.isMutable(firKotlinClass.classId)
+    private val isMutableContainer = JavaToKotlinClassMap.isMutable(firKotlinClass.classId)
+
+    private val allJavaMappedSuperClassIds: List<ClassId> by lazy {
+        buildList {
+            add(firJavaClass.classId)
+            lookupSuperTypes(firJavaClass.symbol, lookupInterfaces = true, deep = true, session).mapTo(this) { superType ->
+                val originalClassId = superType.lookupTag.classId
+                JavaToKotlinClassMap.mapKotlinToJava(originalClassId.asSingleFqName().toUnsafe()) ?: originalClassId
+            }
+        }
+    }
 
     // It's ok to have a super set of actually available member names
     private val myCallableNames by lazy {
@@ -122,10 +139,14 @@ class JvmMappedScope(
 
     private fun isMutabilityViolation(symbol: FirNamedFunctionSymbol, jvmDescriptor: String): Boolean {
         val signature = SignatureBuildingComponents.signature(firJavaClass.classId, jvmDescriptor)
-        if ((signature in JvmBuiltInsSignatures.MUTABLE_METHOD_SIGNATURES) xor isMutable) return true
+        val isAmongMutableSignatures = signature in JvmBuiltInsSignatures.MUTABLE_METHOD_SIGNATURES
+        // If the method belongs to MUTABLE_METHOD_SIGNATURES, but the class is a read-only collection we shouldn't add it.
+        // But if the method is not among MUTABLE_METHOD_SIGNATURES, but the class is a mutable version, we skip it too,
+        // because it has already been added to the read-only version from which we inherit it.
+        if (isAmongMutableSignatures != isMutableContainer) return true
 
         return javaMappedClassUseSiteScope.anyOverriddenOf(symbol) {
-            !it.origin.fromSupertypes && it.containingClassLookupTag()?.classId?.let(JavaToKotlinClassMap::isMutable) == true
+            !it.isSubstitutionOrIntersectionOverride && it.containingClassLookupTag()?.classId?.let(JavaToKotlinClassMap::isMutable) == true
         }
     }
 
@@ -154,15 +175,7 @@ class JvmMappedScope(
     }
 
     private fun getJdkMethodStatus(jvmDescriptor: String): JDKMemberStatus {
-        val allClassIds = buildList {
-            add(firJavaClass.classId)
-            lookupSuperTypes(firJavaClass.symbol, lookupInterfaces = true, deep = true, session).mapTo(this) { superType ->
-                val originalClassId = superType.fullyExpandedType(session).lookupTag.classId
-                JavaToKotlinClassMap.mapKotlinToJava(originalClassId.asSingleFqName().toUnsafe()) ?: originalClassId
-            }
-        }
-
-        for (classId in allClassIds) {
+        for (classId in allJavaMappedSuperClassIds) {
             when (SignatureBuildingComponents.signature(classId, jvmDescriptor)) {
                 in JvmBuiltInsSignatures.HIDDEN_METHOD_SIGNATURES -> return JDKMemberStatus.HIDDEN
                 in JvmBuiltInsSignatures.VISIBLE_METHOD_SIGNATURES -> return JDKMemberStatus.VISIBLE
