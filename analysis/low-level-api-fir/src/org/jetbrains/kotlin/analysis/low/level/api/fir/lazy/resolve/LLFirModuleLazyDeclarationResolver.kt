@@ -204,7 +204,6 @@ private fun handleExceptionFromResolve(
         throw exception
     }
 
-    firDeclarationToResolve.llFirSession.invalidate()
     rethrowExceptionWithDetails(
         buildString {
             val moduleData = firDeclarationToResolve.llFirModuleData
@@ -236,7 +235,6 @@ private fun handleExceptionFromResolve(
     }
 
     val llFirSession = designation.firFile.llFirSession
-    llFirSession.invalidate()
     val moduleData = llFirSession.llFirModuleData
     rethrowExceptionWithDetails(
         buildString {
