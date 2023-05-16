@@ -15,10 +15,7 @@ import org.jetbrains.kotlin.ir.symbols.IrClassifierSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrClassPublicSymbolImpl
-import org.jetbrains.kotlin.name.ClassId
-import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.name.SpecialNames
+import org.jetbrains.kotlin.name.*
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.utils.filterIsInstanceAnd
 import java.io.File
@@ -61,6 +58,19 @@ val IrClassLikeDeclaration.classId: ClassId?
         is IrClass -> parent.classId?.createNestedClassId(this.name)
         is IrPackageFragment -> ClassId.topLevel(parent.fqName.child(this.name))
         else -> null
+    }
+
+val IrClassLikeDeclaration.classIdOrFail: ClassId
+    get() = classId ?: error("No classId for $this")
+
+val IrDeclarationWithName.callableId: CallableId?
+    get() {
+        if (this.symbol is IrClassifierSymbol) error("Classifiers can not have callableId. Got $this")
+        return when (val parent = this.parent) {
+            is IrClass -> parent.classId?.let { CallableId(it, name) }
+            is IrPackageFragment -> CallableId(parent.fqName, name)
+            else -> null
+        }
     }
 
 @Suppress("unused")

@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrTypeAbbreviation
 import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.SymbolTable
+import org.jetbrains.kotlin.mpp.*
 import org.jetbrains.kotlin.types.model.TypeConstructorMarker
 import org.jetbrains.kotlin.types.model.TypeParameterMarker
 
@@ -46,7 +47,7 @@ import org.jetbrains.kotlin.types.model.TypeParameterMarker
  * @see IdSignature
  * @see SymbolTable
  */
-interface IrSymbol {
+interface IrSymbol : DeclarationSymbolMarker {
 
     /**
      * The declaration that this symbol refers to if it's bound.
@@ -167,7 +168,7 @@ interface IrAnonymousInitializerSymbol : IrBindableSymbol<ClassDescriptor, IrAno
  *
  * @see IrGetEnumValue
  */
-interface IrEnumEntrySymbol : IrBindableSymbol<ClassDescriptor, IrEnumEntry>
+interface IrEnumEntrySymbol : IrBindableSymbol<ClassDescriptor, IrEnumEntry>, EnumEntrySymbolMarker
 
 /**
  * A symbol whose [owner] is [IrField].
@@ -175,7 +176,7 @@ interface IrEnumEntrySymbol : IrBindableSymbol<ClassDescriptor, IrEnumEntry>
  * @see IrGetField
  * @see IrSetField
  */
-interface IrFieldSymbol : IrBindableSymbol<PropertyDescriptor, IrField>
+interface IrFieldSymbol : IrBindableSymbol<PropertyDescriptor, IrField>, FieldSymbolMarker
 
 /**
  * A symbol whose [owner] is [IrClass], [IrTypeAlias], [IrScript] or [IrTypeParameter].
@@ -191,7 +192,7 @@ sealed interface IrClassifierSymbol : IrSymbol, TypeConstructorMarker {
 /**
  * A symbol whose [owner] is [IrClass] or [IrTypeAlias]
  */
-sealed interface IrClassLikeSymbol : IrClassifierSymbol {
+sealed interface IrClassLikeSymbol : IrClassifierSymbol, ClassLikeSymbolMarker {
     override val owner: IrClassLikeDeclaration
 }
 
@@ -202,7 +203,7 @@ sealed interface IrClassLikeSymbol : IrClassifierSymbol {
  * @see IrCall.superQualifierSymbol
  * @see IrFieldAccessExpression.superQualifierSymbol
  */
-interface IrClassSymbol : IrClassLikeSymbol, IrBindableSymbol<ClassDescriptor, IrClass>
+interface IrClassSymbol : IrClassLikeSymbol, IrBindableSymbol<ClassDescriptor, IrClass>, RegularClassSymbolMarker
 
 /**
  * A symbol whose [owner] is [IrScript].
@@ -212,7 +213,10 @@ interface IrScriptSymbol : IrClassifierSymbol, IrBindableSymbol<ScriptDescriptor
 /**
  * A symbol whose [owner] is [IrTypeParameter].
  */
-interface IrTypeParameterSymbol : IrClassifierSymbol, IrBindableSymbol<TypeParameterDescriptor, IrTypeParameter>, TypeParameterMarker
+interface IrTypeParameterSymbol : IrClassifierSymbol,
+    IrBindableSymbol<TypeParameterDescriptor, IrTypeParameter>,
+    TypeParameterMarker,
+    TypeParameterSymbolMarker
 
 /**
  * A symbol whose [owner] is [IrValueParameter] or [IrVariable].
@@ -230,7 +234,7 @@ sealed interface IrValueSymbol : IrSymbol {
 /**
  * A symbol whose [owner] is [IrValueParameter].
  */
-interface IrValueParameterSymbol : IrValueSymbol, IrBindableSymbol<ParameterDescriptor, IrValueParameter>
+interface IrValueParameterSymbol : IrValueSymbol, IrBindableSymbol<ParameterDescriptor, IrValueParameter>, ValueParameterSymbolMarker
 
 /**
  * A symbol whose [owner] is [IrVariable].
@@ -254,7 +258,7 @@ sealed interface IrReturnTargetSymbol : IrSymbol {
  *
  * @see IrFunctionReference
  */
-sealed interface IrFunctionSymbol : IrReturnTargetSymbol {
+sealed interface IrFunctionSymbol : IrReturnTargetSymbol, FunctionSymbolMarker {
     override val owner: IrFunction
 }
 
@@ -263,14 +267,14 @@ sealed interface IrFunctionSymbol : IrReturnTargetSymbol {
  *
  * @see IrConstructorCall
  */
-interface IrConstructorSymbol : IrFunctionSymbol, IrBindableSymbol<ClassConstructorDescriptor, IrConstructor>
+interface IrConstructorSymbol : IrFunctionSymbol, IrBindableSymbol<ClassConstructorDescriptor, IrConstructor>, ConstructorSymbolMarker
 
 /**
  * A symbol whose [owner] is [IrSimpleFunction].
  *
  * @see IrCall
  */
-interface IrSimpleFunctionSymbol : IrFunctionSymbol, IrBindableSymbol<FunctionDescriptor, IrSimpleFunction>
+interface IrSimpleFunctionSymbol : IrFunctionSymbol, IrBindableSymbol<FunctionDescriptor, IrSimpleFunction>, SimpleFunctionSymbolMarker
 
 /**
  * A symbol whose [owner] is [IrReturnableBlock].
@@ -280,7 +284,7 @@ interface IrReturnableBlockSymbol : IrReturnTargetSymbol, IrBindableSymbol<Funct
 /**
  * A symbol whose [owner] is [IrProperty].
  */
-interface IrPropertySymbol : IrBindableSymbol<PropertyDescriptor, IrProperty>
+interface IrPropertySymbol : IrBindableSymbol<PropertyDescriptor, IrProperty>, PropertySymbolMarker
 
 /**
  * A symbol whose [owner] is [IrLocalDelegatedProperty].
@@ -292,4 +296,4 @@ interface IrLocalDelegatedPropertySymbol : IrBindableSymbol<VariableDescriptorWi
  *
  * @see IrTypeAbbreviation
  */
-interface IrTypeAliasSymbol : IrBindableSymbol<TypeAliasDescriptor, IrTypeAlias>, IrClassLikeSymbol
+interface IrTypeAliasSymbol : IrBindableSymbol<TypeAliasDescriptor, IrTypeAlias>, IrClassLikeSymbol, TypeAliasSymbolMarker

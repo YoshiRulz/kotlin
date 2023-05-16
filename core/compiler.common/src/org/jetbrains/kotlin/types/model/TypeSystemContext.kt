@@ -454,7 +454,7 @@ interface TypeSystemContext : TypeSystemOptimizationContext {
     @ObsoleteTypeKind
     fun KotlinTypeMarker.isNotNullTypeParameter(): Boolean = false
 
-    fun KotlinTypeMarker.hasFlexibleNullability() =
+    open fun KotlinTypeMarker.hasFlexibleNullability() =
         lowerBoundIfFlexible().isMarkedNullable() != upperBoundIfFlexible().isMarkedNullable()
 
     fun KotlinTypeMarker.typeConstructor(): TypeConstructorMarker =

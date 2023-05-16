@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.mpp.*
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.resolve.multiplatform.ExpectActualCompatibility
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.types.model.KotlinTypeMarker
 import org.jetbrains.kotlin.types.model.TypeSubstitutorMarker
@@ -20,6 +21,10 @@ import org.jetbrains.kotlin.types.model.TypeSystemInferenceExtensionContext
 
 interface ExpectActualMatchingContext<T : DeclarationSymbolMarker> : TypeSystemContext {
     val shouldCheckReturnTypesOfCallables: Boolean
+    val innerClassesCapturesOuterTypeParameters: Boolean
+        get() = true
+    val enumConstructorsAreAlwaysCompatible: Boolean
+        get() = false
 
     val RegularClassSymbolMarker.classId: ClassId
     val TypeAliasSymbolMarker.classId: ClassId
@@ -101,10 +106,17 @@ interface ExpectActualMatchingContext<T : DeclarationSymbolMarker> : TypeSystemC
     /*
      * Determines should some declaration from expect class scope be checked
      *  - FE 1.0: skip fake overrides
-     *  - FIR: skip nothing
+     *  - FIR: skip fake overrides
      *  - IR: skip nothing
      */
     fun CallableSymbolMarker.shouldSkipMatching(containingExpectClass: RegularClassSymbolMarker): Boolean
 
     val CallableSymbolMarker.hasStableParameterNames: Boolean
+
+    fun onMatchedMembers(expectSymbol: DeclarationSymbolMarker, actualSymbol: DeclarationSymbolMarker) {}
+
+    fun onMismatchedMembersFromClassScope(
+        expectSymbol: DeclarationSymbolMarker,
+        actualSymbolsByIncompatibility: Map<ExpectActualCompatibility.Incompatible<*>, List<DeclarationSymbolMarker>>
+    ) {}
 }
