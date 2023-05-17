@@ -1187,33 +1187,11 @@ private fun makeKotlinType(
             classifier.toIrBasedDescriptorIfPossible().defaultType.makeNullableAsSpecified(hasQuestionMark)
         is IrClassSymbol -> {
             val classDescriptor = classifier.toIrBasedDescriptorIfPossible()
-            val kotlinTypeArguments = arguments.memoryOptimizedMapIndexed { index, it ->
-                when (it) {
-                    is IrTypeProjection -> TypeProjectionImpl(it.variance, it.type.toIrBasedKotlinType())
-                    is IrStarProjection -> StarProjectionImpl(classDescriptor.typeConstructor.parameters[index])
-                }
-            }
-
-            try {
-                classDescriptor.defaultType.replace(newArguments = kotlinTypeArguments).makeNullableAsSpecified(hasQuestionMark)
-            } catch (e: Throwable) {
-                throw RuntimeException(
-                    "Classifier: ${classifier.owner.render()}\n" +
-                            "Type parameters:\n" +
-                            classDescriptor.defaultType.constructor.parameters.withIndex()
-                                .joinToString(separator = "\n") {
-                                    val irTypeParameter = (it.value as IrBasedTypeParameterDescriptor).owner
-                                    "${it.index}: ${irTypeParameter.render()} " +
-                                            "of ${irTypeParameter.parent.render()}"
-                                } +
-                            "\nType arguments:\n" +
-                            arguments.withIndex()
-                                .joinToString(separator = "\n") {
-                                    "${it.index}: ${it.value.render()}"
-                                },
-                    e
-                )
-            }
+            makeKotlinType(arguments, classDescriptor, hasQuestionMark, classifier)
+        }
+        is IrTypeAliasSymbol -> {
+            val classDescriptor = classifier.toIrBasedDescriptorIfPossible()
+            makeKotlinType(arguments, classDescriptor, hasQuestionMark, classifier)
         }
         is IrScriptSymbol -> {
             TypeUtils.makeUnsubstitutedType(
@@ -1224,9 +1202,48 @@ private fun makeKotlinType(
         }
     }
 
+private fun makeKotlinType(
+    arguments: List<IrTypeArgument>,
+    classDescriptor: ClassifierDescriptor,
+    hasQuestionMark: Boolean,
+    classifier: IrClassifierSymbol,
+): SimpleType {
+    val kotlinTypeArguments = arguments.memoryOptimizedMapIndexed { index, it ->
+        when (it) {
+            is IrTypeProjection -> TypeProjectionImpl(it.variance, it.type.toIrBasedKotlinType())
+            is IrStarProjection -> StarProjectionImpl(classDescriptor.typeConstructor.parameters[index])
+        }
+    }
+
+    return try {
+        classDescriptor.defaultType.replace(newArguments = kotlinTypeArguments).makeNullableAsSpecified(hasQuestionMark)
+    } catch (e: Throwable) {
+        throw RuntimeException(
+            "Classifier: ${classifier.owner.render()}\n" +
+                    "Type parameters:\n" +
+                    classDescriptor.defaultType.constructor.parameters.withIndex()
+                        .joinToString(separator = "\n") {
+                            val irTypeParameter = (it.value as IrBasedTypeParameterDescriptor).owner
+                            "${it.index}: ${irTypeParameter.render()} " +
+                                    "of ${irTypeParameter.parent.render()}"
+                        } +
+                    "\nType arguments:\n" +
+                    arguments.withIndex()
+                        .joinToString(separator = "\n") {
+                            "${it.index}: ${it.value.render()}"
+                        },
+            e
+        )
+    }
+}
+
 /* When IR-based descriptors are used from Psi2Ir, symbols may be unbound, thus we may need to resort to real descriptors. */
 @OptIn(ObsoleteDescriptorBasedAPI::class)
 private fun IrClassSymbol.toIrBasedDescriptorIfPossible(): ClassDescriptor =
+    if (isBound) owner.toIrBasedDescriptor() else descriptor
+
+@OptIn(ObsoleteDescriptorBasedAPI::class)
+private fun IrTypeAliasSymbol.toIrBasedDescriptorIfPossible(): TypeAliasDescriptor =
     if (isBound) owner.toIrBasedDescriptor() else descriptor
 
 @OptIn(ObsoleteDescriptorBasedAPI::class)

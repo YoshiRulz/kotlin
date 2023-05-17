@@ -12,10 +12,7 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
-import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
-import org.jetbrains.kotlin.ir.symbols.IrClassifierSymbol
-import org.jetbrains.kotlin.ir.symbols.IrScriptSymbol
-import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
+import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.types.impl.IrStarProjectionImpl
@@ -89,6 +86,7 @@ val IrType.erasedUpperBound: IrClass
             is IrClassSymbol -> classifier.owner
             is IrTypeParameterSymbol -> classifier.owner.erasedUpperBound
             is IrScriptSymbol -> classifier.owner.targetClass!!.owner
+            is IrTypeAliasSymbol -> classifier.owner.expandedType.erasedUpperBound
             null -> if (this is IrErrorType) symbol.owner else error(render())
         }
 
@@ -141,7 +139,8 @@ fun IrType.eraseToScope(visibleTypeParameters: Set<IrTypeParameter>): IrType {
                 this
             else
                 upperBound.mergeNullability(this)
-        is IrScriptSymbol -> classifier.unexpectedSymbolKind<IrClassifierSymbol>()
+        is IrScriptSymbol,
+        is IrTypeAliasSymbol -> classifier.unexpectedSymbolKind<IrClassifierSymbol>()
     }
 }
 

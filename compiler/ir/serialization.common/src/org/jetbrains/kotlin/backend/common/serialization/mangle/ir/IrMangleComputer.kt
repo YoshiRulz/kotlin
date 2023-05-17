@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrScriptSymbol
+import org.jetbrains.kotlin.ir.symbols.IrTypeAliasSymbol
 import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
@@ -142,6 +143,7 @@ open class IrMangleComputer(
                     is IrClassSymbol -> with(copy(MangleMode.FQNAME)) { classifier.owner.visit() }
                     is IrTypeParameterSymbol -> tBuilder.mangleTypeParameterReference(classifier)
                     is IrScriptSymbol -> {}
+                    is IrTypeAliasSymbol -> error("Unexpected classifier: $classifier")
                 }
 
                 mangleTypeArguments(tBuilder, type, null)

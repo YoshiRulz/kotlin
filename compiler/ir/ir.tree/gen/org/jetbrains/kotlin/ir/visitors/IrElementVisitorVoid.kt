@@ -11,6 +11,7 @@ package org.jetbrains.kotlin.ir.visitors
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrAnonymousInitializer
 import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.declarations.IrClassLikeDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationBase
 import org.jetbrains.kotlin.ir.declarations.IrEnumEntry
@@ -108,9 +109,15 @@ interface IrElementVisitorVoid : IrElementVisitor<Unit, Nothing?> {
 
     fun visitValueParameter(declaration: IrValueParameter) = visitDeclaration(declaration)
 
+    override fun visitClassLikeDeclaration(declaration: IrClassLikeDeclaration,
+            data: Nothing?) = visitClassLikeDeclaration(declaration)
+
+    fun visitClassLikeDeclaration(declaration: IrClassLikeDeclaration) =
+            visitDeclaration(declaration)
+
     override fun visitClass(declaration: IrClass, data: Nothing?) = visitClass(declaration)
 
-    fun visitClass(declaration: IrClass) = visitDeclaration(declaration)
+    fun visitClass(declaration: IrClass) = visitClassLikeDeclaration(declaration)
 
     override fun visitAnonymousInitializer(declaration: IrAnonymousInitializer,
             data: Nothing?) = visitAnonymousInitializer(declaration)
@@ -177,7 +184,7 @@ interface IrElementVisitorVoid : IrElementVisitor<Unit, Nothing?> {
     override fun visitTypeAlias(declaration: IrTypeAlias, data: Nothing?) =
             visitTypeAlias(declaration)
 
-    fun visitTypeAlias(declaration: IrTypeAlias) = visitDeclaration(declaration)
+    fun visitTypeAlias(declaration: IrTypeAlias) = visitClassLikeDeclaration(declaration)
 
     override fun visitVariable(declaration: IrVariable, data: Nothing?) =
             visitVariable(declaration)

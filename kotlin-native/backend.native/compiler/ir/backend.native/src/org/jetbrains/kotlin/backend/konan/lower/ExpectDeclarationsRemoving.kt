@@ -119,7 +119,8 @@ internal class ExpectToActualDefaultValueCopier(private val irModule: IrModuleFr
             override fun getReferencedClassifier(symbol: IrClassifierSymbol): IrClassifierSymbol = when (symbol) {
                 is IrClassSymbol -> getReferencedClass(symbol)
                 is IrTypeParameterSymbol -> remapExpectTypeParameter(symbol).symbol
-                is IrScriptSymbol -> symbol.unexpectedSymbolKind<IrClassifierSymbol>()
+                is IrScriptSymbol,
+                is IrTypeAliasSymbol -> symbol.unexpectedSymbolKind<IrClassifierSymbol>()
             }
 
             override fun getReferencedConstructor(symbol: IrConstructorSymbol) =

@@ -12,10 +12,7 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrTypeParameter
 import org.jetbrains.kotlin.ir.declarations.IrTypeParametersContainer
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
-import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
-import org.jetbrains.kotlin.ir.symbols.IrClassifierSymbol
-import org.jetbrains.kotlin.ir.symbols.IrScriptSymbol
-import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
+import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.impl.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.FqName
@@ -163,7 +160,8 @@ val IrClassifierSymbol.defaultType: IrType
     get() = when (this) {
         is IrClassSymbol -> owner.defaultType
         is IrTypeParameterSymbol -> owner.defaultType
-        is IrScriptSymbol -> unexpectedSymbolKind<IrClassifierSymbol>()
+        is IrScriptSymbol,
+        is IrTypeAliasSymbol -> unexpectedSymbolKind<IrClassifierSymbol>()
     }
 
 val IrTypeParameter.defaultType: IrType

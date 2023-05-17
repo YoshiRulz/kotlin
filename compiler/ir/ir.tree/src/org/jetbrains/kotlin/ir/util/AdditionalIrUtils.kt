@@ -56,7 +56,7 @@ val IrDeclarationParent.kotlinFqName: FqName
         else -> error(this)
     }
 
-val IrClass.classId: ClassId?
+val IrClassLikeDeclaration.classId: ClassId?
     get() = when (val parent = this.parent) {
         is IrClass -> parent.classId?.createNestedClassId(this.name)
         is IrPackageFragment -> ClassId.topLevel(parent.fqName.child(this.name))

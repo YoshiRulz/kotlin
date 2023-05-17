@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.IrAnonymousInitializer
 import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.declarations.IrClassLikeDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationBase
 import org.jetbrains.kotlin.ir.declarations.IrEnumEntry
@@ -107,8 +108,11 @@ interface IrElementTransformer<in D> : IrElementVisitor<IrElement, D> {
     override fun visitValueParameter(declaration: IrValueParameter, data: D): IrStatement =
             visitDeclaration(declaration, data)
 
+    override fun visitClassLikeDeclaration(declaration: IrClassLikeDeclaration, data: D):
+            IrStatement = visitDeclaration(declaration, data)
+
     override fun visitClass(declaration: IrClass, data: D): IrStatement =
-            visitDeclaration(declaration, data)
+            visitClassLikeDeclaration(declaration, data)
 
     override fun visitAnonymousInitializer(declaration: IrAnonymousInitializer, data: D):
             IrStatement = visitDeclaration(declaration, data)
@@ -150,7 +154,7 @@ interface IrElementTransformer<in D> : IrElementVisitor<IrElement, D> {
             visitFunction(declaration, data)
 
     override fun visitTypeAlias(declaration: IrTypeAlias, data: D): IrStatement =
-            visitDeclaration(declaration, data)
+            visitClassLikeDeclaration(declaration, data)
 
     override fun visitVariable(declaration: IrVariable, data: D): IrStatement =
             visitDeclaration(declaration, data)

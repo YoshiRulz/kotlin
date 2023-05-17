@@ -11,6 +11,7 @@ package org.jetbrains.kotlin.ir.visitors
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrAnonymousInitializer
 import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.declarations.IrClassLikeDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationBase
 import org.jetbrains.kotlin.ir.declarations.IrEnumEntry
@@ -101,7 +102,11 @@ interface IrElementVisitor<out R, in D> {
     fun visitValueParameter(declaration: IrValueParameter, data: D): R =
             visitDeclaration(declaration, data)
 
-    fun visitClass(declaration: IrClass, data: D): R = visitDeclaration(declaration, data)
+    fun visitClassLikeDeclaration(declaration: IrClassLikeDeclaration, data: D): R =
+            visitDeclaration(declaration, data)
+
+    fun visitClass(declaration: IrClass, data: D): R =
+            visitClassLikeDeclaration(declaration, data)
 
     fun visitAnonymousInitializer(declaration: IrAnonymousInitializer, data: D): R =
             visitDeclaration(declaration, data)
@@ -139,7 +144,7 @@ interface IrElementVisitor<out R, in D> {
             visitFunction(declaration, data)
 
     fun visitTypeAlias(declaration: IrTypeAlias, data: D): R =
-            visitDeclaration(declaration, data)
+            visitClassLikeDeclaration(declaration, data)
 
     fun visitVariable(declaration: IrVariable, data: D): R = visitDeclaration(declaration,
             data)

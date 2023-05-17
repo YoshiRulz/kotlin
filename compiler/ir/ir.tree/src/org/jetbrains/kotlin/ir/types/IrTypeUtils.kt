@@ -9,12 +9,14 @@ import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
+import org.jetbrains.kotlin.ir.util.superTypes
 import org.jetbrains.kotlin.types.AbstractTypeChecker
 
 fun IrClassifierSymbol.superTypes(): List<IrType> = when (this) {
     is IrClassSymbol -> owner.superTypes
     is IrTypeParameterSymbol -> owner.superTypes
     is IrScriptSymbol -> emptyList()
+    is IrTypeAliasSymbol -> owner.expandedType.superTypes()
 }
 
 fun IrClassifierSymbol.isSubtypeOfClass(superClass: IrClassSymbol): Boolean =
@@ -44,6 +46,7 @@ fun IrType.isNullable(): Boolean =
                 SimpleTypeNullability.DEFINITELY_NOT_NULL -> false
             }
             is IrScriptSymbol -> nullability == SimpleTypeNullability.MARKED_NULLABLE
+            is IrTypeAliasSymbol -> nullability == SimpleTypeNullability.MARKED_NULLABLE
         }
         is IrDynamicType -> true
         is IrErrorType -> this.isMarkedNullable

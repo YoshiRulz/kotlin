@@ -7,10 +7,7 @@ package org.jetbrains.kotlin.ir.backend.js.utils
 
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationWithName
-import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
-import org.jetbrains.kotlin.ir.symbols.IrClassifierSymbol
-import org.jetbrains.kotlin.ir.symbols.IrScriptSymbol
-import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
+import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.util.isEffectivelyExternal
@@ -45,13 +42,15 @@ private fun IrTypeArgument.asString(): String = when (this) {
 private fun IrClassifierSymbol.asString() = when (this) {
     is IrTypeParameterSymbol -> this.owner.name.asString()
     is IrClassSymbol -> this.owner.fqNameWhenAvailable!!.asString()
-    is IrScriptSymbol -> unexpectedSymbolKind<IrClassifierSymbol>()
+    is IrScriptSymbol,
+    is IrTypeAliasSymbol -> unexpectedSymbolKind<IrClassifierSymbol>()
 }
 
 tailrec fun erase(type: IrType): IrClass? = when (val classifier = type.classifierOrFail) {
     is IrClassSymbol -> classifier.owner
     is IrTypeParameterSymbol -> erase(classifier.owner.superTypes.first())
     is IrScriptSymbol -> null
+    is IrTypeAliasSymbol -> classifier.unexpectedSymbolKind<IrClassifierSymbol>()
 }
 
 fun IrType.getClassRef(context: JsGenerationContext): JsNameRef =

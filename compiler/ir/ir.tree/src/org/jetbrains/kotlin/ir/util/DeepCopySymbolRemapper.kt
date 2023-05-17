@@ -229,6 +229,7 @@ open class DeepCopySymbolRemapper(
             is IrClassSymbol -> classes.getReferenced(symbol)
             is IrScriptSymbol -> scripts.getReferenced(symbol)
             is IrTypeParameterSymbol -> typeParameters.getReferenced(symbol)
+            is IrTypeAliasSymbol -> typeAliases.getReferenced(symbol)
         }
 
     override fun getReferencedTypeAlias(symbol: IrTypeAliasSymbol): IrTypeAliasSymbol = typeAliases.getReferenced(symbol)

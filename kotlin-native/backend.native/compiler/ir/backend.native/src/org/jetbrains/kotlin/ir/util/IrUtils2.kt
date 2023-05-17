@@ -183,7 +183,8 @@ fun IrType.substitute(map: Map<IrTypeParameterSymbol, IrType>): IrType {
             }
             IrSimpleTypeImpl(classifier, nullability, newArguments, annotations)
         }
-        is IrScriptSymbol -> classifier.unexpectedSymbolKind<IrClassifierSymbol>()
+        is IrScriptSymbol,
+        is IrTypeAliasSymbol -> classifier.unexpectedSymbolKind<IrClassifierSymbol>()
     }
 
 }

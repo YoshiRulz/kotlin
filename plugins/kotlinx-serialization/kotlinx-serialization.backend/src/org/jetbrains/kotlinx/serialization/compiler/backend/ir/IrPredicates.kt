@@ -17,10 +17,7 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrGetEnumValue
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
-import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
-import org.jetbrains.kotlin.ir.symbols.IrConstructorSymbol
-import org.jetbrains.kotlin.ir.symbols.IrScriptSymbol
-import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
+import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.Name
@@ -252,6 +249,7 @@ fun IrType.classOrUpperBound(): IrClassSymbol? = when (val cls = classifierOrNul
     is IrClassSymbol -> cls
     is IrScriptSymbol -> cls.owner.targetClass
     is IrTypeParameterSymbol -> cls.owner.representativeUpperBound.classOrUpperBound()
+    is IrTypeAliasSymbol -> cls.owner.expandedType.classOrNull
     null -> null
 }
 

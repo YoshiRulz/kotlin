@@ -178,7 +178,7 @@ interface IrEnumEntrySymbol : IrBindableSymbol<ClassDescriptor, IrEnumEntry>
 interface IrFieldSymbol : IrBindableSymbol<PropertyDescriptor, IrField>
 
 /**
- * A symbol whose [owner] is [IrClass], [IrScript] or [IrTypeParameter].
+ * A symbol whose [owner] is [IrClass], [IrTypeAlias], [IrScript] or [IrTypeParameter].
  *
  * @see IrSimpleType
  * @see IrClassReference
@@ -189,13 +189,20 @@ sealed interface IrClassifierSymbol : IrSymbol, TypeConstructorMarker {
 }
 
 /**
+ * A symbol whose [owner] is [IrClass] or [IrTypeAlias]
+ */
+sealed interface IrClassLikeSymbol : IrClassifierSymbol {
+    override val owner: IrClassLikeDeclaration
+}
+
+/**
  * A symbol whose [owner] is [IrClass].
  *
  * @see IrClass.sealedSubclasses
  * @see IrCall.superQualifierSymbol
  * @see IrFieldAccessExpression.superQualifierSymbol
  */
-interface IrClassSymbol : IrClassifierSymbol, IrBindableSymbol<ClassDescriptor, IrClass>
+interface IrClassSymbol : IrClassLikeSymbol, IrBindableSymbol<ClassDescriptor, IrClass>
 
 /**
  * A symbol whose [owner] is [IrScript].
@@ -285,4 +292,4 @@ interface IrLocalDelegatedPropertySymbol : IrBindableSymbol<VariableDescriptorWi
  *
  * @see IrTypeAbbreviation
  */
-interface IrTypeAliasSymbol : IrBindableSymbol<TypeAliasDescriptor, IrTypeAlias>
+interface IrTypeAliasSymbol : IrBindableSymbol<TypeAliasDescriptor, IrTypeAlias>, IrClassLikeSymbol

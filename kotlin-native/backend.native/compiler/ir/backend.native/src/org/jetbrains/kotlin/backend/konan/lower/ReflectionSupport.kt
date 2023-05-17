@@ -14,10 +14,7 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
-import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
-import org.jetbrains.kotlin.ir.symbols.IrClassifierSymbol
-import org.jetbrains.kotlin.ir.symbols.IrScriptSymbol
-import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
+import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.types.Variance
@@ -67,7 +64,8 @@ internal class KTypeGenerator(
                     // Leave upper bounds of non-reified type parameters as is, even if they are reified themselves.
                     irKTypeParameter(classifier.owner, leaveReifiedForLater = false, seenTypeParameters = seenTypeParameters)
                 }
-                is IrScriptSymbol -> classifier.unexpectedSymbolKind<IrClassifierSymbol>()
+                is IrScriptSymbol,
+                is IrTypeAliasSymbol -> classifier.unexpectedSymbolKind<IrClassifierSymbol>()
             }
 
             return irKTypeImpl(

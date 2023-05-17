@@ -27,9 +27,8 @@ import org.jetbrains.kotlin.ir.visitors.IrElementVisitor
  *
  * Generated from: [org.jetbrains.kotlin.ir.generator.IrTree.class]
  */
-abstract class IrClass : IrDeclarationBase(), IrPossiblyExternalDeclaration,
-        IrDeclarationWithVisibility, IrTypeParametersContainer, IrDeclarationContainer,
-        IrAttributeContainer, IrMetadataSourceOwner {
+abstract class IrClass : IrClassLikeDeclaration(), IrPossiblyExternalDeclaration,
+        IrDeclarationContainer, IrAttributeContainer, IrMetadataSourceOwner {
     @ObsoleteDescriptorBasedAPI
     abstract override val descriptor: ClassDescriptor
 

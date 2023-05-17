@@ -39,6 +39,7 @@ val anonymousInitializerSymbolType = type(symbols, "IrAnonymousInitializerSymbol
 val enumEntrySymbolType = type(symbols, "IrEnumEntrySymbol")
 val fieldSymbolType = type(symbols, "IrFieldSymbol")
 val classifierSymbolType = type(symbols, "IrClassifierSymbol")
+val classLikeSymbolType = type(symbols, "IrClassLikeSymbol")
 val classSymbolType = type(symbols, "IrClassSymbol")
 val scriptSymbolType = type(symbols, "IrScriptSymbol")
 val typeParameterSymbolType = type(symbols, "IrTypeParameterSymbol")

@@ -161,6 +161,9 @@ class Fir2IrDeclarationStorage(
                             is IrScriptSymbol -> {
                                 false
                             }
+                            is IrTypeAliasSymbol -> {
+                                false
+                            }
                         }
                     } else {
                         false
