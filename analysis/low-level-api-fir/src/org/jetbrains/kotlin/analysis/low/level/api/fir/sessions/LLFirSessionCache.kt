@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.analysis.providers.createDeclarationProvider
 import org.jetbrains.kotlin.analysis.providers.createPackageProvider
 import org.jetbrains.kotlin.analysis.providers.impl.EmptyKotlinDeclarationProvider
 import org.jetbrains.kotlin.analysis.providers.impl.FileBasedKotlinDeclarationProvider
+import org.jetbrains.kotlin.analysis.providers.impl.util.mergeInto
 import org.jetbrains.kotlin.analysis.utils.trackers.CompositeModificationTracker
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.LanguageVersionSettings
@@ -50,8 +51,6 @@ import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.jvm.modules.JavaModuleResolver
 import org.jetbrains.kotlin.resolve.jvm.platform.JvmPlatformAnalyzerServices
-import org.jetbrains.kotlin.utils.addIfNotNull
-import org.jetbrains.kotlin.utils.addToStdlib.partitionIsInstance
 import java.util.concurrent.ConcurrentMap
 
 @OptIn(PrivateSessionConstructor::class, SessionConfiguration::class)
@@ -539,29 +538,10 @@ internal class LLFirSessionCache(private val project: Project) {
         session: LLFirSession,
         destination: MutableList<FirSymbolProvider>,
     ) {
-        SymbolProviderMerger(this, destination).apply {
+        mergeInto(destination) {
             merge<LLFirKotlinSymbolProvider> { LLFirCombinedKotlinSymbolProvider.merge(session, project, it) }
             merge<JavaSymbolProvider> { LLFirCombinedJavaSymbolProvider.merge(session, project, it) }
             merge<FirExtensionSyntheticFunctionInterfaceProvider> { LLFirCombinedSyntheticFunctionSymbolProvider.merge(session, it) }
-            finish()
-        }
-    }
-
-    private class SymbolProviderMerger(
-        symbolProviders: List<FirSymbolProvider>,
-        private val destination: MutableList<FirSymbolProvider>
-    ) {
-        private var remainingSymbolProviders = symbolProviders
-
-        inline fun <reified A : FirSymbolProvider> merge(create: (List<A>) -> FirSymbolProvider?) {
-            val (specificSymbolProviders, remainingSymbolProviders) = remainingSymbolProviders.partitionIsInstance<_, A>()
-            destination.addIfNotNull(create(specificSymbolProviders))
-            this.remainingSymbolProviders = remainingSymbolProviders
-        }
-
-        fun finish() {
-            destination.addAll(remainingSymbolProviders)
-            remainingSymbolProviders = emptyList()
         }
     }
 }
