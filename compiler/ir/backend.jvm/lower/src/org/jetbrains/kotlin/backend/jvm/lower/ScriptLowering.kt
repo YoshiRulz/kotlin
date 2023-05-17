@@ -504,11 +504,14 @@ private class ScriptToClassTransformer(
         }
     }
 
+    val scriptThisType = IrSimpleTypeImpl(irScriptClass.symbol, false, emptyList(), emptyList())
     val scriptClassReceiver =
-        irScript.thisReceiver?.transform(this, ScriptToClassTransformerContext(null, null, null, false)) ?: run {
+        irScript.thisReceiver?.let {
+            it.type = scriptThisType
+            it.transform(this, ScriptToClassTransformerContext(null, null, null, false))
+        } ?: run {
             context.symbolTable.enterScope(irScriptClass)
-            val thisType = IrSimpleTypeImpl(irScriptClass.symbol, false, emptyList(), emptyList())
-            val newReceiver = irScriptClass.createThisReceiverParameter(IrDeclarationOrigin.INSTANCE_RECEIVER, thisType)
+            val newReceiver = irScriptClass.createThisReceiverParameter(IrDeclarationOrigin.INSTANCE_RECEIVER, scriptThisType)
             context.symbolTable.leaveScope(irScriptClass)
             newReceiver
         }

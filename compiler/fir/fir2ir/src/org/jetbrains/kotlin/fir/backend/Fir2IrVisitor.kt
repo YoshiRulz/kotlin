@@ -211,13 +211,9 @@ class Fir2IrVisitor(
         return declarationStorage.getCachedIrScript(script)!!.also { irScript ->
             irScript.parent = conversionScope.parentFromStack()
             declarationStorage.enterScope(irScript)
-            irScript.explicitCallParameters = script.parameters.map { parameter ->
-                declarationStorage.createIrVariable(parameter, irScript)
-            }
-            irScript.implicitReceiversParameters = script.contextReceivers.mapIndexedNotNull { index, receiver ->
-                if (receiver.customLabelName?.asString() == SCRIPT_SPECIAL_NAME_STRING)
-                    null
-                else
+
+            val receivers = script.contextReceivers.mapIndexed { index, receiver ->
+                receiver to
                     receiver.convertWithOffsets { startOffset, endOffset ->
                         irFactory.createValueParameter(
                             startOffset, endOffset, IrDeclarationOrigin.DEFINED, IrValueParameterSymbolImpl(),
@@ -232,6 +228,18 @@ class Fir2IrVisitor(
                         }
                     }
             }
+            irScript.thisReceiver = receivers.find { it.first.customLabelName?.asString() == SCRIPT_SPECIAL_NAME_STRING }?.second
+            irScript.implicitReceiversParameters = receivers.mapNotNull { (receiver, irParameter) ->
+                if (receiver.customLabelName?.asString() == SCRIPT_SPECIAL_NAME_STRING)
+                    null
+                else
+                    irParameter
+            }
+
+            irScript.explicitCallParameters = script.parameters.map { parameter ->
+                declarationStorage.createIrVariable(parameter, irScript)
+            }
+
             conversionScope.withParent(irScript) {
                 for (statement in script.statements) {
                     val irStatement = if (statement is FirDeclaration) {
