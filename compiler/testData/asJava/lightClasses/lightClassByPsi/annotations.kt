@@ -65,4 +65,8 @@ class Example(@field:Ann val foo: String,    // annotate Java field
 
 class CtorAnnotations(@Anno val x: String, @param:Anno val y: String, val z: String)
 
+@Anno("propery")
+val <T: Any> @receiver:Anno("receiver") List<T>.extensionProperty: Int
+    get() = 0
+
 // COMPILATION_ERRORS

@@ -59,6 +59,14 @@ public abstract @interface AnnotatedAttribute /* AnnotatedAttribute*/ {
   public abstract java.lang.String x();//  x()
 }
 
+public final class AnnotationsKt /* AnnotationsKt*/ {
+  @Anno(p = "propery")
+  @java.lang.Deprecated()
+  public static void getExtensionProperty$annotations(java.util.List);//  getExtensionProperty$annotations(java.util.List)
+
+  public static final <T> int getExtensionProperty(@Anno(p = "receiver") @org.jetbrains.annotations.NotNull() java.util.List<? extends T>);// <T>  getExtensionProperty(java.util.List<? extends T>)
+}
+
 public static final class Companion /* AnnoWithCompanion.Companion*/ {
   private  Companion();//  .ctor()
 
