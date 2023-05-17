@@ -21,12 +21,12 @@ interface JavaSourceFactoryOwner {
         return sourceFactory.createTypeSource(type)
     }
 
-    fun <TYPE : PsiType> createVariableReturnTypeSource(psi: JavaElementPsiSource<out PsiVariable>): JavaElementTypeSource<TYPE> {
-        return sourceFactory.createVariableReturnTypeSource(psi)
+    fun <TYPE : PsiType> createVariableReturnTypeSource(psiVariableSource: JavaElementPsiSource<out PsiVariable>): JavaElementTypeSource<TYPE> {
+        return sourceFactory.createVariableReturnTypeSource(psiVariableSource)
     }
 
-    fun <TYPE : PsiType> createMethodReturnTypeSource(psi: JavaElementPsiSource<out PsiMethod>): JavaElementTypeSource<TYPE> {
-        return sourceFactory.createMethodReturnTypeSource(psi)
+    fun <TYPE : PsiType> createMethodReturnTypeSource(psiMethodSource: JavaElementPsiSource<out PsiMethod>): JavaElementTypeSource<TYPE> {
+        return sourceFactory.createMethodReturnTypeSource(psiMethodSource)
     }
 
 }
