@@ -25,7 +25,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.ProjectScope
 import com.intellij.util.io.URLUtil.JAR_PROTOCOL
 import com.intellij.util.io.URLUtil.JAR_SEPARATOR
-import org.jetbrains.kotlin.analysis.api.impl.base.java.source.JavaElementSourceFactoryWithSmartPointer
+import org.jetbrains.kotlin.analysis.api.impl.base.java.source.JavaElementSourceWithSmartPointerFactory
 import org.jetbrains.kotlin.analysis.project.structure.*
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.compiler.*
@@ -110,7 +110,7 @@ object StandaloneProjectFactory {
         with(project) {
             registerService(SmartTypePointerManager::class.java, SmartTypePointerManagerImpl::class.java)
             registerService(SmartPointerManager::class.java, SmartPointerManagerImpl::class.java)
-            registerService(JavaElementSourceFactory::class.java, JavaElementSourceFactoryWithSmartPointer::class.java)
+            registerService(JavaElementSourceFactory::class.java, JavaElementSourceWithSmartPointerFactory::class.java)
 
             registerService(KotlinJavaPsiFacade::class.java, KotlinJavaPsiFacade(this))
             registerService(ModuleAnnotationsResolver::class.java, CliModuleAnnotationsResolver())

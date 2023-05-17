@@ -14,7 +14,7 @@ import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementPsiSource
 import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementSourceFactory
 import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementTypeSource
 
- class JavaElementSourceFactoryWithSmartPointer(project: Project) : JavaElementSourceFactory() {
+ class JavaElementSourceWithSmartPointerFactory(project: Project) : JavaElementSourceFactory() {
     private val smartTypePointerManager = SmartTypePointerManager.getInstance(project)
     private val smartPsiPointerManager = SmartPointerManager.getInstance(project)
 
