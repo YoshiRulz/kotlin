@@ -147,13 +147,13 @@ class ArtifactsTest {
         pomSection: String,
         errors: MutableCollection<String>,
     ) {
-        if (expected.groupId != actual.groupId) {
+        if (actual.groupId != expected.groupId) {
             errors.add("[$pomSection] groupId mismatch for $actual in $pomPath")
         }
-        if (expected.scope != actual.scope) {
+        if (actual.scope != expected.scope) {
             errors.add("[$pomSection] scope mismatch for $actual in $pomPath")
         }
-        if (expected.classifier != actual.classifier) {
+        if (actual.classifier != expected.classifier) {
             errors.add("[$pomSection] classifier mismatch for $actual in $pomPath")
         }
     }
