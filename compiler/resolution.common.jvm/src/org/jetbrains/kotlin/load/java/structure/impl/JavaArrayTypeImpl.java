@@ -22,8 +22,8 @@ import org.jetbrains.kotlin.load.java.structure.JavaArrayType;
 import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementTypeSource;
 
 public class JavaArrayTypeImpl extends JavaTypeImpl<PsiArrayType> implements JavaArrayType {
-    public JavaArrayTypeImpl(@NotNull JavaElementTypeSource<PsiArrayType> psiArrayType) {
-        super(psiArrayType);
+    public JavaArrayTypeImpl(@NotNull JavaElementTypeSource<PsiArrayType> psiArrayTypeSource) {
+        super(psiArrayTypeSource);
     }
 
     @Override

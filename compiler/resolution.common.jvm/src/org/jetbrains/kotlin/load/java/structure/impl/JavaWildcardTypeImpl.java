@@ -24,8 +24,8 @@ import org.jetbrains.kotlin.load.java.structure.JavaWildcardType;
 import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementTypeSource;
 
 public class JavaWildcardTypeImpl extends JavaTypeImpl<PsiWildcardType> implements JavaWildcardType {
-    public JavaWildcardTypeImpl(@NotNull JavaElementTypeSource<PsiWildcardType> psiWildcardType) {
-        super(psiWildcardType);
+    public JavaWildcardTypeImpl(@NotNull JavaElementTypeSource<PsiWildcardType> psiWildcardTypeSource) {
+        super(psiWildcardTypeSource);
     }
 
     @Override

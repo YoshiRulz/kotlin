@@ -31,8 +31,8 @@ import java.util.Collection;
 public abstract class JavaTypeImpl<Psi extends PsiType> implements JavaType, JavaAnnotationOwnerImpl, JavaSourceFactoryOwner {
     private final JavaElementTypeSource<Psi> psiType;
 
-    public JavaTypeImpl(@NotNull JavaElementTypeSource<Psi> psiType) {
-        this.psiType = psiType;
+    public JavaTypeImpl(@NotNull JavaElementTypeSource<Psi> psiTypeSource) {
+        this.psiType = psiTypeSource;
     }
 
     @Override
@@ -54,9 +54,9 @@ public abstract class JavaTypeImpl<Psi extends PsiType> implements JavaType, Jav
     }
 
     @NotNull
-    public static JavaTypeImpl<?> create(@NotNull JavaElementTypeSource<PsiType> psiType) {
-        JavaElementSourceFactory sourceFactory = psiType.getFactory();
-        return psiType.getType().accept(new PsiTypeVisitor<JavaTypeImpl<?>>() {
+    public static JavaTypeImpl<?> create(@NotNull JavaElementTypeSource<PsiType> psiTypeSource) {
+        JavaElementSourceFactory sourceFactory = psiTypeSource.getFactory();
+        return psiTypeSource.getType().accept(new PsiTypeVisitor<JavaTypeImpl<?>>() {
 
             @Nullable
             @Override

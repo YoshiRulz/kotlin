@@ -30,16 +30,16 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtPsiUtil
 
-class JavaClassImpl(psiClass: JavaElementPsiSource<PsiClass>) : JavaClassifierImpl<PsiClass>(psiClass), VirtualFileBoundJavaClass, JavaAnnotationOwnerImpl, JavaModifierListOwnerImpl {
+class JavaClassImpl(psiClassSource: JavaElementPsiSource<PsiClass>) : JavaClassifierImpl<PsiClass>(psiClassSource), VirtualFileBoundJavaClass, JavaAnnotationOwnerImpl, JavaModifierListOwnerImpl {
     init {
-        assert(psiClass.psi !is PsiTypeParameter) { "PsiTypeParameter should be wrapped in JavaTypeParameter, not JavaClass: use JavaClassifier.create()" }
+        assert(psiClassSource.psi !is PsiTypeParameter) { "PsiTypeParameter should be wrapped in JavaTypeParameter, not JavaClass: use JavaClassifier.create()" }
     }
 
     override val innerClassNames: Collection<Name>
         get() = psi.innerClasses.mapNotNull { it.name?.takeIf(Name::isValidIdentifier)?.let(Name::identifier) }
 
     override fun findInnerClass(name: Name): JavaClass? {
-        return psi.findInnerClassByName(name.asString(), false)?.let { JavaClassImpl(psiElement.factory.createPsiSource(it)) }
+        return psi.findInnerClassByName(name.asString(), false)?.let { JavaClassImpl(psiElementSource.factory.createPsiSource(it)) }
     }
 
     override val fqName: FqName?
@@ -72,7 +72,7 @@ class JavaClassImpl(psiClass: JavaElementPsiSource<PsiClass>) : JavaClassifierIm
     override val outerClass: JavaClassImpl?
         get() {
             val outer = psi.containingClass
-            return if (outer == null) null else JavaClassImpl(psiElement.factory.createPsiSource(outer))
+            return if (outer == null) null else JavaClassImpl(psiElementSource.factory.createPsiSource(outer))
         }
 
     override val typeParameters: List<JavaTypeParameter>
@@ -115,7 +115,7 @@ class JavaClassImpl(psiClass: JavaElementPsiSource<PsiClass>) : JavaClassifierIm
         get() {
             assertNotLightClass()
 
-            return psi.recordComponents.convert { JavaRecordComponentImpl(psiElement.factory.createPsiSource(it)) }
+            return psi.recordComponents.convert { JavaRecordComponentImpl(psiElementSource.factory.createPsiSource(it)) }
         }
 
     override fun hasDefaultConstructor() = !isInterface && constructors.isEmpty()

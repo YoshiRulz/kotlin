@@ -34,8 +34,8 @@ import java.util.Collection;
 
 public class JavaValueParameterImpl extends JavaElementImpl<PsiParameter>
         implements JavaValueParameter, JavaAnnotationOwnerImpl, JavaModifierListOwnerImpl {
-    public JavaValueParameterImpl(@NotNull JavaElementPsiSource<PsiParameter> psiParameter) {
-        super(psiParameter);
+    public JavaValueParameterImpl(@NotNull JavaElementPsiSource<PsiParameter> psiParameterSource) {
+        super(psiParameterSource);
     }
 
     @Nullable

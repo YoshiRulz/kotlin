@@ -22,8 +22,8 @@ import org.jetbrains.kotlin.load.java.structure.JavaType
 import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementTypeSource
 
 class JavaClassifierTypeImpl(
-    psiClassType: JavaElementTypeSource<PsiClassType>,
-) : JavaTypeImpl<PsiClassType>(psiClassType), JavaClassifierType {
+    psiClassTypeSource: JavaElementTypeSource<PsiClassType>,
+) : JavaTypeImpl<PsiClassType>(psiClassTypeSource), JavaClassifierType {
 
     private var resolutionResult: ResolutionResult? = null
 

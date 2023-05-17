@@ -24,9 +24,9 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
 class JavaPackageImpl(
-    psiPackage: JavaElementPsiSource<PsiPackage>, private val scope: GlobalSearchScope,
+    psiPackageSource: JavaElementPsiSource<PsiPackage>, private val scope: GlobalSearchScope,
     private val mayHaveAnnotations: Boolean = true,
-) : JavaElementImpl<PsiPackage>(psiPackage), JavaPackage, MapBasedJavaAnnotationOwner {
+) : JavaElementImpl<PsiPackage>(psiPackageSource), JavaPackage, MapBasedJavaAnnotationOwner {
 
     override fun getClasses(nameFilter: (Name) -> Boolean): Collection<JavaClass> {
         val psiClasses = psi.getClasses(scope).filter {

@@ -31,8 +31,8 @@ import java.util.Collection;
 import static org.jetbrains.kotlin.load.java.structure.impl.JavaElementCollectionFromPsiArrayUtil.classifierTypes;
 
 public class JavaTypeParameterImpl extends JavaClassifierImpl<PsiTypeParameter> implements JavaTypeParameter {
-    public JavaTypeParameterImpl(@NotNull JavaElementPsiSource<PsiTypeParameter> psiTypeParameter) {
-        super(psiTypeParameter);
+    public JavaTypeParameterImpl(@NotNull JavaElementPsiSource<PsiTypeParameter> psiTypeParameterSource) {
+        super(psiTypeParameterSource);
     }
 
     @NotNull

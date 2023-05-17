@@ -25,8 +25,8 @@ import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementTypeSourc
 import org.jetbrains.kotlin.resolve.jvm.JvmPrimitiveType;
 
 public class JavaPrimitiveTypeImpl extends JavaTypeImpl<PsiPrimitiveType> implements JavaPrimitiveType {
-    public JavaPrimitiveTypeImpl(@NotNull JavaElementTypeSource<PsiPrimitiveType> psiPrimitiveType) {
-        super(psiPrimitiveType);
+    public JavaPrimitiveTypeImpl(@NotNull JavaElementTypeSource<PsiPrimitiveType> psiPrimitiveTypeSource) {
+        super(psiPrimitiveTypeSource);
     }
 
     @Override

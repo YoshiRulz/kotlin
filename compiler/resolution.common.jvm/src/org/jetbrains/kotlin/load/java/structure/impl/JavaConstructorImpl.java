@@ -29,9 +29,9 @@ import static org.jetbrains.kotlin.load.java.structure.impl.JavaElementCollectio
 import static org.jetbrains.kotlin.load.java.structure.impl.JavaElementCollectionFromPsiArrayUtil.valueParameters;
 
 public class JavaConstructorImpl extends JavaMemberImpl<PsiMethod> implements JavaConstructor {
-    public JavaConstructorImpl(@NotNull JavaElementPsiSource<PsiMethod> psiConstructor) {
-        super(psiConstructor);
-        PsiMethod psiMethod = psiConstructor.getPsi();
+    public JavaConstructorImpl(@NotNull JavaElementPsiSource<PsiMethod> psiConstructorSource) {
+        super(psiConstructorSource);
+        PsiMethod psiMethod = psiConstructorSource.getPsi();
         assert psiMethod.isConstructor() :
                 "PsiMethod which is not a constructor should not be wrapped in JavaConstructorImpl: " +
                 psiMethod.getName() + " " + psiMethod.getClass().getName();

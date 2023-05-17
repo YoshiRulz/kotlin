@@ -11,10 +11,10 @@ import org.jetbrains.kotlin.load.java.structure.JavaType
 import org.jetbrains.kotlin.load.java.structure.impl.source.JavaElementPsiSource
 
 class JavaRecordComponentImpl(
-    psi: JavaElementPsiSource<PsiRecordComponent>
-) : JavaMemberImpl<PsiRecordComponent>(psi), JavaRecordComponent {
+    psiRecordComponentSource: JavaElementPsiSource<PsiRecordComponent>
+) : JavaMemberImpl<PsiRecordComponent>(psiRecordComponentSource), JavaRecordComponent {
     override val type: JavaType
-        get() = JavaTypeImpl.create(sourceFactory.createTypeSource(psi.type))
+        get() = JavaTypeImpl.create(sourceFactory.createTypeSource(psiElementSource.psi.type))
 
     override val isVararg: Boolean
         get() = psi.isVarArgs

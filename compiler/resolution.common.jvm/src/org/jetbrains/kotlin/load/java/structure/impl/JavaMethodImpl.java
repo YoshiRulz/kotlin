@@ -32,9 +32,9 @@ import static org.jetbrains.kotlin.load.java.structure.impl.JavaElementCollectio
 import static org.jetbrains.kotlin.load.java.structure.impl.JavaElementCollectionFromPsiArrayUtil.valueParameters;
 
 public class JavaMethodImpl extends JavaMemberImpl<PsiMethod> implements JavaMethod {
-    public JavaMethodImpl(@NotNull JavaElementPsiSource<PsiMethod> psiMethod) {
-        super(psiMethod);
-        PsiMethod method = psiMethod.getPsi();
+    public JavaMethodImpl(@NotNull JavaElementPsiSource<PsiMethod> psiMethodSource) {
+        super(psiMethodSource);
+        PsiMethod method = psiMethodSource.getPsi();
         assert !method.isConstructor() :
                 "PsiMethod which is a constructor should be wrapped in JavaConstructorImpl: " + method.getName();
     }
