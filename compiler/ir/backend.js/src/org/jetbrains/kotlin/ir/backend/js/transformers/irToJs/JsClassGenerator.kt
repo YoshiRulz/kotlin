@@ -9,10 +9,12 @@ import org.jetbrains.kotlin.backend.common.compilationException
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
+import org.jetbrains.kotlin.ir.backend.js.JsLoweredDeclarationOrigin
 import org.jetbrains.kotlin.ir.backend.js.export.isAllowedFakeOverriddenDeclaration
 import org.jetbrains.kotlin.ir.backend.js.export.isExported
 import org.jetbrains.kotlin.ir.backend.js.export.isOverriddenExported
 import org.jetbrains.kotlin.ir.backend.js.lower.isEs6ConstructorReplacement
+import org.jetbrains.kotlin.ir.backend.js.lower.isSyntheticPrimaryConstructor
 import org.jetbrains.kotlin.ir.backend.js.utils.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
@@ -22,6 +24,8 @@ import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.js.backend.ast.*
 import org.jetbrains.kotlin.js.common.isValidES5Identifier
 import org.jetbrains.kotlin.utils.addIfNotNull
+import org.jetbrains.kotlin.utils.addToStdlib.runIf
+import org.jetbrains.kotlin.utils.findIsInstanceAnd
 import org.jetbrains.kotlin.utils.memoryOptimizedMap
 import org.jetbrains.kotlin.utils.toSmartList
 
@@ -329,6 +333,9 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
         val name = generateSimpleName()
         val interfaces = generateInterfacesList()
         val metadataConstructor = getMetadataConstructor()
+        val defaultConstructor = runIf(irClass.isClass && !irClass.couldSkipFullReflection()) {
+            findDefaultConstructor()
+        }
         val associatedObjectKey = generateAssociatedObjectKey()
         val associatedObjects = generateAssociatedObjects()
         val suspendArity = generateSuspendArity()
@@ -337,7 +344,17 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
 
         return JsInvocation(
             JsNameRef(context.getNameForStaticFunction(setMetadataFor)),
-            listOf(ctor, name, metadataConstructor, parent, interfaces, associatedObjectKey, associatedObjects, suspendArity)
+            listOf(
+                ctor,
+                name,
+                metadataConstructor,
+                parent,
+                interfaces,
+                defaultConstructor,
+                associatedObjectKey,
+                associatedObjects,
+                suspendArity
+            )
                 .dropLastWhile { it == null }
                 .memoryOptimizedMap { it ?: undefined }
         ).makeStmt()
@@ -378,6 +395,17 @@ class JsClassGenerator(private val irClass: IrClass, val context: JsGenerationCo
             ?.mapNotNull { it.asConstructorRef() }
             ?.takeIf { it.isNotEmpty() } ?: return null
         return JsArrayLiteral(listRef.toSmartList())
+    }
+
+    private fun findDefaultConstructor(): JsNameRef? {
+        return when (val defaultConstructor = context.staticContext.backendContext.findDefaultConstructorFor(irClass)) {
+            is IrConstructor -> context.getNameForConstructor(defaultConstructor).makeRef()
+            is IrSimpleFunction -> when {
+                es6mode -> JsNameRef(context.getNameForMemberFunction(defaultConstructor), classNameRef)
+                else -> context.getNameForStaticFunction(defaultConstructor).makeRef()
+            }
+            else -> null
+        }
     }
 
     private fun generateSuspendArity(): JsArrayLiteral? {

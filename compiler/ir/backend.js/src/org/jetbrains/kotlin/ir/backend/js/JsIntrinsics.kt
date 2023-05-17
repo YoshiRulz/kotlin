@@ -335,6 +335,7 @@ class JsIntrinsics(private val irBuiltIns: IrBuiltIns, val context: JsIrBackendC
     }
 
     val jsImplicitExportAnnotationSymbol = context.symbolTable.referenceClass(context.getJsInternalClass("JsImplicitExport"))
+    val jsSkipFullReflectionAnnotationSymbol = context.symbolTable.referenceClass(context.getJsInternalClass("JsSkipFullReflection"))
 
     // TODO move CharSequence-related stiff to IntrinsifyCallsLowering
     val charSequenceClassSymbol = context.symbolTable.referenceClass(context.getClass(FqName("kotlin.CharSequence")))

@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.ir.backend.js.utils.MutableReference
 import org.jetbrains.kotlin.ir.declarations.*
 
 class JsMapping : DefaultMapping() {
+    val classesWithExtendedMetadata = DefaultDelegateFactory.newDeclarationToValueMapping<IrClass, Boolean>()
     val esClassWhichNeedBoxParameters = DefaultDelegateFactory.newDeclarationToValueMapping<IrClass, Boolean>()
     val esClassToPossibilityForOptimization = DefaultDelegateFactory.newDeclarationToValueMapping<IrClass, MutableReference<Boolean>>()
 
@@ -19,6 +20,7 @@ class JsMapping : DefaultMapping() {
     val originalInnerClassPrimaryConstructorByClass = DefaultDelegateFactory.newDeclarationToDeclarationMapping<IrClass, IrConstructor>()
     val secondaryConstructorToDelegate = DefaultDelegateFactory.newDeclarationToDeclarationMapping<IrConstructor, IrSimpleFunction>()
     val secondaryConstructorToFactory = DefaultDelegateFactory.newDeclarationToDeclarationMapping<IrConstructor, IrSimpleFunction>()
+    val classToItsSecondaryConstructors = DefaultDelegateFactory.newDeclarationToValueMapping<IrClass, MutableList<IrSimpleFunction>>()
     val objectToGetInstanceFunction = DefaultDelegateFactory.newDeclarationToDeclarationMapping<IrClass, IrSimpleFunction>()
     val objectToInstanceField = DefaultDelegateFactory.newDeclarationToDeclarationMapping<IrClass, IrField>()
     val classToSyntheticPrimaryConstructor = DefaultDelegateFactory.newDeclarationToDeclarationMapping<IrClass, IrConstructor>()

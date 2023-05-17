@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
 import org.jetbrains.kotlin.serialization.js.ModuleKind
+import org.jetbrains.kotlin.utils.addToStdlib.runIf
 
 internal class JsUsefulDeclarationProcessor(
     override val context: JsIrBackendContext,
@@ -68,6 +69,14 @@ internal class JsUsefulDeclarationProcessor(
                 context.reflectionSymbols.getKClassFromExpression -> {
                     val ref = expression.getTypeArgument(0)?.classOrNull ?: context.irBuiltIns.anyClass
                     referencedJsClassesFromExpressions += ref.owner
+                }
+
+                context.reflectionSymbols.getKClass -> {
+                    val classToCreate = expression.getTypeArgument(0)!!.classifierOrFail.owner as IrClass
+                    val defaultConstructor = runIf(classToCreate.isClass) {
+                        context.findDefaultConstructorFor(classToCreate)
+                    }
+                    defaultConstructor?.enqueue(data, "intrinsic: KClass<*>.createInstance")
                 }
 
                 context.intrinsics.jsObjectCreateSymbol -> {

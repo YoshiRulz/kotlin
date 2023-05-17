@@ -77,6 +77,7 @@ class ES6ConstructorLowering(val context: JsIrBackendContext) : DeclarationTrans
                         statements.add(JsIrBuilder.buildReturn(symbol, selfReplacedConstructorCall, returnType))
                     }
                 }
+                origin = PrimaryConstructorLowering.SYNTHETIC_PRIMARY_CONSTRUCTOR
             }
         }
     }

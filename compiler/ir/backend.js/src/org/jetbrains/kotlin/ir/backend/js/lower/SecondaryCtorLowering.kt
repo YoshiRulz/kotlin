@@ -230,7 +230,11 @@ private fun JsIrBackendContext.buildConstructorDelegate(constructor: IrConstruct
 
 private fun JsIrBackendContext.buildConstructorFactory(constructor: IrConstructor, klass: IrClass): IrSimpleFunction {
     return mapping.secondaryConstructorToFactory.getOrPut(constructor) {
-        buildFactoryDeclaration(constructor, klass)
+        buildFactoryDeclaration(constructor, klass).also {
+            mapping.classToItsSecondaryConstructors
+                .getOrPut(klass) { mutableListOf() }
+                .add(it)
+        }
     }
 }
 
