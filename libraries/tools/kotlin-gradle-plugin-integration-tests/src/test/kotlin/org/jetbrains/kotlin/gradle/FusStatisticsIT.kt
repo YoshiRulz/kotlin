@@ -16,7 +16,11 @@ import java.nio.file.Path
 //Tests for FUS statistics have to create new instance of KotlinBuildStatsService
 class FusStatisticsIT : KGPDaemonsBaseTest() {
     @DisplayName("for dokka")
-    @GradleTest
+    @GradleTestVersions(
+        minVersion = TestVersions.Gradle.G_7_4,
+        additionalVersions = [TestVersions.Gradle.G_7_6],
+        maxVersion = TestVersions.Gradle.G_8_1
+    )
     fun testDokka(gradleVersion: GradleVersion) {
         project(
             "simpleProject",
@@ -48,6 +52,11 @@ class FusStatisticsIT : KGPDaemonsBaseTest() {
 
     @DisplayName("general fields")
     @GradleTest
+    @GradleTestVersions(
+        minVersion = TestVersions.Gradle.G_7_4,
+        additionalVersions = [TestVersions.Gradle.G_7_6],
+        maxVersion = TestVersions.Gradle.G_8_1
+    )
     fun testFusStatistics(gradleVersion: GradleVersion) {
         project(
             "simpleProject",
@@ -76,6 +85,11 @@ class FusStatisticsIT : KGPDaemonsBaseTest() {
 
     @DisplayName("for failed build")
     @GradleTest
+    @GradleTestVersions(
+        minVersion = TestVersions.Gradle.G_7_4,
+        additionalVersions = [TestVersions.Gradle.G_7_6],
+        maxVersion = TestVersions.Gradle.G_8_1
+    )
     fun testFusStatisticsForFailedBuild(gradleVersion: GradleVersion) {
         project(
             "simpleProject",

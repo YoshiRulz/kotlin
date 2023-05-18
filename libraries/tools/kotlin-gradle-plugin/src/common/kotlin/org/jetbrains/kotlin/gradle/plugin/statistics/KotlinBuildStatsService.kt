@@ -282,7 +282,10 @@ internal abstract class AbstractKotlinBuildStatsService(
     private val sessionLoggerRootPath =
         customSessionLoggerRootPath?.let { File(it) } ?: gradle.gradleUserHomeDir
 
-    protected val sessionLogger = BuildSessionLogger(sessionLoggerRootPath, forceValuesValidation = forcePropertiesValidation)
+    protected val sessionLogger = BuildSessionLogger(
+        sessionLoggerRootPath,
+        forceValuesValidation = forcePropertiesValidation,
+    )
 
     private fun gradleBuildStartTime(gradle: Gradle): Long? {
         return (gradle as? DefaultGradle)?.services?.get(BuildRequestMetaData::class.java)?.startTime

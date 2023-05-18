@@ -17,6 +17,7 @@ import org.gradle.tooling.events.task.TaskFinishEvent
 import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.gradle.plugin.BuildEventsListenerRegistryHolder
 import org.jetbrains.kotlin.gradle.plugin.StatisticsBuildFlowManager
+import org.jetbrains.kotlin.gradle.utils.isConfigurationCacheAvailable
 import org.jetbrains.kotlin.gradle.utils.registerClassLoaderScopedBuildService
 import org.jetbrains.kotlin.statistics.metrics.BooleanMetrics
 import org.jetbrains.kotlin.statistics.metrics.IStatisticsValuesConsumer
@@ -46,7 +47,7 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
             }
             if (GradleVersion.current().baseVersion < GradleVersion.version("8.1")) {
                 BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
-            } else {
+            } else if (!isConfigurationCacheAvailable(project.gradle)) {
                 StatisticsBuildFlowManager.getInstance(project).subscribeForBuildResult(project)
             }
 

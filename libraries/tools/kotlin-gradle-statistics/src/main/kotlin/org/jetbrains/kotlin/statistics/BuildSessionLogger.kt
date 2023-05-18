@@ -20,7 +20,7 @@ class BuildSessionLogger(
     private val maxProfileFiles: Int = DEFAULT_MAX_PROFILE_FILES,
     private val maxFileSize: Long = DEFAULT_MAX_PROFILE_FILE_SIZE,
     private val maxFileAge: Long = DEFAULT_MAX_FILE_AGE,
-    private val forceValuesValidation: Boolean = false
+    private val forceValuesValidation: Boolean = false,
 ) : IStatisticsValuesConsumer {
 
     companion object {
