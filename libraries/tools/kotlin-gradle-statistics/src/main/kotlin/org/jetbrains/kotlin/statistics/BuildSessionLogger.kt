@@ -131,7 +131,10 @@ class BuildSessionLogger(
     }
 
     @Synchronized
-    fun finishBuildSession(@Suppress("UNUSED_PARAMETER") action: String?, buildFailed: Boolean) {
+    fun finishBuildSession(
+        @Suppress("UNUSED_PARAMETER") action: String?,
+        buildFailed: Boolean,
+    ) {
         try {
             // nanotime could not be used as build start time in nanotime is unknown. As result, the measured duration
             // could be affected by system clock correction

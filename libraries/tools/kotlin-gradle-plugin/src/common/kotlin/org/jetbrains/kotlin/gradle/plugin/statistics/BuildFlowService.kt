@@ -37,7 +37,7 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
         ): Provider<BuildFlowService> {
             val buildService = project.gradle.registerClassLoaderScopedBuildService(BuildFlowService::class) { spec ->
                 spec.parameters.configurationMetrics.set(project.provider {
-                    KotlinBuildStatsService.getInstance()?.collectedStartMetrics(project)
+                    KotlinBuildStatsService.getInstance()?.collectStartMetrics(project)
                 })
             }
 

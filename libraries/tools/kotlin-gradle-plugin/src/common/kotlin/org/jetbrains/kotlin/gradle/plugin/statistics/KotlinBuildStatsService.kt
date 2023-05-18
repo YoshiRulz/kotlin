@@ -220,7 +220,7 @@ internal abstract class KotlinBuildStatsService internal constructor() : IStatis
     /**
      * Collect project general and configuration metrics at the start of a build
      */
-    open fun collectedStartMetrics(project: Project): MetricContainer = MetricContainer()
+    open fun collectStartMetrics(project: Project): MetricContainer = MetricContainer()
 
     open fun recordProjectsEvaluated(gradle: Gradle) {}
 }
@@ -335,6 +335,6 @@ internal class DefaultKotlinBuildStatsService internal constructor(
         KotlinBuildStatHandler().reportBuildFinished(sessionLogger, action, buildFailed, configurationTimeMetrics)
     }
 
-    override fun collectedStartMetrics(project: Project) = KotlinBuildStatHandler().collectConfigurationTimeMetrics(project, sessionLogger)
+    override fun collectStartMetrics(project: Project) = KotlinBuildStatHandler().collectConfigurationTimeMetrics(project, sessionLogger)
 
 }
