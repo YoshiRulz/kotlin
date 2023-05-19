@@ -41,21 +41,14 @@ fun IrFile.transformConst(
         IrInterpreterCommonChecker(),
     )
 
-    val irConstExpressionTransformer = IrConstExpressionTransformer(
-        interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions
-    )
-    val irConstDeclarationAnnotationTransformer = IrConstDeclarationAnnotationTransformer(
-        interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions
-    )
-    val irConstTypeAnnotationTransformer = IrConstTypeAnnotationTransformer(
-        interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions
+    val transformers = setOf(
+        IrConstExpressionTransformer(interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions),
+        IrConstDeclarationAnnotationTransformer(interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions),
+        IrConstTypeAnnotationTransformer(interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions)
     )
 
-    checkers.fold(preprocessedFile) { file, checker ->
-        irConstExpressionTransformer.transform(file, checker)
-        irConstDeclarationAnnotationTransformer.transform(file, checker)
-        irConstTypeAnnotationTransformer.transform(file, checker)
-        file
+    checkers.forEach { checker ->
+        transformers.forEach { it.transform(preprocessedFile, checker) }
     }
 }
 
