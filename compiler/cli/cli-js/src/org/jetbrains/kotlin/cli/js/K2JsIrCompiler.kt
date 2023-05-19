@@ -67,8 +67,8 @@ import java.io.IOException
 
 private val K2JSCompilerArguments.granularity: JsGenerationGranularity
     get() = when {
-        this.irPerModule -> JsGenerationGranularity.PER_MODULE
         this.irPerFile -> JsGenerationGranularity.PER_FILE
+        this.irPerModule -> JsGenerationGranularity.PER_MODULE
         else -> JsGenerationGranularity.WHOLE_PROGRAM
     }
 
