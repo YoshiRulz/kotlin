@@ -830,12 +830,6 @@ private val cleanupLoweringPhase = makeBodyLoweringPhase(
     description = "Clean up IR before codegen"
 )
 
-private val moveAllClassesToSeparatePlaceLowering = makeCustomJsModulePhase(
-    ::moveAllClassesToSeparateFiles,
-    name = "MoveOpenClassesToSeparateFiles",
-    description = "Move open classes to separate files"
-).toModuleLowering()
-
 private val jsSuspendArityStorePhase = makeDeclarationTransformerPhase(
     ::JsSuspendArityStoreLowering,
     name = "JsSuspendArityStoreLowering",
@@ -895,7 +889,6 @@ val loweringList = listOf<Lowering>(
     addContinuationToNonLocalSuspendFunctionsLoweringPhase,
     addContinuationToLocalSuspendFunctionsLoweringPhase,
     addContinuationToFunctionCallsLoweringPhase,
-    moveAllClassesToSeparatePlaceLowering,
     enumWhenPhase,
     enumEntryInstancesLoweringPhase,
     enumEntryInstancesBodyLoweringPhase,

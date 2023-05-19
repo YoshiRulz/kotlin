@@ -58,7 +58,7 @@ internal annotation class marker
  *
  */
 @Retention(AnnotationRetention.BINARY)
-@Target(CLASS, FUNCTION, PROPERTY, CONSTRUCTOR, PROPERTY_GETTER, PROPERTY_SETTER)
+@Target(FILE, CLASS, FUNCTION, PROPERTY, CONSTRUCTOR, PROPERTY_GETTER, PROPERTY_SETTER)
 public actual annotation class JsName(actual val name: String)
 
 /**

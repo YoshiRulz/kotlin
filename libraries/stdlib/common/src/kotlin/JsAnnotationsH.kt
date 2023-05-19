@@ -10,7 +10,7 @@ import kotlin.annotation.AnnotationTarget.*
 /**
  * Gives a declaration (a function, a property or a class) specific name in JavaScript.
  */
-@Target(CLASS, FUNCTION, PROPERTY, CONSTRUCTOR, PROPERTY_GETTER, PROPERTY_SETTER)
+@Target(FILE, CLASS, FUNCTION, PROPERTY, CONSTRUCTOR, PROPERTY_GETTER, PROPERTY_SETTER)
 @OptionalExpectation
 public expect annotation class JsName(val name: String)
 

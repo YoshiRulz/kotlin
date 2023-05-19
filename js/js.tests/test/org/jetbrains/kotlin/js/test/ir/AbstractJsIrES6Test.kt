@@ -19,6 +19,8 @@ abstract class AbstractJsIrES6Test(
         with(builder) {
             defaultDirectives {
                 +JsEnvironmentConfigurationDirectives.ES6_MODE
+                +JsEnvironmentConfigurationDirectives.ES_MODULES
+                +JsEnvironmentConfigurationDirectives.SPLIT_PER_FILE
             }
         }
     }

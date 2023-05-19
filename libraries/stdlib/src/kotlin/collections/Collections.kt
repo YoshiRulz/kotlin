@@ -3,6 +3,9 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
+// TODO: Suppress will be until the next bootstrapping, so it should be removed after the bootstrapping
+@file:Suppress("ANNOTATION_IS_NOT_APPLICABLE_TO_MULTIFILE_CLASSES")
+@file:kotlin.js.JsName("CollectionsKt")
 @file:kotlin.jvm.JvmMultifileClass
 @file:kotlin.jvm.JvmName("CollectionsKt")
 @file:OptIn(kotlin.experimental.ExperimentalTypeInference::class)
