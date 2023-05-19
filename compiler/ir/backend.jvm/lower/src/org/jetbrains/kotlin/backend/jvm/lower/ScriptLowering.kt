@@ -707,7 +707,7 @@ private class ScriptToClassTransformer(
     }
 
     override fun visitGetField(expression: IrGetField, data: ScriptToClassTransformerContext): IrExpression {
-        if (expression.receiver == null && expression.symbol.owner.needsScriptReceiver()) {
+        if (expression.receiver == null && expression.symbol.owner.parent.let { it == irScript || it == irScriptClass }) {
             expression.receiver =
                 getAccessCallForScriptInstance(
                     data, expression.startOffset, expression.endOffset, expression.origin, originalReceiverParameter = null
