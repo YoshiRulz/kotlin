@@ -43,17 +43,19 @@ fun IrFile.transformConst(
 
     checkers.fold(preprocessedFile) { file, checker ->
         val irConstExpressionTransformer = IrConstExpressionTransformer(
-            interpreter, file, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions
+            interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions
         )
         val irConstDeclarationAnnotationTransformer = IrConstDeclarationAnnotationTransformer(
-            interpreter, file, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions
+            interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions
         )
         val irConstTypeAnnotationTransformer = IrConstTypeAnnotationTransformer(
-            interpreter, file, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions
+            interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions
         )
-        file.transform(irConstExpressionTransformer, null)
-        file.transform(irConstDeclarationAnnotationTransformer, null)
-        file.transform(irConstTypeAnnotationTransformer, null)
+
+        irConstExpressionTransformer.transform(file)
+        irConstDeclarationAnnotationTransformer.transform(file)
+        irConstTypeAnnotationTransformer.transform(file)
+        file
     }
 }
 
@@ -61,7 +63,6 @@ fun IrFile.transformConst(
 // that is used later in `IrConstTypeAnnotationTransformer`.
 internal abstract class IrConstTransformer(
     protected val interpreter: IrInterpreter,
-    private val irFile: IrFile,
     private val mode: EvaluationMode,
     private val checker: IrInterpreterChecker,
     private val evaluatedConstTracker: EvaluatedConstTracker? = null,
@@ -69,6 +70,13 @@ internal abstract class IrConstTransformer(
     private val onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     private val suppressExceptions: Boolean,
 ) : IrElementTransformer<Nothing?> {
+    protected lateinit var irFile: IrFile
+
+    fun transform(irFile: IrFile) {
+        this.irFile = irFile
+        irFile.accept(this, null)
+    }
+
     private fun IrExpression.warningIfError(original: IrExpression): IrExpression {
         if (this is IrErrorExpression) {
             onWarning(irFile, original, this)

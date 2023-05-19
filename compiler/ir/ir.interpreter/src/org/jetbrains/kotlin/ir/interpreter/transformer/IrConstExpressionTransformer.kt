@@ -24,14 +24,13 @@ import kotlin.math.min
 
 internal class IrConstExpressionTransformer(
     interpreter: IrInterpreter,
-    irFile: IrFile,
     mode: EvaluationMode,
     checker: IrInterpreterChecker,
     evaluatedConstTracker: EvaluatedConstTracker?,
     onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
     onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     suppressExceptions: Boolean,
-) : IrConstTransformer(interpreter, irFile, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions) {
+) : IrConstTransformer(interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions) {
     override fun visitCall(expression: IrCall, data: Nothing?): IrElement {
         if (expression.canBeInterpreted()) {
             return expression.interpret(failAsError = false)

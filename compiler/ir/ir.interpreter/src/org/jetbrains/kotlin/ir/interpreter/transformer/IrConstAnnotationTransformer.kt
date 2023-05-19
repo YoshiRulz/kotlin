@@ -21,14 +21,25 @@ import org.jetbrains.kotlin.ir.types.*
 
 internal abstract class IrConstAnnotationTransformer(
     interpreter: IrInterpreter,
-    irFile: IrFile,
     mode: EvaluationMode,
     checker: IrInterpreterChecker,
     evaluatedConstTracker: EvaluatedConstTracker?,
     onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
     onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     suppressExceptions: Boolean,
-) : IrConstTransformer(interpreter, irFile, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions) {
+) : IrConstTransformer(interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions) {
+    private val visitedAnnotations = mutableMapOf<IrFile, MutableList<IrConstructorCall>>()
+
+    override fun visitFile(declaration: IrFile, data: Nothing?): IrFile {
+        if (visitedAnnotations.containsKey(declaration)) {
+            visitedAnnotations[declaration]?.forEach { annotation -> transformAnnotation(annotation) }
+            return declaration
+        }
+
+        visitedAnnotations[declaration] = mutableListOf()
+        return super.visitFile(declaration, data)
+    }
+
     protected fun transformAnnotations(annotationContainer: IrAnnotationContainer) {
         annotationContainer.annotations.forEach { annotation ->
             transformAnnotation(annotation)
@@ -36,6 +47,7 @@ internal abstract class IrConstAnnotationTransformer(
     }
 
     private fun transformAnnotation(annotation: IrConstructorCall) {
+        visitedAnnotations[irFile]?.add(annotation)
         for (i in 0 until annotation.valueArgumentsCount) {
             val arg = annotation.getValueArgument(i) ?: continue
             annotation.putValueArgument(i, transformAnnotationArgument(arg, annotation.symbol.owner.valueParameters[i]))
