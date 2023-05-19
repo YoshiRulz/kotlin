@@ -726,5 +726,6 @@ val wasmPhases = SameTypeNamedCompilerPhase(
 
             virtualDispatchReceiverExtractionPhase then
             staticMembersLoweringPhase then
+            inlineObjectsWithPureInitializationLoweringPhase then
             validateIrAfterLowering
 )
