@@ -5,7 +5,7 @@
 
 package org.jetbrains.kotlin.wasm.ir
 
-import org.jetbrains.kotlin.utils.removeLastFrom
+import org.jetbrains.kotlin.utils.removeLastStartingFrom
 import org.jetbrains.kotlin.wasm.ir.source.location.SourceLocation
 
 private fun WasmOp.isOutCfgNode() = when (this) {
@@ -78,7 +78,7 @@ class WasmIrExpressionBuilder(
 
         // droppable instructions + drop/unreachable -> nothing
         if ((op == WasmOp.DROP || op == WasmOp.UNREACHABLE) && lastOperator.pureStacklessInstruction()) {
-            expression.removeLastFrom(lastInstructionId)
+            expression.removeLastStartingFrom(lastInstructionId)
             return
         }
 
@@ -88,7 +88,7 @@ class WasmIrExpressionBuilder(
             if (localSetNumber != null) {
                 val localGetNumber = (immediates.firstOrNull() as? WasmImmediate.LocalIdx)?.value
                 if (localGetNumber == localSetNumber) {
-                    expression.removeLastFrom(lastInstructionId)
+                    expression.removeLastStartingFrom(lastInstructionId)
                     addInstruction(WasmOp.LOCAL_TEE, location, immediates)
                     return
                 }
