@@ -33,7 +33,7 @@ inline fun <reified R> Collection<*>.filterIsInstanceAnd(predicate: (R) -> Boole
     return filterIsInstanceAndTo(SmartList(), predicate)
 }
 
-public fun <T> MutableList<T>.removeLastFrom(index: Int) {
+public fun <T> MutableList<T>.removeLastStartingFrom(index: Int) {
     subList(index, size).clear()
 }
 
