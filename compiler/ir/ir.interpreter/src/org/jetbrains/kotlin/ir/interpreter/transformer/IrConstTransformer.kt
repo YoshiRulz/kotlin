@@ -41,20 +41,20 @@ fun IrFile.transformConst(
         IrInterpreterCommonChecker(),
     )
 
-    checkers.fold(preprocessedFile) { file, checker ->
-        val irConstExpressionTransformer = IrConstExpressionTransformer(
-            interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions
-        )
-        val irConstDeclarationAnnotationTransformer = IrConstDeclarationAnnotationTransformer(
-            interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions
-        )
-        val irConstTypeAnnotationTransformer = IrConstTypeAnnotationTransformer(
-            interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions
-        )
+    val irConstExpressionTransformer = IrConstExpressionTransformer(
+        interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions
+    )
+    val irConstDeclarationAnnotationTransformer = IrConstDeclarationAnnotationTransformer(
+        interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions
+    )
+    val irConstTypeAnnotationTransformer = IrConstTypeAnnotationTransformer(
+        interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions
+    )
 
-        irConstExpressionTransformer.transform(file)
-        irConstDeclarationAnnotationTransformer.transform(file)
-        irConstTypeAnnotationTransformer.transform(file)
+    checkers.fold(preprocessedFile) { file, checker ->
+        irConstExpressionTransformer.transform(file, checker)
+        irConstDeclarationAnnotationTransformer.transform(file, checker)
+        irConstTypeAnnotationTransformer.transform(file, checker)
         file
     }
 }
@@ -64,16 +64,17 @@ fun IrFile.transformConst(
 internal abstract class IrConstTransformer(
     protected val interpreter: IrInterpreter,
     private val mode: EvaluationMode,
-    private val checker: IrInterpreterChecker,
     private val evaluatedConstTracker: EvaluatedConstTracker? = null,
     private val onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
     private val onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     private val suppressExceptions: Boolean,
 ) : IrElementTransformer<Nothing?> {
     protected lateinit var irFile: IrFile
+    private lateinit var checker: IrInterpreterChecker
 
-    fun transform(irFile: IrFile) {
+    fun transform(irFile: IrFile, checker: IrInterpreterChecker) {
         this.irFile = irFile
+        this.checker = checker
         irFile.accept(this, null)
     }
 

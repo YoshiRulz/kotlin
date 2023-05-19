@@ -21,12 +21,11 @@ import org.jetbrains.kotlin.ir.util.primaryConstructor
 internal class IrConstDeclarationAnnotationTransformer(
     interpreter: IrInterpreter,
     mode: EvaluationMode,
-    checker: IrInterpreterChecker,
     evaluatedConstTracker: EvaluatedConstTracker?,
     onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
     onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     suppressExceptions: Boolean,
-) : IrConstAnnotationTransformer(interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions) {
+) : IrConstAnnotationTransformer(interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions) {
     override fun visitFile(declaration: IrFile, data: Nothing?): IrFile {
         transformAnnotations(declaration)
         return super.visitFile(declaration, data)

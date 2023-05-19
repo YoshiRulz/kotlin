@@ -20,12 +20,11 @@ import org.jetbrains.kotlin.ir.visitors.IrTypeTransformerVoid
 internal class IrConstTypeAnnotationTransformer(
     interpreter: IrInterpreter,
     mode: EvaluationMode,
-    checker: IrInterpreterChecker,
     evaluatedConstTracker: EvaluatedConstTracker?,
     onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
     onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     suppressExceptions: Boolean,
-) : IrConstAnnotationTransformer(interpreter, mode, checker, evaluatedConstTracker, onWarning, onError, suppressExceptions),
+) : IrConstAnnotationTransformer(interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions),
     IrTypeTransformerVoid<Nothing?> {
 
     override fun <Type : IrType?> transformType(container: IrElement, type: Type, data: Nothing?): Type {
