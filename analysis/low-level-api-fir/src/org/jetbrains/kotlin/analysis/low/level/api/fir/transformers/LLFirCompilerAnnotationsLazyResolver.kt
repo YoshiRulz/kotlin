@@ -161,13 +161,13 @@ private class LLFirCompilerRequiredAnnotationsTargetResolver(
         }
 
         val map = hashMapOf<FirElementWithResolveState, List<FirAnnotation>>()
-        var readed = false
+        var isUnresolved = false
         withReadLock(this) {
-            readed = true
+            isUnresolved = true
             annotationsForTransformationTo(map)
         }
 
-        return map.takeIf { readed }?.let(::AnnotationTransformer)
+        return map.takeIf { isUnresolved }?.let(::AnnotationTransformer)
     }
 
     private inner class AnnotationTransformer(
