@@ -5,6 +5,8 @@
 
 package org.jetbrains.kotlin.gradle.plugin.diagnostics.checkers
 
+import org.jetbrains.kotlin.gradle.plugin.KotlinPluginLifecycle
+import org.jetbrains.kotlin.gradle.plugin.await
 import org.jetbrains.kotlin.gradle.plugin.diagnostics.KotlinGradleProjectChecker
 import org.jetbrains.kotlin.gradle.plugin.diagnostics.KotlinGradleProjectCheckerContext
 import org.jetbrains.kotlin.gradle.plugin.diagnostics.KotlinToolingDiagnostics
@@ -16,6 +18,9 @@ import org.jetbrains.kotlin.gradle.targets.native.internal.isAllowCommonizer
 
 internal object DisabledCinteropCommonizationInHmppProjectChecker : KotlinGradleProjectChecker {
     override suspend fun KotlinGradleProjectCheckerContext.runChecks(collector: KotlinToolingDiagnosticsCollector) {
+        // `isAllowCommonizer` is not lifecycle-aware, but requires afterEvaluate-phase, so have to await manually
+        KotlinPluginLifecycle.Stage.ReadyForExecution.await()
+
         if (multiplatformExtension == null
             || !project.isAllowCommonizer()
             || kotlinPropertiesProvider.enableCInteropCommonization
