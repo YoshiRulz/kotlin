@@ -72,7 +72,7 @@ class SerializationPluginContext(baseContext: IrPluginContext, val metadataPlugi
     internal val lazyModePublicationEnumEntry =
         lazyModeClass.enumEntries().single { it.name == SerializationDependencies.LAZY_PUBLICATION_MODE_NAME }
     internal val lazyFunctionSymbol =
-        referenceFunctions(CallableId(StandardNames.BUILT_INS_PACKAGE_FQ_NAME, Name.identifier("lazy"))).single {
+        referenceFunctions(CallableId(StandardNames.BUILT_INS_PACKAGE_FQ_NAME, Name.identifier("lazy"))).first {
             it.owner.valueParameters.size == 2 && it.owner.valueParameters[0].type == lazyModeClass.defaultType
         }
     internal val lazyClass = referenceClass(ClassId.topLevel(SerializationDependencies.LAZY_FQ))!!.owner
