@@ -33,6 +33,12 @@ inline fun <reified R> Collection<*>.filterIsInstanceAnd(predicate: (R) -> Boole
     return filterIsInstanceAndTo(SmartList(), predicate)
 }
 
+/**
+ * Removes all elements from this [MutableList] starting from the provided [index] to the end.
+ * It looks like [dropLast] but there are 2 key differences:
+ * - It mutates the provided [MutableList] instead of returning the new transformed one
+ * - Instead of number of elements to remove, it accepts the start index (inclusive)
+ */
 public fun <T> MutableList<T>.removeLastStartingFrom(index: Int) {
     subList(index, size).clear()
 }
