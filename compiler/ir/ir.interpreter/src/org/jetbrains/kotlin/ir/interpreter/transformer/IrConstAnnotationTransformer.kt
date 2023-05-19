@@ -77,12 +77,14 @@ internal abstract class IrConstAnnotationTransformer : IrConstTransformer() {
     }
 
     private fun IrExpression.transformSingleArg(expectedType: IrType): IrExpression {
-        if (this.canBeInterpreted(configuration = interpreter.environment.configuration.copy(treatFloatInSpecialWay = false))) {
-            return this.interpret(failAsError = true).convertToConstIfPossible(expectedType)
-        } else if (this is IrConstructorCall) {
-            transformAnnotation(this)
+        return when (this) {
+            is IrConstructorCall -> {
+                transformAnnotation(this)
+                this
+            }
+            is IrGetEnumValue, is IrClassReference -> this.transform(this@IrConstAnnotationTransformer, null)
+            else -> this.interpret(failAsError = true).convertToConstIfPossible(expectedType)
         }
-        return this
     }
 
     private fun IrExpression.convertToConstIfPossible(type: IrType): IrExpression {
