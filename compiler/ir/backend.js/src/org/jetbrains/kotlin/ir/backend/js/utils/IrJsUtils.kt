@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.ir.backend.js.export.isExported
 import org.jetbrains.kotlin.ir.backend.js.ir.JsIrBuilder
 import org.jetbrains.kotlin.ir.backend.js.lower.isBoxParameter
 import org.jetbrains.kotlin.ir.backend.js.lower.isEs6ConstructorReplacement
+import org.jetbrains.kotlin.ir.backend.js.lower.isSyntheticConstructorForExport
 import org.jetbrains.kotlin.ir.backend.js.lower.isSyntheticPrimaryConstructor
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -119,7 +120,7 @@ fun JsIrBackendContext.findDefaultConstructorFor(irClass: IrClass): IrFunction? 
             .filterIsInstanceAnd<IrSimpleFunction> { it.isEs6ConstructorReplacement }
         else -> mapping.classToItsSecondaryConstructors[irClass].orEmpty()
     }
-        .plus(listOfNotNull(irClass.primaryConstructor?.takeIf { !it.isSyntheticPrimaryConstructor }))
+        .plus(listOfNotNull(irClass.primaryConstructor?.takeIf { !it.isSyntheticPrimaryConstructor && !it.isSyntheticConstructorForExport }))
         .singleOrNull { it.visibility == DescriptorVisibilities.PUBLIC && it.isDefaultConstructor() }
 }
 
