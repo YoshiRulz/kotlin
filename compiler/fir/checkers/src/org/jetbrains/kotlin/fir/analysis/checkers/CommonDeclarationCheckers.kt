@@ -172,4 +172,9 @@ object CommonDeclarationCheckers : DeclarationCheckers() {
 
     override val valueParameterCheckers: Set<FirValueParameterChecker>
         get() = setOf()
+
+    override val enumEntryCheckers: Set<FirEnumEntryChecker>
+        get() = setOf(
+            FirNotImplementedOverrideSimpleEnumEntryChecker,
+        )
 }
