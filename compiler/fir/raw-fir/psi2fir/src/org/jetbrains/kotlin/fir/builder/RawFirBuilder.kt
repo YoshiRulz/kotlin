@@ -1326,7 +1326,7 @@ open class RawFirBuilder(
                                         (property.returnTypeRef.psi as KtTypeReference?).toFirOrImplicitType()
                                     }
                                 },
-                                addValueParameterAnnotations = { addAnnotationsFrom(it as KtParameter, true) },
+                                addValueParameterAnnotations = { addAnnotationsFrom(it as KtParameter, isFromPrimaryConstructor = true) },
                             ).generate()
                         }
 
