@@ -430,7 +430,7 @@ val distJs = distTask<Sync>("distJs") {
 }
 
 val compilerZipSbomName = "kotlin-compiler-zip"
-val compilerZipSbom = configureSbom(
+val sbom = configureSbom(
     moduleName = compilerZipSbomName,
     gradleConfigurations = setOf("runtimeClasspath", libraries.name, librariesStripVersion.name, compilerPlugins.name)
 )
@@ -442,10 +442,11 @@ distTask<Copy>("dist") {
     dependsOn(distCommon)
     dependsOn(distMaven)
     dependsOn(distJs)
+    dependsOn("spdxSbomForKotlin-compiler-zip")
 
     from(buildNumber)
     from(distStdlibMinimalForTests)
-    from(compilerZipSbom.artifacts.files) {
+    from(sbom.file) {
         rename("$compilerZipSbomName.spdx.json", "${project.name}-${project.version}.spdx.json")
     }
 }
