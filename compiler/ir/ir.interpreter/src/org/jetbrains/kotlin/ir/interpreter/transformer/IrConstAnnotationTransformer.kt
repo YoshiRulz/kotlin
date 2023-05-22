@@ -27,14 +27,29 @@ internal abstract class IrConstAnnotationTransformer(
     onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     suppressExceptions: Boolean,
 ) : IrConstTransformer(interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions) {
-    private val visitedAnnotations = mutableMapOf<IrFile, MutableList<IrConstructorCall>>()
+    private class Cache {
+        private val cache = mutableListOf<IrConstructorCall>()
+        private var mustCache = true
+
+        fun add(value: IrConstructorCall) {
+            if (!mustCache) return
+            cache += value
+        }
+
+        fun forEach(block: (IrConstructorCall) -> Unit) {
+            mustCache = false
+            cache.forEach { block(it) }
+        }
+    }
+
+    private val visitedAnnotations = mutableMapOf<IrFile, Cache>()
 
     override fun visitFile(declaration: IrFile, data: Nothing?): IrFile {
         visitedAnnotations[declaration]
             ?.forEach { annotation -> transformAnnotation(annotation) }
             ?.let { return declaration }
 
-        visitedAnnotations[declaration] = mutableListOf()
+        visitedAnnotations[declaration] = Cache()
         return super.visitFile(declaration, data)
     }
 
