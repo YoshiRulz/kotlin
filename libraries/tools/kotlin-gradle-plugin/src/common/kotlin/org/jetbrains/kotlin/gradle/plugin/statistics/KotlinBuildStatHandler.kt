@@ -169,7 +169,7 @@ class KotlinBuildStatHandler {
                     }.toLong()
                 )
 
-                if (buildSrcExists(project)) {
+                if (project.name == "buildSrc") {
                     configurationTimeMetrics.put(NumericalMetrics.BUILD_SRC_COUNT, 1)
                     configurationTimeMetrics.put(BooleanMetrics.BUILD_SRC_EXISTS, true)
                 }

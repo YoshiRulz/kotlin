@@ -18,7 +18,6 @@ import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.gradle.plugin.BuildEventsListenerRegistryHolder
 import org.jetbrains.kotlin.gradle.plugin.StatisticsBuildFlowManager
 import org.jetbrains.kotlin.gradle.utils.isConfigurationCacheAvailable
-import org.jetbrains.kotlin.gradle.utils.registerClassLoaderScopedBuildService
 import org.jetbrains.kotlin.statistics.metrics.BooleanMetrics
 import org.jetbrains.kotlin.statistics.metrics.IStatisticsValuesConsumer
 import org.jetbrains.kotlin.statistics.metrics.NumericalMetrics
@@ -33,35 +32,40 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
     }
 
     companion object {
-        fun registerIfAbsentImpl(
+        private val serviceName = "${BuildFlowService::class.simpleName}_${BuildFlowService::class.java.classLoader.hashCode()}"
+        fun registerIfAbsent(
             project: Project,
         ): Provider<BuildFlowService> {
-            val buildService = project.gradle.registerClassLoaderScopedBuildService(BuildFlowService::class) { spec ->
+
+            project.gradle.sharedServices.registrations.findByName(serviceName)?.let {
+                @Suppress("UNCHECKED_CAST")
+                return it.service as Provider<BuildFlowService>
+            }
+
+            return project.gradle.sharedServices.registerIfAbsent(serviceName, BuildFlowService::class.java) { spec ->
+                KotlinBuildStatsService.applyIfInitialised {
+                    it.recordProjectsEvaluated(project.gradle)
+                }
+
                 spec.parameters.configurationMetrics.set(project.provider {
                     KotlinBuildStatsService.getInstance()?.collectStartMetrics(project)
                 })
-            }
-
-            KotlinBuildStatsService.applyIfInitialised {
-                it.recordProjectsEvaluated(project.gradle)
-            }
-
-            when {
-                GradleVersion.current().baseVersion < GradleVersion.version("7.4") ->
-                    //known issue for Gradle with configurationCache: https://github.com/gradle/gradle/issues/20001
-                    if (!isConfigurationCacheAvailable(project.gradle)) {
+            }.also { buildService ->
+                when {
+                    GradleVersion.current().baseVersion < GradleVersion.version("7.4") ->
+                        //known issue for Gradle with configurationCache: https://github.com/gradle/gradle/issues/20001
+                        if (!isConfigurationCacheAvailable(project.gradle) || !project.rootDir.resolve("buildSrc").exists()) {
+                            BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
+                        }
+                    GradleVersion.current().baseVersion < GradleVersion.version("8.1") ->
                         BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
-                    }
-                GradleVersion.current().baseVersion < GradleVersion.version("8.1") ->
-                    BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
-                else ->
-                    if (!isConfigurationCacheAvailable(project.gradle)) {
-                        //known issue. Cant reuse cache if file is changed in gradle_user_home dir: KT-58768
-                        StatisticsBuildFlowManager.getInstance(project).subscribeForBuildResult(project)
-                    }
+                    else ->
+                        if (!isConfigurationCacheAvailable(project.gradle)) {
+                            //known issue. Cant reuse cache if file is changed in gradle_user_home dir: KT-58768
+                            StatisticsBuildFlowManager.getInstance(project).subscribeForBuildResult(project)
+                        }
+                }
             }
-
-            return buildService
         }
     }
 
@@ -73,6 +77,9 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
 
     override fun close() {
         recordBuildFinished(null, buildFailed)
+        KotlinBuildStatsService.applyIfInitialised {
+            it.close()
+        }
     }
 
     internal fun recordBuildFinished(action: String?, buildFailed: Boolean) {

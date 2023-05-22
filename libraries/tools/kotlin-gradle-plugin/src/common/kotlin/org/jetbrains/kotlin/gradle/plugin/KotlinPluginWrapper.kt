@@ -66,18 +66,17 @@ abstract class DefaultKotlinBasePlugin : KotlinBasePlugin {
     override val pluginVersion: String = getKotlinPluginVersion(logger)
 
     override fun apply(project: Project) {
+
+        KotlinBuildStatsService.getOrCreateInstance(project)?.apply {
+            report(StringMetrics.KOTLIN_COMPILER_VERSION, pluginVersion)
+        }
+        BuildFlowService.registerIfAbsent(project)
+
         checkGradleCompatibility()
 
         project.gradle.projectsEvaluated {
             whenBuildEvaluated(project)
         }
-
-        val kotlinPluginVersion = project.getKotlinPluginVersion()
-
-        KotlinBuildStatsService.getOrCreateInstance(project)?.apply {
-            report(StringMetrics.KOTLIN_COMPILER_VERSION, kotlinPluginVersion)
-        }
-        BuildFlowService.registerIfAbsentImpl(project)
 
         addKotlinCompilerConfiguration(project)
 
@@ -92,7 +91,7 @@ abstract class DefaultKotlinBasePlugin : KotlinBasePlugin {
 
         val kotlinGradleBuildServices = KotlinGradleBuildServices.registerIfAbsent(project.gradle).get()
         if (!project.isProjectIsolationEnabled) {
-            kotlinGradleBuildServices.detectKotlinPluginLoadedInMultipleProjects(project, kotlinPluginVersion)
+            kotlinGradleBuildServices.detectKotlinPluginLoadedInMultipleProjects(project, pluginVersion)
         }
 
         BuildMetricsService.registerIfAbsent(project)
@@ -215,7 +214,6 @@ abstract class KotlinBasePluginWrapper : DefaultKotlinBasePlugin() {
 
     override fun apply(project: Project) {
         super.apply(project)
-        val kotlinPluginVersion = project.getKotlinPluginVersion()
 
         project.logger.info("Using Kotlin Gradle Plugin $pluginVariant variant")
 
@@ -228,7 +226,7 @@ abstract class KotlinBasePluginWrapper : DefaultKotlinBasePlugin() {
         project.maybeCreateCommonizerClasspathConfiguration()
 
         project.createKotlinExtension(projectExtensionClass).apply {
-            coreLibrariesVersion = kotlinPluginVersion
+            coreLibrariesVersion = pluginVersion
 
             fun kotlinSourceSetContainer(factory: NamedDomainObjectFactory<KotlinSourceSet>) =
                 project.container(KotlinSourceSet::class.java, factory)
