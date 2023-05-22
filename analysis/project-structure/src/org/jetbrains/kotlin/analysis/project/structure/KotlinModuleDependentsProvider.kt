@@ -10,6 +10,10 @@ import com.intellij.openapi.project.Project
 /**
  * [KotlinModuleDependentsProvider] provides dependents for a [KtModule], which are modules that depend on the [KtModule].
  *
+ * [getDirectDependents] and [getTransitiveDependents] may return an empty set for [KtSdkModule]s even though most modules depend on an SDK,
+ * because it is often not feasible to compute that set. Instead, users of [KotlinModuleDependentsProvider] should keep this limitation in
+ * mind and handle it separately, for example by using global modification events for [KtSdkModule] changes.
+ *
  * Implementations of this provider should ensure that results are provided in reasonable time, for example by caching results, as its
  * functions may be called frequently.
  */
