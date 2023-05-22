@@ -12,16 +12,26 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fakeElement
 import org.jetbrains.kotlin.fir.FirModuleData
+import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.FirSessionComponent
+import org.jetbrains.kotlin.fir.caches.FirCache
+import org.jetbrains.kotlin.fir.caches.FirCachesFactory
+import org.jetbrains.kotlin.fir.caches.createCache
+import org.jetbrains.kotlin.fir.caches.firCachesFactory
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
+import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
+import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
 import org.jetbrains.kotlin.fir.declarations.builder.FirSimpleFunctionBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.buildSimpleFunction
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameter
 import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedDeclarationStatusImpl
+import org.jetbrains.kotlin.fir.resolve.ScopeSessionKey
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.scopes.FirTypeScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
 import org.jetbrains.kotlin.fir.symbols.impl.*
+import org.jetbrains.kotlin.fir.symbols.lazyResolveToPhase
 import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.fir.types.impl.FirImplicitBooleanTypeRef
 import org.jetbrains.kotlin.fir.types.impl.FirImplicitIntTypeRef
@@ -33,14 +43,17 @@ import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlin.utils.addToStdlib.shouldNotBeCalled
 
 class FirClassAnySynthesizedMemberScope(
+    session: FirSession,
     private val useSiteMemberScope: FirClassUseSiteMemberScope,
+    key: ScopeSessionKey<*, *>,
     private val lookupTag: ConeClassLikeLookupTag,
     private val baseModuleData: FirModuleData,
     private val dispatchReceiverType: ConeClassLikeType,
     classSource: KtSourceElement?,
 ) : FirTypeScope() {
-    // Pair stores here the synthesized Any member symbol at .first and its overridden symbol at .second
-    private val synthesizedIndex = mutableMapOf<Name, Pair<FirNamedFunctionSymbol, FirNamedFunctionSymbol>>()
+    private val synthesizedCache = session.synthesizedStorage.synthesizedCacheByScope.getValue(key, null)
+
+    private val synthesizedOverrides = mutableMapOf<FirNamedFunctionSymbol, FirNamedFunctionSymbol>()
 
     private val synthesizedSource = classSource?.fakeElement(KtFakeSourceElementKind.DataClassGeneratedMembers)
 
@@ -63,7 +76,7 @@ class FirClassAnySynthesizedMemberScope(
         functionSymbol: FirNamedFunctionSymbol,
         processor: (FirNamedFunctionSymbol, FirTypeScope) -> ProcessorAction,
     ): ProcessorAction {
-        val (_, overridden) = synthesizedIndex[functionSymbol.name]?.takeIf { it.first == functionSymbol }
+        val overridden = synthesizedOverrides[functionSymbol]
             ?: return useSiteMemberScope.processDirectOverriddenFunctionsWithBaseScope(functionSymbol, processor)
         return processor(overridden, useSiteMemberScope)
     }
@@ -90,32 +103,37 @@ class FirClassAnySynthesizedMemberScope(
                 processor(fromUseSiteScope)
             } else {
                 val matchedSomeAnyMember = when (name) {
-                    OperatorNameConventions.HASH_CODE, OperatorNameConventions.TO_STRING ->
+                    OperatorNameConventions.HASH_CODE, OperatorNameConventions.TO_STRING -> {
                         fromUseSiteScope.valueParameterSymbols.isEmpty() && !fromUseSiteScope.isExtension &&
                                 fromUseSiteScope.fir.contextReceivers.isEmpty()
-                    else ->
+                    }
+                    else -> {
+                        fromUseSiteScope.lazyResolveToPhase(FirResolvePhase.TYPES)
                         fromUseSiteScope.fir.isEquals()
+                    }
                 }
                 val hasSameReceiver =
                     dispatchReceiverType.lookupTag == (fromUseSiteScope.dispatchReceiverType as? ConeClassLikeType)?.lookupTag
                 if (!matchedSomeAnyMember || hasSameReceiver) {
                     processor(fromUseSiteScope)
                 } else {
-                    val (synthesized, _) = synthesizedIndex.getOrPut(name) {
-                        when (name) {
-                            OperatorNameConventions.EQUALS -> generateEqualsFunction()
-                            OperatorNameConventions.HASH_CODE -> generateHashCodeFunction()
-                            OperatorNameConventions.TO_STRING -> generateToStringFunction()
-                            else -> shouldNotBeCalled()
-                        }.symbol to fromUseSiteScope
-                    }
+                    val synthesized = synthesizedCache.synthesizedFunctionAndOverrides.getValue(name, this)
+                    synthesizedOverrides[synthesized] = fromUseSiteScope
                     processor(synthesized)
                 }
             }
         }
     }
 
-    private fun generateEqualsFunction() =
+    internal fun generateSyntheticFunctionByName(name: Name): FirNamedFunctionSymbol =
+        when (name) {
+            OperatorNameConventions.EQUALS -> generateEqualsFunction()
+            OperatorNameConventions.HASH_CODE -> generateHashCodeFunction()
+            OperatorNameConventions.TO_STRING -> generateToStringFunction()
+            else -> shouldNotBeCalled()
+        }.symbol
+
+    private fun generateEqualsFunction(): FirSimpleFunction =
         buildSimpleFunction {
             generateSyntheticFunction(OperatorNameConventions.EQUALS, isOperator = true)
             returnTypeRef = FirImplicitBooleanTypeRef(source)
@@ -134,13 +152,13 @@ class FirClassAnySynthesizedMemberScope(
             )
         }
 
-    private fun generateHashCodeFunction() =
+    private fun generateHashCodeFunction(): FirSimpleFunction =
         buildSimpleFunction {
             generateSyntheticFunction(OperatorNameConventions.HASH_CODE)
             returnTypeRef = FirImplicitIntTypeRef(source)
         }
 
-    private fun generateToStringFunction() =
+    private fun generateToStringFunction(): FirSimpleFunction =
         buildSimpleFunction {
             generateSyntheticFunction(OperatorNameConventions.TO_STRING)
             returnTypeRef = FirImplicitStringTypeRef(source)
@@ -167,3 +185,17 @@ class FirClassAnySynthesizedMemberScope(
         )
     }
 }
+
+class FirSynthesizedStorage(val session: FirSession) : FirSessionComponent {
+    private val cachesFactory = session.firCachesFactory
+
+    val synthesizedCacheByScope: FirCache<ScopeSessionKey<*, *>, SynthesizedCache, Nothing?> =
+        cachesFactory.createCache { _ -> SynthesizedCache(session.firCachesFactory) }
+
+    class SynthesizedCache(cachesFactory: FirCachesFactory) {
+        val synthesizedFunctionAndOverrides: FirCache<Name, FirNamedFunctionSymbol, FirClassAnySynthesizedMemberScope> =
+            cachesFactory.createCache { name, scope -> scope.generateSyntheticFunctionByName(name) }
+    }
+}
+
+private val FirSession.synthesizedStorage: FirSynthesizedStorage by FirSession.sessionComponentAccessor()
