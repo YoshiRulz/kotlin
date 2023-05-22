@@ -10,12 +10,9 @@ import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.fir.backend.Fir2IrComponents
 import org.jetbrains.kotlin.fir.backend.FirMetadataSource
 import org.jetbrains.kotlin.fir.backend.declareThisReceiverParameter
-import org.jetbrains.kotlin.fir.backend.toIrType
 import org.jetbrains.kotlin.fir.containingClassLookupTag
-import org.jetbrains.kotlin.fir.declarations.FirClass
-import org.jetbrains.kotlin.fir.declarations.FirDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
-import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
+import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
@@ -46,15 +43,15 @@ import org.jetbrains.kotlin.util.OperatorNameConventions.TO_STRING
  */
 class DataClassMembersGenerator(val components: Fir2IrComponents) : Fir2IrComponents by components {
 
-    fun generateSingleFieldValueClassMembers(klass: FirClass, irClass: IrClass): List<FirDeclaration> =
+    fun generateSingleFieldValueClassMembers(klass: FirRegularClass, irClass: IrClass): List<FirDeclaration> =
         MyDataClassMethodsGenerator(irClass, klass.symbol.toLookupTag(), IrDeclarationOrigin.GENERATED_SINGLE_FIELD_VALUE_CLASS_MEMBER)
             .generate(klass)
 
-    fun generateMultiFieldValueClassMembers(klass: FirClass, irClass: IrClass): List<FirDeclaration> =
+    fun generateMultiFieldValueClassMembers(klass: FirRegularClass, irClass: IrClass): List<FirDeclaration> =
         MyDataClassMethodsGenerator(irClass, klass.symbol.toLookupTag(), IrDeclarationOrigin.GENERATED_MULTI_FIELD_VALUE_CLASS_MEMBER)
             .generate(klass)
 
-    fun generateDataClassMembers(klass: FirClass, irClass: IrClass): List<FirDeclaration> =
+    fun generateDataClassMembers(klass: FirRegularClass, irClass: IrClass): List<FirDeclaration> =
         MyDataClassMethodsGenerator(irClass, klass.symbol.toLookupTag(), IrDeclarationOrigin.GENERATED_DATA_CLASS_MEMBER).generate(klass)
 
     fun generateDataClassComponentBody(irFunction: IrFunction, lookupTag: ConeClassLikeLookupTag) =
@@ -149,7 +146,7 @@ class DataClassMembersGenerator(val components: Fir2IrComponents) : Fir2IrCompon
                 UNDEFINED_OFFSET
             )
 
-        fun generate(klass: FirClass): List<FirDeclaration> {
+        fun generate(klass: FirRegularClass): List<FirDeclaration> {
             val propertyParametersCount = irClass.primaryConstructor?.explicitParameters?.size ?: 0
             val properties = irClass.properties.filter { it.backingField != null }.take(propertyParametersCount).toList()
 
@@ -168,7 +165,11 @@ class DataClassMembersGenerator(val components: Fir2IrComponents) : Fir2IrCompon
                             // We won't synthesize a function if there is a user-contributed (non-synthetic) one.
                             if (it.origin != FirDeclarationOrigin.Synthetic) return@processFunctionsByName
                             if (it.containingClassLookupTag() != klass.symbol.toLookupTag()) return@processFunctionsByName
-                            putIfAbsent(name, it.fir)
+                            require(!contains(name)) {
+                                "Two synthetic functions $name were found in data/value class ${klass.name}:\n" +
+                                        "${this[name]?.render()}\n${it.fir.render()}"
+                            }
+                            this[name] = it.fir
                         }
                     }
                 }
