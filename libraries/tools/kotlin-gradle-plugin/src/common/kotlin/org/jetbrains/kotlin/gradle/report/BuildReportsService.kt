@@ -103,9 +103,8 @@ class BuildReportsService {
 
     fun onFinish(
         event: TaskFinishEvent, buildOperation: BuildOperationRecord,
-        parameters: BuildReportParameters, buildScan: BuildScanExtensionHolder?
+        parameters: BuildReportParameters
     ) {
-        buildScan?.also { addBuildScanReport(event, buildOperation, parameters, it) }
         addHttpReport(event, buildOperation, parameters)
     }
 
@@ -177,7 +176,7 @@ class BuildReportsService {
 
     }
 
-    private fun addBuildScanReport(
+    internal fun addBuildScanReport(
         event: TaskFinishEvent,
         buildOperationRecord: BuildOperationRecord,
         parameters: BuildReportParameters,
