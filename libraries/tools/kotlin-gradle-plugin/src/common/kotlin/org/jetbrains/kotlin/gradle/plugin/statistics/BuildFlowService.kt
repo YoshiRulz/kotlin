@@ -45,10 +45,20 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
             KotlinBuildStatsService.applyIfInitialised {
                 it.recordProjectsEvaluated(project.gradle)
             }
-            if (GradleVersion.current().baseVersion < GradleVersion.version("8.1")) {
-                BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
-            } else if (!isConfigurationCacheAvailable(project.gradle)) {
-                StatisticsBuildFlowManager.getInstance(project).subscribeForBuildResult(project)
+
+            when {
+                GradleVersion.current().baseVersion < GradleVersion.version("7.4") ->
+                    //known issue for Gradle with configurationCache: https://github.com/gradle/gradle/issues/20001
+                    if (!isConfigurationCacheAvailable(project.gradle)) {
+                        BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
+                    }
+                GradleVersion.current().baseVersion < GradleVersion.version("8.1") ->
+                    BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
+                else ->
+                    if (!isConfigurationCacheAvailable(project.gradle)) {
+                        //known issue. Cant reuse cache if file is changed in gradle_user_home dir: KT-58768
+                        StatisticsBuildFlowManager.getInstance(project).subscribeForBuildResult(project)
+                    }
             }
 
             return buildService

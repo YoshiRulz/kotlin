@@ -103,7 +103,7 @@ class KotlinBuildStatHandler {
         fun buildSrcExists(project: Project) = File(project.projectDir, "buildSrc").exists()
         configurationTimeMetrics.put(BooleanMetrics.BUILD_SRC_EXISTS, buildSrcExists(gradle.rootProject))
 
-        if(project.isProjectIsolationEnabled) { //support project isolation - KT-58768
+        if (project.isProjectIsolationEnabled) { //support project isolation - KT-58768
             return configurationTimeMetrics
         }
         val statisticOverhead = measureTimeMillis {
