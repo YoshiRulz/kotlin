@@ -159,11 +159,17 @@ fun IrInlinedFunctionBlock.getAdditionalStatementsFromInlinedBlock(): List<IrSta
         .flatMap { it.statements }
 }
 
+fun IrInlinedFunctionBlock.getNonDefaultInlinedArgumentsBlock() =
+    this.statements.filterIsInstance<IrComposite>().singleOrNull { it.origin == INLINED_FUNCTION_ARGUMENTS }
+
 fun IrInlinedFunctionBlock.getNonDefaultAdditionalStatementsFromInlinedBlock(): List<IrStatement> {
     return this.statements
         .filterIsInstance<IrComposite>()
         .singleOrNull { it.origin == INLINED_FUNCTION_ARGUMENTS }?.statements ?: emptyList()
 }
+
+fun IrInlinedFunctionBlock.getDefaultInlinedArgumentsBlock() =
+    this.statements.filterIsInstance<IrComposite>().singleOrNull { it.origin == INLINED_FUNCTION_DEFAULT_ARGUMENTS }
 
 fun IrInlinedFunctionBlock.getDefaultAdditionalStatementsFromInlinedBlock(): List<IrStatement> {
     return this.statements

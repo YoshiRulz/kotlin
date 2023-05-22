@@ -484,9 +484,20 @@ class ExpressionCodegen(
         val callee = inlinedBlock.inlineDeclaration as? IrFunction
         val callLineNumber = lineNumberMapper.getLineNumberForOffset(inlineCall.startOffset)
 
+        val visitedVariables = mutableSetOf<IrVariable>()
+
         // 1. Evaluate NON DEFAULT arguments from inline function call
-        inlinedBlock.getNonDefaultAdditionalStatementsFromInlinedBlock().forEach { exp ->
-            exp.accept(this, data).discard()
+        val nonDefaultInlinedArgumentsBlock = inlinedBlock.getNonDefaultInlinedArgumentsBlock()
+        if (nonDefaultInlinedArgumentsBlock != null) {
+            // There may be variables declared before the non-default arguments block and referenced in it.
+            // Visit them before the block.
+            inlinedBlock.statements.takeWhile { it != nonDefaultInlinedArgumentsBlock }.filterIsInstance<IrVariable>().forEach { variable ->
+                variable.accept(this, data)
+                visitedVariables.add(variable)
+            }
+            nonDefaultInlinedArgumentsBlock.statements.forEach { statement ->
+                statement.accept(this, data).discard()
+            }
         }
 
         if (inlinedBlock.isLambdaInlining()) {
@@ -506,8 +517,19 @@ class ExpressionCodegen(
             }
 
             // 2. Evaluate DEFAULT arguments from inline function call
-            inlinedBlock.getDefaultAdditionalStatementsFromInlinedBlock().forEach { exp ->
-                exp.accept(this, data).discard()
+            val defaultInlinedArgumentsBlock = inlinedBlock.getDefaultInlinedArgumentsBlock()
+            if (defaultInlinedArgumentsBlock != null) {
+                // There may be variables declared before default arguments block and referenced in it.
+                // Visit them before the block, ignoring variables that have already been visited.
+                inlinedBlock.statements.takeWhile { it != defaultInlinedArgumentsBlock }.filterIsInstance<IrVariable>()
+                    .filter { it !in visitedVariables }
+                    .forEach { variable ->
+                        variable.accept(this, data)
+                        visitedVariables.add(variable)
+                    }
+                defaultInlinedArgumentsBlock.statements.forEach { statement ->
+                    statement.accept(this, data).discard()
+                }
             }
 
             if (inlineCall.usesDefaultArguments()) {
@@ -515,10 +537,10 @@ class ExpressionCodegen(
                 lastLineNumber = -1
             }
 
-            // 3. Evaluate statements from inline function body
+            // 3. Evaluate statements from inline function body, ignore variables that have already been visited
             val result = inlinedBlock.getOriginalStatementsFromInlinedBlock().fold(unitValue) { prev, exp ->
                 prev.discard()
-                exp.accept(this, data)
+                if (visitedVariables.contains(exp)) unitValue else exp.accept(this, data)
             }
 
             if (callee != null && (inlinedBlock.inlinedElement !is IrCallableReference<*> || callee.isInline)) {
