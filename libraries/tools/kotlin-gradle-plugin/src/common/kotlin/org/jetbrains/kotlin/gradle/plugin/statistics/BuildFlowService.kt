@@ -71,8 +71,11 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
                     when {
                         GradleVersion.current().baseVersion < GradleVersion.version("8.1") ->
                             BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
-                        else -> StatisticsBuildFlowManager.getInstance(project).subscribeForBuildResult(project)
+                        else -> StatisticsBuildFlowManager.getInstance(project).subscribeForBuildResult()
                     }
+                }
+                if (GradleVersion.current().baseVersion >= GradleVersion.version("8.1")) {
+                    StatisticsBuildFlowManager.getInstance(project).subscribeForBuildScan(project)
                 }
             }
         }

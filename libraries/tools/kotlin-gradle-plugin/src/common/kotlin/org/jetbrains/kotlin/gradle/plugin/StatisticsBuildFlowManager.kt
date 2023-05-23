@@ -24,27 +24,44 @@ internal abstract class StatisticsBuildFlowManager @Inject constructor(
             project.objects.newInstance(StatisticsBuildFlowManager::class.java)
     }
 
-    fun subscribeForBuildResult(project: Project) {
+    fun subscribeForBuildResult() {
+        flowScope.always(
+            BuildFinishFlowAction::class.java
+        ) { spec ->
+            spec.parameters.buildFailed.set(flowProviders.buildWorkResult.map { it.failure.isPresent })
+        }
+    }
+
+    fun subscribeForBuildScan(project: Project) {
         val buildScanExtension = project.rootProject.extensions.findByName("buildScan")
         val buildScanHolder = buildScanExtension?.let { BuildScanExtensionHolder(it) }
 
         flowScope.always(
-            BuildFinishFlowAction::class.java
+            BuildScanFlowAction::class.java
         ) { spec ->
             spec.parameters.buildScanExtensionHolder.set(buildScanHolder)
-            spec.parameters.buildFailed.set(flowProviders.buildWorkResult.map { it.failure.isPresent })
         }
     }
 }
 
+internal class BuildScanFlowAction : FlowAction<BuildScanFlowAction.Parameters> {
+    interface Parameters : FlowParameters {
+        @get:ServiceReference
+        val buildMetricService: Property<BuildMetricsService?>
+
+        @get: Input
+        val buildScanExtensionHolder: Property<BuildScanExtensionHolder?>
+    }
+
+    override fun execute(parameters: Parameters) {
+        parameters.buildMetricService.orNull?.addCollectedTagsToBuildScan(parameters.buildScanExtensionHolder.orNull)
+    }
+}
 
 internal class BuildFinishFlowAction : FlowAction<BuildFinishFlowAction.Parameters> {
     interface Parameters : FlowParameters {
         @get:ServiceReference
         val buildFlowServiceProperty: Property<BuildFlowService>
-
-        @get:ServiceReference
-        val buildMetricService: Property<BuildMetricsService?>
 
         @get:Input
         val action: Property<String?>
@@ -52,14 +69,11 @@ internal class BuildFinishFlowAction : FlowAction<BuildFinishFlowAction.Paramete
         @get:Input
         val buildFailed: Property<Boolean>
 
-        @get:Input
-        val buildScanExtensionHolder: Property<BuildScanExtensionHolder?>
     }
 
     override fun execute(parameters: Parameters) {
         parameters.buildFlowServiceProperty.get().recordBuildFinished(
             parameters.action.orNull, parameters.buildFailed.get()
         )
-        parameters.buildMetricService.orNull?.addCollectedTagsToBuildScan(parameters.buildScanExtensionHolder.orNull)
     }
 }
