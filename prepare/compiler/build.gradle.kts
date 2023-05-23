@@ -247,6 +247,12 @@ dependencies {
     fatJarContentsStripMetadata(commonDependency("org.jetbrains.intellij.deps:jdom")) { isTransitive = false }
     fatJarContentsStripMetadata(commonDependency("org.jetbrains.intellij.deps:log4j")) { isTransitive = false }
     fatJarContentsStripVersions(commonDependency("one.util:streamex")) { isTransitive = false }
+
+    cachedDependencies("org.jetbrains:annotations:13.0@pom")
+    cachedDependencies("org.jetbrains.kotlin:kotlin-reflect:1.6.10@pom")
+    cachedDependencies("org.jetbrains.intellij.deps:trove4j:1.0.20200330@pom")
+    cachedDependencies("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0@pom")
+    cachedDependencies("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.5.0@pom")
 }
 
 publish()
