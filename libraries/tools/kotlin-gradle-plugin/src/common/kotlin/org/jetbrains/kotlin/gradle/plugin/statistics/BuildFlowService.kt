@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.gradle.plugin.statistics
 
 import org.gradle.api.Project
+import org.gradle.api.invocation.Gradle
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.services.BuildService
@@ -29,10 +30,21 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
 
     interface Parameters : BuildServiceParameters {
         val configurationMetrics: Property<MetricContainer>
+        val fusStatisticsAvailable: Property<Boolean>
     }
 
     companion object {
         private val serviceName = "${BuildFlowService::class.simpleName}_${BuildFlowService::class.java.classLoader.hashCode()}"
+
+        private fun fusStatisticsAvailable(gradle: Gradle): Boolean {
+            return when {
+                //known issue for Gradle with configurationCache: https://github.com/gradle/gradle/issues/20001
+                GradleVersion.current().baseVersion < GradleVersion.version("7.4") -> !isConfigurationCacheAvailable(gradle)
+                GradleVersion.current().baseVersion < GradleVersion.version("8.1") -> true
+                //known issue. Cant reuse cache if file is changed in gradle_user_home dir: KT-58768
+                else -> !isConfigurationCacheAvailable(gradle)
+            }
+        }
         fun registerIfAbsent(
             project: Project,
         ): Provider<BuildFlowService> {
@@ -42,28 +54,25 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
                 return it.service as Provider<BuildFlowService>
             }
 
+            val fusStatisticsAvailable = fusStatisticsAvailable(project.gradle)
             return project.gradle.sharedServices.registerIfAbsent(serviceName, BuildFlowService::class.java) { spec ->
-                KotlinBuildStatsService.applyIfInitialised {
-                    it.recordProjectsEvaluated(project.gradle)
+                if (fusStatisticsAvailable) {
+                    KotlinBuildStatsService.applyIfInitialised {
+                        it.recordProjectsEvaluated(project.gradle)
+                    }
                 }
 
                 spec.parameters.configurationMetrics.set(project.provider {
                     KotlinBuildStatsService.getInstance()?.collectStartMetrics(project)
                 })
+                spec.parameters.fusStatisticsAvailable.set(fusStatisticsAvailable)
             }.also { buildService ->
-                when {
-                    GradleVersion.current().baseVersion < GradleVersion.version("7.4") ->
-                        //known issue for Gradle with configurationCache: https://github.com/gradle/gradle/issues/20001
-                        if (!isConfigurationCacheAvailable(project.gradle)) {
+                if (fusStatisticsAvailable) {
+                    when {
+                        GradleVersion.current().baseVersion < GradleVersion.version("8.1") ->
                             BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
-                        }
-                    GradleVersion.current().baseVersion < GradleVersion.version("8.1") ->
-                        BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
-                    else ->
-                        if (!isConfigurationCacheAvailable(project.gradle)) {
-                            //known issue. Cant reuse cache if file is changed in gradle_user_home dir: KT-58768
-                            StatisticsBuildFlowManager.getInstance(project).subscribeForBuildResult(project)
-                        }
+                        else -> StatisticsBuildFlowManager.getInstance(project).subscribeForBuildResult(project)
+                    }
                 }
             }
         }
@@ -76,7 +85,9 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
     }
 
     override fun close() {
-        recordBuildFinished(null, buildFailed)
+        if (parameters.fusStatisticsAvailable.get()) {
+            recordBuildFinished(null, buildFailed)
+        }
         KotlinBuildStatsService.applyIfInitialised {
             it.close()
         }
