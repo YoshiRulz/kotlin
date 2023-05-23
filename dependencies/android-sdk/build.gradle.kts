@@ -25,6 +25,17 @@ repositories {
     }
 }
 
+dependencies {
+    cachedDependencies("google:build-tools:r29.0.3:windows@zip")
+    cachedDependencies("google:build-tools:r29.0.3:linux@zip")
+    cachedDependencies("google:build-tools:r28.0.3:windows@zip")
+    cachedDependencies("google:build-tools:r28.0.3:linux@zip")
+    cachedDependencies("google:platform-tools:r28.0.1:linux@zip")
+    cachedDependencies("google:platform-tools:r28.0.1:windows@zip")
+    cachedDependencies("google:sdk-tools-windows:4333796@zip")
+    cachedDependencies("google:sdk-tools-linux:4333796@zip")
+}
+
 val androidSdk by configurations.creating
 val androidJar by configurations.creating
 val androidPlatform by configurations.creating
