@@ -872,7 +872,7 @@ private class ScriptToClassTransformer(
             }
         } else if (irScript.needsReceiverProcessing) {
             val getValueParameter = expression.symbol.owner as? IrValueParameter
-            if (getValueParameter != null && getValueParameter.name == SpecialNames.THIS) {
+            if (getValueParameter != null && isValidNameForReceiver(getValueParameter.name)) {
                 val newExpression = getDispatchReceiverExpression(
                     data, expression, getValueParameter.type, expression.origin, getValueParameter
                 )
@@ -883,6 +883,9 @@ private class ScriptToClassTransformer(
         }
         return super.visitGetValue(expression, data)
     }
+
+    private fun isValidNameForReceiver(name: Name) =
+        name == SpecialNames.THIS || irScript.implicitReceiversParameters.any { it.name == name }
 
     private fun IrDeclaration.isCurrentScriptTopLevelDeclaration(data: ScriptToClassTransformerContext): Boolean {
         if (data.topLevelDeclaration == null || (parent != irScript && parent != irScriptClass)) return false
