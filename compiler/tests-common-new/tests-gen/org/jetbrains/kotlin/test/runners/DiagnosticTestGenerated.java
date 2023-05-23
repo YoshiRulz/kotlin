@@ -22247,6 +22247,12 @@ public class DiagnosticTestGenerated extends AbstractDiagnosticTest {
             }
 
             @Test
+            @TestMetadata("expectAbstractToString.kt")
+            public void testExpectAbstractToString() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/multiplatform/expectAbstractToString.kt");
+            }
+
+            @Test
             @TestMetadata("expectDataObject.kt")
             public void testExpectDataObject() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/multiplatform/expectDataObject.kt");
