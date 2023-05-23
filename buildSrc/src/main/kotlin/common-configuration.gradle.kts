@@ -30,6 +30,7 @@ dependencies {
 
 project.configureJvmDefaultToolchain()
 project.addEmbeddedConfigurations()
+project.addCachedDependenciesConfiguration()
 project.configureJavaCompile()
 project.configureJavaBasePlugin()
 project.configureKotlinCompilationOptions()
@@ -51,6 +52,13 @@ afterEvaluate {
 
         configurations.findByName("kotlinCompilerPluginClasspath")
             ?.exclude("org.jetbrains.kotlin", "kotlin-scripting-compiler-embeddable")
+    }
+}
+
+fun Project.addCachedDependenciesConfiguration() {
+    configurations.maybeCreate("cachedDependencies").apply {
+        isCanBeConsumed = false
+        isCanBeResolved = false
     }
 }
 
