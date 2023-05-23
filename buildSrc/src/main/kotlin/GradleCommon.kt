@@ -625,6 +625,14 @@ fun Project.configureDokkaPublication(
     shouldLinkGradleApi: Boolean = false,
     configurePublishingToKotlinlang: Boolean = false,
 ) {
+
+    val dokkaVersioningPluginVersion = "1.8.10"
+
+    dependencies {
+        cachedDependencies("org.jetbrains.dokka:javadoc-plugin:${DokkaVersion.version}")
+        cachedDependencies("org.jetbrains.dokka:versioning-plugin:$dokkaVersioningPluginVersion")
+    }
+
     if (!kotlinBuildProperties.publishGradlePluginsJavadoc) return
 
     plugins.apply("org.jetbrains.dokka")
@@ -680,7 +688,7 @@ fun Project.configureDokkaPublication(
 
             project.dependencies {
                 // Version is required due to https://github.com/Kotlin/dokka/issues/2812
-                "dokkaPlugin"("org.jetbrains.dokka:versioning-plugin:1.8.10")
+                "dokkaPlugin"("org.jetbrains.dokka:versioning-plugin:$dokkaVersioningPluginVersion")
             }
 
             tasks.register<DokkaTask>("dokkaKotlinlangDocumentation") {
