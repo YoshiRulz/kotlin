@@ -182,6 +182,7 @@ internal class ListBuilder<E> private constructor(
     private fun ensureCapacity(minCapacity: Int) {
         if (backing != null) throw IllegalStateException() // just in case somebody casts subList to ListBuilder
         if (minCapacity < 0) throw OutOfMemoryError()    // overflow
+        modCount += 1
         if (minCapacity > array.size) {
             val newSize = ArrayDeque.newCapacity(array.size, minCapacity)
             array = array.copyOfUninitializedElements(newSize)
@@ -210,6 +211,7 @@ internal class ListBuilder<E> private constructor(
     }
 
     private fun addAtInternal(i: Int, element: E) {
+        modCount += 1
         if (backing != null) {
             backing.addAtInternal(i, element)
             array = backing.array
@@ -221,6 +223,7 @@ internal class ListBuilder<E> private constructor(
     }
 
     private fun addAllInternal(i: Int, elements: Collection<E>, n: Int) {
+        modCount += 1
         if (backing != null) {
             backing.addAllInternal(i, elements, n)
             array = backing.array
@@ -237,6 +240,7 @@ internal class ListBuilder<E> private constructor(
     }
 
     private fun removeAtInternal(i: Int): E {
+        modCount += 1
         if (backing != null) {
             val old = backing.removeAtInternal(i)
             length--
@@ -251,6 +255,7 @@ internal class ListBuilder<E> private constructor(
     }
 
     private fun removeRangeInternal(rangeOffset: Int, rangeLength: Int) {
+        if (rangeLength > 0) modCount += 1
         if (backing != null) {
             backing.removeRangeInternal(rangeOffset, rangeLength)
         } else {
@@ -262,10 +267,8 @@ internal class ListBuilder<E> private constructor(
 
     /** Retains elements if [retain] == true and removes them it [retain] == false. */
     private fun retainOrRemoveAllInternal(rangeOffset: Int, rangeLength: Int, elements: Collection<E>, retain: Boolean): Int {
-        if (backing != null) {
-            val removed = backing.retainOrRemoveAllInternal(rangeOffset, rangeLength, elements, retain)
-            length -= removed
-            return removed
+        val removed = if (backing != null) {
+            backing.retainOrRemoveAllInternal(rangeOffset, rangeLength, elements, retain)
         } else {
             var i = 0
             var j = 0
@@ -279,20 +282,24 @@ internal class ListBuilder<E> private constructor(
             val removed = rangeLength - j
             array.copyInto(array, startIndex = rangeOffset + rangeLength, endIndex = length, destinationOffset = rangeOffset + j)
             array.resetRange(fromIndex = length - removed, toIndex = length)
-            length -= removed
-            return removed
+            removed
         }
+        if (removed > 0) modCount += 1
+        length -= removed
+        return removed
     }
 
     private class Itr<E> : MutableListIterator<E> {
         private val list: ListBuilder<E>
         private var index: Int
         private var lastIndex: Int
+        private var expectedModCount: Int
 
         constructor(list: ListBuilder<E>, index: Int) {
             this.list = list
             this.index = index
             this.lastIndex = -1
+            this.expectedModCount = list.modCount
         }
 
         override fun hasPrevious(): Boolean = index > 0
@@ -302,32 +309,44 @@ internal class ListBuilder<E> private constructor(
         override fun nextIndex(): Int = index
 
         override fun previous(): E {
+            checkForComodification()
             if (index <= 0) throw NoSuchElementException()
             lastIndex = --index
             return list.array[list.offset + lastIndex]
         }
 
         override fun next(): E {
+            checkForComodification()
             if (index >= list.length) throw NoSuchElementException()
             lastIndex = index++
             return list.array[list.offset + lastIndex]
         }
 
         override fun set(element: E) {
+            checkForComodification()
             check(lastIndex != -1) { "Call next() or previous() before replacing element from the iterator." }
             list.set(lastIndex, element)
         }
 
         override fun add(element: E) {
+            checkForComodification()
             list.add(index++, element)
             lastIndex = -1
+            expectedModCount = list.modCount
         }
 
         override fun remove() {
+            checkForComodification()
             check(lastIndex != -1) { "Call next() or previous() before removing element from the iterator." }
             list.removeAt(lastIndex)
             index = lastIndex
             lastIndex = -1
+            expectedModCount = list.modCount
+        }
+
+        private fun checkForComodification() {
+            if (list.modCount != expectedModCount)
+                throw ConcurrentModificationException()
         }
     }
 }
