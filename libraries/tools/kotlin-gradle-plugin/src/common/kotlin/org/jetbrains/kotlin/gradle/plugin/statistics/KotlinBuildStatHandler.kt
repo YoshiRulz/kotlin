@@ -67,7 +67,10 @@ class KotlinBuildStatHandler {
         sessionLogger: BuildSessionLogger,
     ) {
         runSafe("${KotlinBuildStatHandler::class.java}.reportGlobalMetrics") {
-            reportGlobalMetricsImpl(sessionLogger)
+            System.getProperty("os.name")?.also { sessionLogger.report(StringMetrics.OS_TYPE, System.getProperty("os.name")) }
+            sessionLogger.report(NumericalMetrics.CPU_NUMBER_OF_CORES, Runtime.getRuntime().availableProcessors().toLong())
+            sessionLogger.report(BooleanMetrics.EXECUTED_FROM_IDEA, System.getProperty("idea.active") != null)
+            sessionLogger.report(NumericalMetrics.GRADLE_DAEMON_HEAP_SIZE, Runtime.getRuntime().maxMemory())
         }
     }
 
@@ -91,6 +94,11 @@ class KotlinBuildStatHandler {
         val configurationTimeMetrics = MetricContainer()
         configurationTimeMetrics.put(StringMetrics.PROJECT_PATH, gradle.rootProject.projectDir.absolutePath)
         configurationTimeMetrics.put(StringMetrics.GRADLE_VERSION, gradle.gradleVersion)
+
+        if (project.isProjectIsolationEnabled) { //support project isolation - KT-58768
+            return configurationTimeMetrics
+        }
+
         configurationTimeMetrics.put(
             BooleanMetrics.KOTLIN_OFFICIAL_CODESTYLE,
             gradle.rootProject.providers.gradleProperty("kotlin.code.style")
@@ -103,9 +111,6 @@ class KotlinBuildStatHandler {
         fun buildSrcExists(project: Project) = File(project.projectDir, "buildSrc").exists()
         configurationTimeMetrics.put(BooleanMetrics.BUILD_SRC_EXISTS, buildSrcExists(gradle.rootProject))
 
-        if (project.isProjectIsolationEnabled) { //support project isolation - KT-58768
-            return configurationTimeMetrics
-        }
         val statisticOverhead = measureTimeMillis {
             gradle.allprojects { project ->
                 project.plugins.findPlugin(DOKKA_PLUGIN)?.also {
@@ -178,13 +183,6 @@ class KotlinBuildStatHandler {
         sessionLogger.report(NumericalMetrics.STATISTICS_VISIT_ALL_PROJECTS_OVERHEAD, statisticOverhead)
 
         return configurationTimeMetrics
-    }
-
-    private fun reportGlobalMetricsImpl(sessionLogger: BuildSessionLogger) {
-        System.getProperty("os.name")?.also { sessionLogger.report(StringMetrics.OS_TYPE, System.getProperty("os.name")) }
-        sessionLogger.report(NumericalMetrics.CPU_NUMBER_OF_CORES, Runtime.getRuntime().availableProcessors().toLong())
-        sessionLogger.report(BooleanMetrics.EXECUTED_FROM_IDEA, System.getProperty("idea.active") != null)
-        sessionLogger.report(NumericalMetrics.GRADLE_DAEMON_HEAP_SIZE, Runtime.getRuntime().maxMemory())
     }
 
     private fun reportLibrariesVersions(configurationTimeMetrics: MetricContainer, dependencies: DependencySet?) {

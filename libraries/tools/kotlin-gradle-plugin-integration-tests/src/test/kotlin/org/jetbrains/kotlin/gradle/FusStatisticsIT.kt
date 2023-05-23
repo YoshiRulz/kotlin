@@ -115,7 +115,6 @@ class FusStatisticsIT : KGPDaemonsBaseTest() {
     @GradleTest
     @GradleTestVersions(
         minVersion = TestVersions.Gradle.G_7_6,
-        additionalVersions = [TestVersions.Gradle.G_8_0],
         maxVersion = TestVersions.Gradle.G_8_0
     )
     fun testProjectWithIncludedBuild(gradleVersion: GradleVersion) {
