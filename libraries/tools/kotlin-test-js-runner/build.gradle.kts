@@ -18,6 +18,11 @@ node {
     nodeProjectDir.set(projectDir)
 }
 
+dependencies {
+    cachedDependencies("org.nodejs:node:$nodejsVersion:win-x64@zip")
+    cachedDependencies("org.nodejs:node:$nodejsVersion:linux-x64@tar.gz")
+}
+
 tasks {
     named("yarn") {
         val nodeModulesDir = projectDir.resolve("node_modules")
