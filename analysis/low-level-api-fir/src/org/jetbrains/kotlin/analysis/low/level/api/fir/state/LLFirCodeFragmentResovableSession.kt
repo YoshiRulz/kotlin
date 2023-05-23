@@ -222,7 +222,7 @@ internal class LLFirCodeFragmentResovableSession(
                                     constructedTypeRef = superType.toFirResolvedTypeRef()
                                     calleeReference = buildResolvedNamedReference {
                                         val superClassConstructorSymbol = superType.toRegularClassSymbol(useSiteFirSession)
-                                            ?.declaredMemberScope(useSiteFirSession)
+                                            ?.declaredMemberScope(useSiteFirSession, null)
                                             ?.getDeclaredConstructors()
                                             ?.firstOrNull { it.valueParameterSymbols.isEmpty() }
                                             ?: error("shouldn't be here")

@@ -95,7 +95,7 @@ internal class LLFirSessionCache(private val project: Project) {
             is KtLibraryModule, is KtLibrarySourceModule -> sessionFactory.createLibrarySession(module)
             is KtSdkModule -> sessionFactory.createBinaryLibrarySession(module)
             is KtScriptModule -> sessionFactory.createScriptSession(module)
-            is KtCodeFragmentModule -> createCodeFragmentResolvableSession(module)
+            is KtCodeFragmentModule -> sessionFactory.createCodeFragmentSession(module)
             is KtNotUnderContentRootModule -> sessionFactory.createNotUnderContentRootResolvableSession(module)
             else -> error("Unexpected module kind: ${module::class.simpleName}")
         }
@@ -140,69 +140,3 @@ fun createEmptySession(): FirSession {
     }
 }
 
-    private fun createCodeFragmentResolvableSession(
-        module: KtCodeFragmentModule,
-    ): LLFirCodeFragmentResolvableModuleSession {
-        val builtinsSession = LLFirBuiltinsSessionFactory.getInstance(project).getBuiltinsSession(JvmPlatforms.unspecifiedJvmPlatform)
-        val scopeProvider = FirKotlinScopeProvider(::wrapScopeWithJvmMapped)
-        val globalResolveComponents = LLFirGlobalResolveComponents(project)
-        val components = LLFirModuleResolveComponents(
-            getModule(project, module.rawContext, null),
-            globalResolveComponents,
-            scopeProvider
-        )
-
-        val dependencies = collectSourceModuleDependencies(module)
-        val dependencyTracker = createSourceModuleDependencyTracker(module, dependencies)
-        return LLFirCodeFragmentResolvableModuleSession(
-            builtinsSession.ktModule,
-            dependencyTracker,
-            builtinsSession.builtinTypes,
-            components
-        ).apply session@{
-            components.session = this
-            val moduleData = LLFirModuleData(module).apply { bindSession(this@session) }
-            register(FirKotlinScopeProvider::class, scopeProvider)
-            registerIdeComponents(project)
-            registerCommonComponents(LanguageVersionSettingsImpl.DEFAULT)
-            registerCommonJavaComponents(JavaModuleResolver.getInstance(project))
-            registerCommonComponentsAfterExtensionsAreConfigured()
-            registerJavaSpecificResolveComponents()
-            registerResolveComponents()
-            registerModuleData(moduleData)
-            register(FirLazyDeclarationResolver::class, LLFirLazyDeclarationResolver())
-            val annotationsResolver = project.createAnnotationResolver(module.contentScope)
-            register(FirRegisteredPluginAnnotations::class, LLFirIdeRegisteredPluginAnnotations(this@session, annotationsResolver))
-            register(FirPredicateBasedProvider::class, FirEmptyPredicateBasedProvider)
-            val provider = LLFirProvider(
-                this,
-                components,
-                project.createDeclarationProvider(module.contentScope, module),
-                project.createPackageProvider(module.contentScope),
-                canContainKotlinPackage = true,
-            )
-            register(FirProvider::class, provider)
-            val dependencyProvider = LLFirDependenciesSymbolProvider(this, buildList {
-                addDependencySymbolProvidersTo(this@session, dependencies, this)
-                add(builtinsSession.symbolProvider)
-            })
-            val javaSymbolProvider = createJavaSymbolProvider(this, moduleData, project, module.contentScope)
-            val codeFragmentSymbolProvider = LLFirCodeFragmentSymbolProvider(this)
-            register(
-                FirSymbolProvider::class,
-                LLFirModuleWithDependenciesSymbolProvider(
-                    this,
-                    providers = listOf(
-                        codeFragmentSymbolProvider,
-                        javaSymbolProvider,
-                    ),
-                    dependencyProvider,
-                )
-            )
-            register(LLFirCodeFragmentSymbolProvider::class, codeFragmentSymbolProvider)
-            register(JavaSymbolProvider::class, javaSymbolProvider)
-            register(DEPENDENCIES_SYMBOL_PROVIDER_QUALIFIED_KEY, dependencyProvider)
-            LLFirSessionConfigurator.configure(this)
-        }
-    }
-}

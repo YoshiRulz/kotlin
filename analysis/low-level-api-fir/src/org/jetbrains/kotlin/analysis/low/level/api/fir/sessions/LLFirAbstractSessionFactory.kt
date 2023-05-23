@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.analysis.low.level.api.fir.LLFirLazyDeclarationResol
 import org.jetbrains.kotlin.analysis.low.level.api.fir.LLFirModuleResolveComponents
 import org.jetbrains.kotlin.analysis.low.level.api.fir.project.structure.*
 import org.jetbrains.kotlin.analysis.low.level.api.fir.providers.*
+import org.jetbrains.kotlin.analysis.low.level.api.fir.state.LLFirCodeFragmentResovableSession
 import org.jetbrains.kotlin.analysis.project.structure.*
 import org.jetbrains.kotlin.analysis.providers.createAnnotationResolver
 import org.jetbrains.kotlin.analysis.providers.createDeclarationProvider
@@ -265,12 +266,12 @@ internal abstract class LLFirAbstractSessionFactory(protected val project: Proje
         val moduleData: LLFirModuleData,
         val contentScope: GlobalSearchScope,
         val firProvider: LLFirProvider,
-        val dependencyProvider: LLFirDependenciesSymbolProvider
+        val dependencyProvider: LLFirDependenciesSymbolProvider,
     )
 
     protected fun doCreateLibrarySession(
         module: KtModule,
-        additionalSessionConfiguration: LLFirLibraryOrLibrarySourceResolvableModuleSession.(context: LibrarySessionCreationContext) -> Unit
+        additionalSessionConfiguration: LLFirLibraryOrLibrarySourceResolvableModuleSession.(context: LibrarySessionCreationContext) -> Unit,
     ): LLFirLibraryOrLibrarySourceResolvableModuleSession {
         val libraryModule = when (module) {
             is KtLibraryModule -> module
@@ -419,9 +420,11 @@ internal abstract class LLFirAbstractSessionFactory(protected val project: Proje
             is KtSourceModule -> llFirSessionCache.getSession(dependency)
 
             is KtScriptModule,
+            is KtCodeFragmentModule,
             is KtScriptDependencyModule,
             is KtNotUnderContentRootModule,
-            is KtLibrarySourceModule -> error("Module $module cannot depend on ${dependency::class}: $dependency")
+            is KtLibrarySourceModule,
+            -> error("Module $module cannot depend on ${dependency::class}: $dependency")
         }
 
         val dependencyModules = buildSet {
@@ -491,9 +494,74 @@ internal abstract class LLFirAbstractSessionFactory(protected val project: Proje
         }
     }
 
+    fun createCodeFragmentSession(module: KtCodeFragmentModule): LLFirCodeFragmentResolvableModuleSession {
+        val project = module.project
+        val builtinsSession = LLFirBuiltinsSessionFactory.getInstance(project).getBuiltinsSession(JvmPlatforms.unspecifiedJvmPlatform)
+        val scopeProvider = FirKotlinScopeProvider(::wrapScopeWithJvmMapped)
+        val globalResolveComponents = LLFirGlobalResolveComponents(project)
+        val components = LLFirModuleResolveComponents(
+            ProjectStructureProvider.getModule(project, module.rawContext, null),
+            globalResolveComponents,
+            scopeProvider
+        )
+
+        val dependencies = collectSourceModuleDependencies(module)
+        val dependencyTracker = createSourceModuleDependencyTracker(module, dependencies)
+        return LLFirCodeFragmentResolvableModuleSession(
+            builtinsSession.ktModule,
+            dependencyTracker,
+            builtinsSession.builtinTypes,
+            components
+        ).apply session@{
+            components.session = this
+            val moduleData = LLFirModuleData(module).apply { bindSession(this@session) }
+            register(FirKotlinScopeProvider::class, scopeProvider)
+            registerIdeComponents(project)
+            registerCommonComponents(LanguageVersionSettingsImpl.DEFAULT)
+            registerCommonJavaComponents(JavaModuleResolver.getInstance(project))
+            registerCommonComponentsAfterExtensionsAreConfigured()
+            registerJavaSpecificResolveComponents()
+            registerResolveComponents()
+            registerModuleData(moduleData)
+            register(FirLazyDeclarationResolver::class, LLFirLazyDeclarationResolver())
+            val annotationsResolver = project.createAnnotationResolver(module.contentScope)
+            register(FirRegisteredPluginAnnotations::class, LLFirIdeRegisteredPluginAnnotations(this@session, annotationsResolver))
+            register(FirPredicateBasedProvider::class, FirEmptyPredicateBasedProvider)
+            val provider = LLFirProvider(
+                this,
+                components,
+                project.createDeclarationProvider(module.contentScope, module),
+                project.createPackageProvider(module.contentScope),
+                canContainKotlinPackage = true,
+            )
+            register(FirProvider::class, provider)
+            val dependencyProvider = LLFirDependenciesSymbolProvider(this, buildList {
+                addDependencySymbolProvidersTo(this@session, dependencies, this)
+                add(builtinsSession.symbolProvider)
+            })
+            val javaSymbolProvider = createJavaSymbolProvider(this, moduleData, project, module.contentScope)
+            val codeFragmentSymbolProvider = LLFirCodeFragmentSymbolProvider(this)
+            register(
+                FirSymbolProvider::class,
+                LLFirModuleWithDependenciesSymbolProvider(
+                    this,
+                    providers = listOf(
+                        codeFragmentSymbolProvider,
+                        javaSymbolProvider,
+                    ),
+                    dependencyProvider,
+                )
+            )
+            register(LLFirCodeFragmentSymbolProvider::class, codeFragmentSymbolProvider)
+            register(JavaSymbolProvider::class, javaSymbolProvider)
+            register(DEPENDENCIES_SYMBOL_PROVIDER_QUALIFIED_KEY, dependencyProvider)
+            LLFirSessionConfigurator.configure(this)
+        }
+    }
+
     private class SymbolProviderMerger(
         symbolProviders: List<FirSymbolProvider>,
-        private val destination: MutableList<FirSymbolProvider>
+        private val destination: MutableList<FirSymbolProvider>,
     ) {
         private var remainingSymbolProviders = symbolProviders
 
