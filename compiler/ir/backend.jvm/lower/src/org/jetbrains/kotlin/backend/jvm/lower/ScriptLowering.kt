@@ -706,14 +706,14 @@ private class ScriptToClassTransformer(
         return super.visitMemberAccess(expression, data) as IrExpression
     }
 
-    override fun visitGetField(expression: IrGetField, data: ScriptToClassTransformerContext): IrExpression {
+    override fun visitFieldAccess(expression: IrFieldAccessExpression, data: ScriptToClassTransformerContext): IrExpression {
         if (expression.receiver == null && expression.symbol.owner.parent.let { it == irScript || it == irScriptClass }) {
             expression.receiver =
                 getAccessCallForScriptInstance(
                     data, expression.startOffset, expression.endOffset, expression.origin, originalReceiverParameter = null
                 )
         }
-        return super.visitGetField(expression, data)
+        return super.visitFieldAccess(expression, data)
     }
 
     override fun visitConstructorCall(expression: IrConstructorCall, data: ScriptToClassTransformerContext): IrExpression {
