@@ -209,6 +209,7 @@ fun transformFirToIr(
             linkViaSignatures = false,
             evaluatedConstTracker = moduleStructure.compilerConfiguration
                 .putIfAbsent(CommonConfigurationKeys.EVALUATED_CONST_TRACKER, EvaluatedConstTracker.create()),
+            inlineConstTracker = moduleStructure.compilerConfiguration[CommonConfigurationKeys.INLINE_CONST_TRACKER],
         ),
         IrGenerationExtension.getInstances(moduleStructure.project),
         signatureComposer = DescriptorSignatureComposerStub(JsManglerDesc),

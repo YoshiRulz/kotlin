@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.ir.interpreter.transformer
 
 import org.jetbrains.kotlin.constant.EvaluatedConstTracker
 import org.jetbrains.kotlin.descriptors.ClassKind
+import org.jetbrains.kotlin.incremental.components.InlineConstTracker
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.*
@@ -23,10 +24,11 @@ internal class IrConstExpressionTransformer(
     interpreter: IrInterpreter,
     mode: EvaluationMode,
     evaluatedConstTracker: EvaluatedConstTracker?,
+    inlineConstTracker: InlineConstTracker?,
     onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
     onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     suppressExceptions: Boolean,
-) : IrConstTransformer(interpreter, mode, evaluatedConstTracker, onWarning, onError, suppressExceptions) {
+) : IrConstTransformer(interpreter, mode, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions) {
     private var inAnnotation: Boolean = false
 
     private inline fun <T> visitAnnotationClass(crossinline block: () -> T): T {
