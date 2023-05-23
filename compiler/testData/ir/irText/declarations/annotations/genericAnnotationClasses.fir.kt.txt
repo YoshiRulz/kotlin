@@ -87,7 +87,7 @@ open annotation class Test5<T : Any?> : Annotation {
 
 }
 
-kk@Test1<ARG>(x = 42)
+@Test1<ARG>(x = 42)
 @Test2<String, String>(x = 38)
 @Test3<String, C<String>>(x = Test1<I<C<String>>>(x = 39))
 @Test4(x = [Test3<ErrorType, ErrorType>(x = Test1<ErrorType>(x = 40)), Test3<ErrorType, ErrorType>(x = Test1<ErrorType>(x = 50)), Test3<ErrorType, ErrorType>(x = Test1<ErrorType>(x = 60))])
