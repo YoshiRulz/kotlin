@@ -15,7 +15,6 @@ import org.jetbrains.kotlin.fir.declarations.utils.isFinal
 import org.jetbrains.kotlin.fir.dispatchReceiverClassLookupTagOrNull
 import org.jetbrains.kotlin.fir.isSubstitutionOrIntersectionOverride
 import org.jetbrains.kotlin.fir.resolve.defaultType
-import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.lookupSuperTypes
 import org.jetbrains.kotlin.fir.resolve.providers.symbolProvider
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
@@ -64,7 +63,7 @@ class JvmMappedScope(
     private val declaredScopeOfMutableVersion = JavaToKotlinClassMap.readOnlyToMutable(firKotlinClass.classId)?.let {
         session.symbolProvider.getClassLikeSymbolByClassId(it) as? FirClassSymbol
     }?.let {
-        session.declaredMemberScope(it)
+        session.declaredMemberScope(it, memberRequiredPhase = null)
     }
 
     private val isMutableContainer = JavaToKotlinClassMap.isMutable(firKotlinClass.classId)
@@ -121,7 +120,12 @@ class JvmMappedScope(
 
             val jvmDescriptor = symbol.fir.computeJvmDescriptor()
             if (jvmDescriptor in declaredSignatures || symbol.isMappedToSpecialBuiltIn(jvmDescriptor)) return@processor
-            if (isOverrideOfKotlinDeclaredFunction(symbol) || isMutabilityViolation(symbol, jvmDescriptor)) return@processor
+
+            // If it's java.lang.List.contains(Object) it being loaded as contains(E) and treated as an override
+            // of kotlin.collections.Collection.contains(E), thus we're not loading it as an additional JDK member
+            if (isOverrideOfKotlinDeclaredFunction(symbol)) return@processor
+
+            if (isMutabilityViolation(symbol, jvmDescriptor)) return@processor
 
             val jdkMemberStatus = getJdkMethodStatus(jvmDescriptor)
 
@@ -141,8 +145,11 @@ class JvmMappedScope(
         val signature = SignatureBuildingComponents.signature(firJavaClass.classId, jvmDescriptor)
         val isAmongMutableSignatures = signature in JvmBuiltInsSignatures.MUTABLE_METHOD_SIGNATURES
         // If the method belongs to MUTABLE_METHOD_SIGNATURES, but the class is a read-only collection we shouldn't add it.
+        // For example, we don't want j.u.Collection.removeIf would got to read-only kotlin.collections.Collection
         // But if the method is not among MUTABLE_METHOD_SIGNATURES, but the class is a mutable version, we skip it too,
         // because it has already been added to the read-only version from which we inherit it.
+        // For example, we don't need regular j.u.Collection.stream was duplicated in MutableCollection
+        // as it's already present in the read-only version.
         if (isAmongMutableSignatures != isMutableContainer) return true
 
         return javaMappedClassUseSiteScope.anyOverriddenOf(symbol) {
@@ -153,7 +160,7 @@ class JvmMappedScope(
     private fun FirNamedFunctionSymbol.isMappedToSpecialBuiltIn(jvmDescriptor: String): Boolean {
         val fqName = firJavaClass.classId.asSingleFqName().child(name)
         if (valueParameterSymbols.isEmpty()) {
-            if (valueParameterSymbols.isEmpty() && fqName in BuiltinSpecialProperties.GETTER_FQ_NAMES) return true
+            if (fqName in BuiltinSpecialProperties.GETTER_FQ_NAMES) return true
             if (getPropertyNamesCandidatesByAccessorName(name).any(::isTherePropertyWithNameInKotlinClass)) return true
         }
 
@@ -167,8 +174,11 @@ class JvmMappedScope(
         return declaredMemberScope.getProperties(name).isNotEmpty()
     }
 
+    // Mostly, what this function checks is if the member was serialized to built-ins, but not loaded from JDK.
+    // Currently, we use FirDeclarationOrigin.Library for all deserialized members, including built-in ones.
+    // Another implementation might be `it.origin != FirDeclarationOrigin.Enhancement`, but that shouldn't really matter.
     private fun isDeclaredInBuiltinClass(it: FirNamedFunctionSymbol) =
-        it.origin == FirDeclarationOrigin.BuiltIns || it.origin == FirDeclarationOrigin.Library
+        it.origin == FirDeclarationOrigin.Library
 
     private fun FirNamedFunctionSymbol.isDeclaredInMappedJavaClass(): Boolean {
         return !fir.isSubstitutionOrIntersectionOverride && fir.dispatchReceiverClassLookupTagOrNull() == firJavaClass.symbol.toLookupTag()
