@@ -119,7 +119,11 @@ class JvmMappedScope(
             }
 
             val jvmDescriptor = symbol.fir.computeJvmDescriptor()
-            if (jvmDescriptor in declaredSignatures || symbol.isMappedToSpecialBuiltIn(jvmDescriptor)) return@processor
+            // We don't need adding what is already declared
+            if (jvmDescriptor in declaredSignatures) return@processor
+
+            // That condition means that the member is already declared in the built-in class, but has a non-trivially mapped JVM descriptor
+            if (isRenamedJdkMethod(jvmDescriptor) || symbol.isOverrideOfKotlinBuiltinPropertyGetter()) return@processor
 
             // If it's java.lang.List.contains(Object) it being loaded as contains(E) and treated as an override
             // of kotlin.collections.Collection.contains(E), thus we're not loading it as an additional JDK member
@@ -157,13 +161,18 @@ class JvmMappedScope(
         }
     }
 
-    private fun FirNamedFunctionSymbol.isMappedToSpecialBuiltIn(jvmDescriptor: String): Boolean {
+    private fun FirNamedFunctionSymbol.isOverrideOfKotlinBuiltinPropertyGetter(): Boolean {
         val fqName = firJavaClass.classId.asSingleFqName().child(name)
         if (valueParameterSymbols.isEmpty()) {
             if (fqName in BuiltinSpecialProperties.GETTER_FQ_NAMES) return true
             if (getPropertyNamesCandidatesByAccessorName(name).any(::isTherePropertyWithNameInKotlinClass)) return true
         }
 
+        return false
+    }
+
+    // j/l/Number.intValue(), j/u/Collection.remove(I), etc.
+    private fun isRenamedJdkMethod(jvmDescriptor: String): Boolean {
         val signature = SignatureBuildingComponents.signature(firJavaClass.classId, jvmDescriptor)
         return signature in SpecialGenericSignatures.JVM_SIGNATURES_FOR_RENAMED_BUILT_INS
     }
