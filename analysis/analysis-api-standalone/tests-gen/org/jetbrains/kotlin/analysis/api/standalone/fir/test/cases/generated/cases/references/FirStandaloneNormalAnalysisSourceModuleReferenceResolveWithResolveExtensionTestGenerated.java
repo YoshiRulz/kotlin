@@ -59,6 +59,18 @@ public class FirStandaloneNormalAnalysisSourceModuleReferenceResolveWithResolveE
     }
 
     @Test
+    @TestMetadata("shadowedDeclaration.kt")
+    public void testShadowedDeclaration() throws Exception {
+        runTest("analysis/analysis-api/testData/resolveExtensions/referenceResolve/shadowedDeclaration.kt");
+    }
+
+    @Test
+    @TestMetadata("shadowedOverload.kt")
+    public void testShadowedOverload() throws Exception {
+        runTest("analysis/analysis-api/testData/resolveExtensions/referenceResolve/shadowedOverload.kt");
+    }
+
+    @Test
     @TestMetadata("topLevelFunction.kt")
     public void testTopLevelFunction() throws Exception {
         runTest("analysis/analysis-api/testData/resolveExtensions/referenceResolve/topLevelFunction.kt");

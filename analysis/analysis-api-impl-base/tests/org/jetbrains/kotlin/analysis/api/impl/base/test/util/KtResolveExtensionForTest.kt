@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.analysis.api.impl.base.test.util
 import com.intellij.mock.MockProject
 import com.intellij.openapi.util.ModificationTracker
 import com.intellij.psi.PsiElement
+import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.analysis.api.KtAnalysisSession
 import org.jetbrains.kotlin.analysis.api.resolve.extensions.KtResolveExtension
 import org.jetbrains.kotlin.analysis.api.resolve.extensions.KtResolveExtensionFile
@@ -25,9 +26,10 @@ import org.jetbrains.kotlin.test.services.TestServices
 class KtResolveExtensionProviderForTest(
     private val files: List<KtResolveExtensionFile>,
     private val packages: Set<FqName>,
+    private val shadowedScope: GlobalSearchScope,
 ) : KtResolveExtensionProvider() {
     override fun provideExtensionsFor(module: KtModule): List<KtResolveExtension> {
-        return listOf(KtResolveExtensionForTest(files, packages))
+        return listOf(KtResolveExtensionForTest(files, packages, shadowedScope))
     }
 }
 
@@ -48,10 +50,12 @@ class KtResolveExtensionProviderForTestPreAnalysisHandler(
 class KtResolveExtensionForTest(
     private val files: List<KtResolveExtensionFile>,
     private val packages: Set<FqName>,
+    private val shadowedScope: GlobalSearchScope,
 ) : KtResolveExtension() {
     override fun getKtFiles(): List<KtResolveExtensionFile> = files
     override fun getModificationTracker(): ModificationTracker = ModificationTracker.NEVER_CHANGED
     override fun getContainedPackages(): Set<FqName> = packages
+    override fun getShadowedScope(): GlobalSearchScope = shadowedScope
 }
 
 class KtResolveExtensionFileForTests(
