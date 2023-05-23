@@ -54,7 +54,7 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
                 when {
                     GradleVersion.current().baseVersion < GradleVersion.version("7.4") ->
                         //known issue for Gradle with configurationCache: https://github.com/gradle/gradle/issues/20001
-                        if (!isConfigurationCacheAvailable(project.gradle) || !project.rootDir.resolve("buildSrc").exists()) {
+                        if (!isConfigurationCacheAvailable(project.gradle)) {
                             BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry.onTaskCompletion(buildService)
                         }
                     GradleVersion.current().baseVersion < GradleVersion.version("8.1") ->

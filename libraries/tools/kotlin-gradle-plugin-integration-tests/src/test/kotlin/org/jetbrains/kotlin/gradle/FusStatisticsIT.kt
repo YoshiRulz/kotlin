@@ -114,8 +114,8 @@ class FusStatisticsIT : KGPDaemonsBaseTest() {
     @DisplayName("for project with included build")
     @GradleTest
     @GradleTestVersions(
-        minVersion = TestVersions.Gradle.MIN_SUPPORTED,
-        additionalVersions = [TestVersions.Gradle.G_7_6, TestVersions.Gradle.G_8_0],
+        minVersion = TestVersions.Gradle.G_7_6,
+        additionalVersions = [TestVersions.Gradle.G_8_0],
         maxVersion = TestVersions.Gradle.G_8_0
     )
     fun testProjectWithIncludedBuild(gradleVersion: GradleVersion) {
@@ -173,9 +173,12 @@ class FusStatisticsIT : KGPDaemonsBaseTest() {
 
     @DisplayName("general fields with configuration cache")
     @GradleTest
-    //Since Gradle 8.0 configurationMetrics BuildFlowService.Parameters.configurationMetrics calculates every time so dependency information
+    @GradleTestVersions(
+        minVersion = TestVersions.Gradle.MIN_SUPPORTED,
+        additionalVersions = [TestVersions.Gradle.G_7_6, TestVersions.Gradle.G_8_0],
+        maxVersion = TestVersions.Gradle.G_8_1
+    )
     fun testFusStatisticsWithConfigurationCache(gradleVersion: GradleVersion) {
-
         project(
             "simpleProject",
             gradleVersion,
@@ -185,22 +188,14 @@ class FusStatisticsIT : KGPDaemonsBaseTest() {
                 "compileKotlin",
                 "-Pkotlin.session.logger.root.path=$projectPath",
             ) {
-                val fusStatisticsPath = fusStatisticsPath
-                assertFileContains(
-                    fusStatisticsPath,
-                    *expectedMetrics
-                )
+                assertConfigurationCacheStored()
             }
 
             build(
                 "compileKotlin",
                 "-Pkotlin.session.logger.root.path=$projectPath",
             ) {
-                val fusStatisticsPath = fusStatisticsPath
-                assertFileContains(
-                    fusStatisticsPath,
-                    *expectedMetrics
-                )
+                assertConfigurationCacheReused()
             }
         }
     }
