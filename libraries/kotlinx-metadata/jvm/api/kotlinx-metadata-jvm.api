@@ -763,13 +763,16 @@ public abstract class kotlinx/metadata/KmPackageVisitor : kotlinx/metadata/KmDec
 public final class kotlinx/metadata/KmProperty : kotlinx/metadata/KmPropertyVisitor {
 	public field returnType Lkotlinx/metadata/KmType;
 	public fun <init> (ILjava/lang/String;II)V
+	public fun <init> (Ljava/lang/String;)V
 	public final fun accept (Lkotlinx/metadata/KmPropertyVisitor;)V
 	public final fun getContextReceiverTypes ()Ljava/util/List;
 	public final fun getFlags ()I
+	public final fun getGetter ()Lkotlinx/metadata/KmPropertyAccessorAttributes;
 	public final fun getGetterFlags ()I
 	public final fun getName ()Ljava/lang/String;
 	public final fun getReceiverParameterType ()Lkotlinx/metadata/KmType;
 	public final fun getReturnType ()Lkotlinx/metadata/KmType;
+	public final fun getSetter ()Lkotlinx/metadata/KmPropertyAccessorAttributes;
 	public final fun getSetterFlags ()I
 	public final fun getSetterParameter ()Lkotlinx/metadata/KmValueParameter;
 	public final fun getTypeParameters ()Ljava/util/List;
@@ -779,6 +782,7 @@ public final class kotlinx/metadata/KmProperty : kotlinx/metadata/KmPropertyVisi
 	public final fun setName (Ljava/lang/String;)V
 	public final fun setReceiverParameterType (Lkotlinx/metadata/KmType;)V
 	public final fun setReturnType (Lkotlinx/metadata/KmType;)V
+	public final fun setSetter (Lkotlinx/metadata/KmPropertyAccessorAttributes;)V
 	public final fun setSetterFlags (I)V
 	public final fun setSetterParameter (Lkotlinx/metadata/KmValueParameter;)V
 	public fun visitContextReceiverType (I)Lkotlinx/metadata/KmTypeVisitor;
@@ -788,6 +792,10 @@ public final class kotlinx/metadata/KmProperty : kotlinx/metadata/KmPropertyVisi
 	public fun visitSetterParameter (ILjava/lang/String;)Lkotlinx/metadata/KmValueParameterVisitor;
 	public fun visitTypeParameter (ILjava/lang/String;ILkotlinx/metadata/KmVariance;)Lkotlinx/metadata/KmTypeParameterVisitor;
 	public fun visitVersionRequirement ()Lkotlinx/metadata/KmVersionRequirementVisitor;
+}
+
+public final class kotlinx/metadata/KmPropertyAccessorAttributes {
+	public fun <init> ()V
 }
 
 public abstract interface class kotlinx/metadata/KmPropertyExtensionVisitor : kotlinx/metadata/KmExtensionVisitor {
@@ -809,6 +817,7 @@ public abstract class kotlinx/metadata/KmPropertyVisitor {
 
 public final class kotlinx/metadata/KmType : kotlinx/metadata/KmTypeVisitor {
 	public field classifier Lkotlinx/metadata/KmClassifier;
+	public fun <init> ()V
 	public fun <init> (I)V
 	public final fun accept (Lkotlinx/metadata/KmTypeVisitor;)V
 	public final fun getAbbreviatedType ()Lkotlinx/metadata/KmType;
@@ -837,6 +846,7 @@ public final class kotlinx/metadata/KmTypeAlias : kotlinx/metadata/KmTypeAliasVi
 	public field expandedType Lkotlinx/metadata/KmType;
 	public field underlyingType Lkotlinx/metadata/KmType;
 	public fun <init> (ILjava/lang/String;)V
+	public fun <init> (Ljava/lang/String;)V
 	public final fun accept (Lkotlinx/metadata/KmTypeAliasVisitor;)V
 	public final fun getAnnotations ()Ljava/util/List;
 	public final fun getExpandedType ()Lkotlinx/metadata/KmType;
@@ -878,6 +888,7 @@ public abstract interface class kotlinx/metadata/KmTypeExtensionVisitor : kotlin
 
 public final class kotlinx/metadata/KmTypeParameter : kotlinx/metadata/KmTypeParameterVisitor {
 	public fun <init> (ILjava/lang/String;ILkotlinx/metadata/KmVariance;)V
+	public fun <init> (Ljava/lang/String;ILkotlinx/metadata/KmVariance;)V
 	public final fun accept (Lkotlinx/metadata/KmTypeParameterVisitor;)V
 	public final fun getFlags ()I
 	public final fun getId ()I
@@ -943,6 +954,7 @@ public abstract class kotlinx/metadata/KmTypeVisitor {
 public final class kotlinx/metadata/KmValueParameter : kotlinx/metadata/KmValueParameterVisitor {
 	public field type Lkotlinx/metadata/KmType;
 	public fun <init> (ILjava/lang/String;)V
+	public fun <init> (Ljava/lang/String;)V
 	public final fun accept (Lkotlinx/metadata/KmValueParameterVisitor;)V
 	public final fun getFlags ()I
 	public final fun getName ()Ljava/lang/String;
@@ -1063,6 +1075,12 @@ public final class kotlinx/metadata/Modality : java/lang/Enum {
 
 public final class kotlinx/metadata/NodesFlagExtensionsKt {
 	public static final fun getDeclaresDefaultValue (Lkotlinx/metadata/KmValueParameter;)Z
+	public static final fun getHasAnnotations (Lkotlinx/metadata/KmClass;)Z
+	public static final fun getHasAnnotations (Lkotlinx/metadata/KmConstructor;)Z
+	public static final fun getHasAnnotations (Lkotlinx/metadata/KmFunction;)Z
+	public static final fun getHasAnnotations (Lkotlinx/metadata/KmProperty;)Z
+	public static final fun getHasAnnotations (Lkotlinx/metadata/KmTypeAlias;)Z
+	public static final fun getHasAnnotations (Lkotlinx/metadata/KmValueParameter;)Z
 	public static final fun getHasConstant (Lkotlinx/metadata/KmProperty;)Z
 	public static final fun getHasEnumEntries (Lkotlinx/metadata/KmClass;)Z
 	public static final fun getHasGetter (Lkotlinx/metadata/KmProperty;)Z
@@ -1075,10 +1093,13 @@ public final class kotlinx/metadata/NodesFlagExtensionsKt {
 	public static final fun getModality (Lkotlinx/metadata/KmClass;)Lkotlinx/metadata/Modality;
 	public static final fun getModality (Lkotlinx/metadata/KmFunction;)Lkotlinx/metadata/Modality;
 	public static final fun getModality (Lkotlinx/metadata/KmProperty;)Lkotlinx/metadata/Modality;
+	public static final fun getModality (Lkotlinx/metadata/KmPropertyAccessorAttributes;)Lkotlinx/metadata/Modality;
 	public static final fun getVisibility (Lkotlinx/metadata/KmClass;)Lkotlinx/metadata/Visibility;
 	public static final fun getVisibility (Lkotlinx/metadata/KmConstructor;)Lkotlinx/metadata/Visibility;
 	public static final fun getVisibility (Lkotlinx/metadata/KmFunction;)Lkotlinx/metadata/Visibility;
 	public static final fun getVisibility (Lkotlinx/metadata/KmProperty;)Lkotlinx/metadata/Visibility;
+	public static final fun getVisibility (Lkotlinx/metadata/KmPropertyAccessorAttributes;)Lkotlinx/metadata/Visibility;
+	public static final fun getVisibility (Lkotlinx/metadata/KmTypeAlias;)Lkotlinx/metadata/Visibility;
 	public static final fun isConst (Lkotlinx/metadata/KmProperty;)Z
 	public static final fun isCrossinline (Lkotlinx/metadata/KmValueParameter;)Z
 	public static final fun isData (Lkotlinx/metadata/KmClass;)Z
@@ -1090,12 +1111,17 @@ public final class kotlinx/metadata/NodesFlagExtensionsKt {
 	public static final fun isExternal (Lkotlinx/metadata/KmClass;)Z
 	public static final fun isExternal (Lkotlinx/metadata/KmFunction;)Z
 	public static final fun isExternal (Lkotlinx/metadata/KmProperty;)Z
+	public static final fun isExternal (Lkotlinx/metadata/KmPropertyAccessorAttributes;)Z
 	public static final fun isFunInterface (Lkotlinx/metadata/KmClass;)Z
 	public static final fun isInfix (Lkotlinx/metadata/KmFunction;)Z
 	public static final fun isInline (Lkotlinx/metadata/KmFunction;)Z
+	public static final fun isInline (Lkotlinx/metadata/KmPropertyAccessorAttributes;)Z
 	public static final fun isInner (Lkotlinx/metadata/KmClass;)Z
 	public static final fun isLateinit (Lkotlinx/metadata/KmProperty;)Z
+	public static final fun isNegated (Lkotlinx/metadata/KmEffectExpression;)Z
 	public static final fun isNoinline (Lkotlinx/metadata/KmValueParameter;)Z
+	public static final fun isNotDefault (Lkotlinx/metadata/KmPropertyAccessorAttributes;)Z
+	public static final fun isNullCheckPredicate (Lkotlinx/metadata/KmEffectExpression;)Z
 	public static final fun isNullable (Lkotlinx/metadata/KmType;)Z
 	public static final fun isOperator (Lkotlinx/metadata/KmFunction;)Z
 	public static final fun isReified (Lkotlinx/metadata/KmTypeParameter;)Z
@@ -1118,6 +1144,12 @@ public final class kotlinx/metadata/NodesFlagExtensionsKt {
 	public static final fun setExternal (Lkotlinx/metadata/KmFunction;Z)V
 	public static final fun setExternal (Lkotlinx/metadata/KmProperty;Z)V
 	public static final fun setFunInterface (Lkotlinx/metadata/KmClass;Z)V
+	public static final fun setHasAnnotations (Lkotlinx/metadata/KmClass;Z)V
+	public static final fun setHasAnnotations (Lkotlinx/metadata/KmConstructor;Z)V
+	public static final fun setHasAnnotations (Lkotlinx/metadata/KmFunction;Z)V
+	public static final fun setHasAnnotations (Lkotlinx/metadata/KmProperty;Z)V
+	public static final fun setHasAnnotations (Lkotlinx/metadata/KmTypeAlias;Z)V
+	public static final fun setHasAnnotations (Lkotlinx/metadata/KmValueParameter;Z)V
 	public static final fun setHasConstant (Lkotlinx/metadata/KmProperty;Z)V
 	public static final fun setHasEnumEntries (Lkotlinx/metadata/KmClass;Z)V
 	public static final fun setHasGetter (Lkotlinx/metadata/KmProperty;Z)V
@@ -1134,7 +1166,11 @@ public final class kotlinx/metadata/NodesFlagExtensionsKt {
 	public static final fun setModality (Lkotlinx/metadata/KmClass;Lkotlinx/metadata/Modality;)V
 	public static final fun setModality (Lkotlinx/metadata/KmFunction;Lkotlinx/metadata/Modality;)V
 	public static final fun setModality (Lkotlinx/metadata/KmProperty;Lkotlinx/metadata/Modality;)V
+	public static final fun setModality (Lkotlinx/metadata/KmPropertyAccessorAttributes;Lkotlinx/metadata/Modality;)V
+	public static final fun setNegated (Lkotlinx/metadata/KmEffectExpression;Z)V
 	public static final fun setNoinline (Lkotlinx/metadata/KmValueParameter;Z)V
+	public static final fun setNotDefault (Lkotlinx/metadata/KmPropertyAccessorAttributes;Z)V
+	public static final fun setNullCheckPredicate (Lkotlinx/metadata/KmEffectExpression;Z)V
 	public static final fun setNullable (Lkotlinx/metadata/KmType;Z)V
 	public static final fun setOperator (Lkotlinx/metadata/KmFunction;Z)V
 	public static final fun setReified (Lkotlinx/metadata/KmTypeParameter;Z)V
@@ -1148,6 +1184,8 @@ public final class kotlinx/metadata/NodesFlagExtensionsKt {
 	public static final fun setVisibility (Lkotlinx/metadata/KmConstructor;Lkotlinx/metadata/Visibility;)V
 	public static final fun setVisibility (Lkotlinx/metadata/KmFunction;Lkotlinx/metadata/Visibility;)V
 	public static final fun setVisibility (Lkotlinx/metadata/KmProperty;Lkotlinx/metadata/Visibility;)V
+	public static final fun setVisibility (Lkotlinx/metadata/KmPropertyAccessorAttributes;Lkotlinx/metadata/Visibility;)V
+	public static final fun setVisibility (Lkotlinx/metadata/KmTypeAlias;Lkotlinx/metadata/Visibility;)V
 }
 
 public final class kotlinx/metadata/Visibility : java/lang/Enum {
