@@ -4,10 +4,7 @@ apply plugin: 'kotlin'
 
 JvmToolchain.configureJvmToolchain(project, JdkMajorVersion.JDK_1_8)
 
-def sbom = configureSbom(project)
-configurePublishing(project, {
-    artifact(sbom)
-})
+configurePublishing(project)
 configureSourcesJar()
 configureJavadocJar()
 
