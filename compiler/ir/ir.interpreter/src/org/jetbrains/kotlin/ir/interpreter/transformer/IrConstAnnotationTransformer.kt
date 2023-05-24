@@ -30,7 +30,9 @@ internal abstract class IrConstAnnotationTransformer(
     onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
     onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     suppressExceptions: Boolean,
-) : IrConstTransformer(interpreter, irFile, mode, checker, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions) {
+) : AbstractIrConstTransformer(
+    interpreter, irFile, mode, checker, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions
+) {
     protected fun transformAnnotations(annotationContainer: IrAnnotationContainer) {
         annotationContainer.annotations.forEach { annotation ->
             transformAnnotation(annotation)
@@ -44,7 +46,7 @@ internal abstract class IrConstAnnotationTransformer(
         }
     }
 
-    protected fun transformAnnotationArgument(argument: IrExpression, valueParameter: IrValueParameter): IrExpression {
+    private fun transformAnnotationArgument(argument: IrExpression, valueParameter: IrValueParameter): IrExpression {
         return when (argument) {
             is IrVararg -> argument.transformVarArg()
             else -> argument.transformSingleArg(valueParameter.type)

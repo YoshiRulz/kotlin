@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.ir.util.classId
 import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
+import org.jetbrains.kotlin.ir.visitors.IrTypeTransformerVoid
 
 fun IrFile.transformConst(
     interpreter: IrInterpreter,
@@ -44,24 +45,15 @@ fun IrFile.transformConst(
     )
 
     checkers.fold(preprocessedFile) { file, checker ->
-        val irConstExpressionTransformer = IrConstExpressionTransformer(
+        val irConstTransformer = IrConstExpressionTransformer(
             interpreter, file, mode, checker, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions
         )
-        val irConstDeclarationAnnotationTransformer = IrConstDeclarationAnnotationTransformer(
-            interpreter, file, mode, checker, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions
-        )
-        val irConstTypeAnnotationTransformer = IrConstTypeAnnotationTransformer(
-            interpreter, file, mode, checker, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions
-        )
-        file.transform(irConstExpressionTransformer, null)
-        file.transform(irConstDeclarationAnnotationTransformer, null)
-        file.transform(irConstTypeAnnotationTransformer, null)
+        file.transform(irConstTransformer, null)
     }
 }
 
-// Note: We are using `IrElementTransformer` here instead of `IrElementTransformerVoid` to avoid conflicts with `IrTypeVisitorVoid`
-// that is used later in `IrConstTypeAnnotationTransformer`.
-internal abstract class IrConstTransformer(
+// Note: We are using `IrElementTransformer` here instead of `IrElementTransformerVoid` to avoid conflicts with `IrTypeVisitorVoid`.
+internal abstract class AbstractIrConstTransformer(
     protected val interpreter: IrInterpreter,
     private val irFile: IrFile,
     private val mode: EvaluationMode,
@@ -71,7 +63,7 @@ internal abstract class IrConstTransformer(
     private val onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
     private val onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
     private val suppressExceptions: Boolean,
-) : IrElementTransformer<Nothing?> {
+) : IrElementTransformer<Nothing?>, IrTypeTransformerVoid<Nothing?> {
     private fun IrExpression.warningIfError(original: IrExpression): IrExpression {
         if (this is IrErrorExpression) {
             onWarning(irFile, original, this)
