@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.backend.konan.objcexport
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.analyzer.ModuleInfo
+import org.jetbrains.kotlin.backend.konan.KonanFqNames
 import org.jetbrains.kotlin.backend.konan.UnitSuspendFunctionObjCExport
 import org.jetbrains.kotlin.descriptors.konan.isNativeStdlib
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
@@ -28,6 +29,7 @@ import org.jetbrains.kotlin.resolve.BindingTraceContext
 import org.jetbrains.kotlin.resolve.DescriptorResolver
 import org.jetbrains.kotlin.resolve.TypeResolver
 import org.jetbrains.kotlin.resolve.deprecation.DeprecationResolver
+import org.jetbrains.kotlin.resolve.descriptorUtil.annotationClass
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.resolve.lazy.FileScopeProvider
 import org.jetbrains.kotlin.resolve.lazy.KotlinCodeAnalyzer
@@ -182,7 +184,11 @@ internal class ObjCExportLazyImpl(
             if ((it is KtFunction || it is KtProperty) && it.isPublic && !it.hasExpectModifier()) {
                 val classDescriptor = getClassIfExtension(it)
                 if (classDescriptor != null) {
-                    extensions.getOrPut(classDescriptor, { mutableListOf() }) += it
+                    // If a class is hidden from Objective-C API then it is meaningless
+                    // to export its extensions.
+                    if (!classDescriptor.isHiddenFromObjC()) {
+                        extensions.getOrPut(classDescriptor, { mutableListOf() }) += it
+                    }
                 } else {
                     topLevel += it
                 }
