@@ -10,6 +10,8 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.interpreter.accessesTopLevelOrObjectField
+import org.jetbrains.kotlin.ir.interpreter.checker.IrInterpreterNameChecker.Companion.isEnumName
+import org.jetbrains.kotlin.ir.interpreter.checker.IrInterpreterNameChecker.Companion.isKCallableNameCall
 import org.jetbrains.kotlin.ir.interpreter.fqName
 import org.jetbrains.kotlin.ir.interpreter.isAccessToNotNullableObject
 import org.jetbrains.kotlin.ir.types.*
@@ -60,6 +62,8 @@ class IrInterpreterCommonChecker : IrInterpreterChecker {
 
         val owner = expression.symbol.owner
         if (!data.mode.canEvaluateFunction(owner)) return false
+
+        if (expression.isKCallableNameCall(data.irBuiltIns) || expression.isEnumName()) return true
 
         // We disable `toFloat` folding on K/JS till `toFloat` is fixed (KT-35422)
         // This check must be placed here instead of CallInterceptor because we still
@@ -137,6 +141,9 @@ class IrInterpreterCommonChecker : IrInterpreterChecker {
     }
 
     override fun visitStringConcatenation(expression: IrStringConcatenation, data: IrInterpreterCheckerData): Boolean {
+        val possibleNameCall = expression.arguments.singleOrNull() as? IrCall
+        if (possibleNameCall != null && possibleNameCall.accept(this, data)) return true
+
         return expression.arguments.all { arg ->
             when (arg) {
                 is IrGetObjectValue -> {

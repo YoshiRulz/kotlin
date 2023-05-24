@@ -40,7 +40,7 @@ fun IrFile.transformConst(
     }
 
     val checkers = setOf(
-        IrInterpreterNameChecker(),
+//        IrInterpreterNameChecker(),
         IrInterpreterCommonChecker(),
     )
 

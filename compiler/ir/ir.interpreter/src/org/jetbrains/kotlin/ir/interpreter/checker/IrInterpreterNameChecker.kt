@@ -49,7 +49,7 @@ class IrInterpreterNameChecker : IrInterpreterChecker {
             return name.asString() == "name"
         }
 
-        private fun IrCall.isEnumName(): Boolean {
+        fun IrCall.isEnumName(): Boolean {
             val owner = this.symbol.owner
             if (owner.extensionReceiverParameter != null || owner.valueParameters.isNotEmpty()) return false
             val property = owner.property ?: return false
