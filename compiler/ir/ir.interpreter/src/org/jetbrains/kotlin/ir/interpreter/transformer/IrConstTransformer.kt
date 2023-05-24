@@ -24,6 +24,20 @@ import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformer
 
+// Note: `preprocessors` and `transformers` are using per file cache. In K2 we are visiting one file twice: after fir2ir and in lowering.
+// If in between some new declaration appear we will not process them. But this should not be a problem because lowering is placed at the top.
+// The only problem can occur when and if we move lowering below `FunctionInlining`. In that case we must visit only `IrReturnableBlock`s and
+// somehow "reset" cache.
+private val preprocessors = setOf(IrInterpreterKCallableNamePreprocessor())
+
+private val transformers = setOf(
+    IrConstExpressionTransformer(),
+    IrConstDeclarationAnnotationTransformer(),
+    IrConstTypeAnnotationTransformer()
+)
+
+private val lock = Object()
+
 fun IrFile.transformConst(
     interpreter: IrInterpreter,
     mode: EvaluationMode,
@@ -33,7 +47,6 @@ fun IrFile.transformConst(
     onError: (IrFile, IrElement, IrErrorExpression) -> Unit = { _, _, _ -> },
     suppressExceptions: Boolean = false,
 ) {
-    val preprocessors = setOf(IrInterpreterKCallableNamePreprocessor())
     val preprocessedFile = preprocessors.fold(this) { file, preprocessor ->
         preprocessor.preprocess(file, IrInterpreterPreprocessorData(mode, interpreter.irBuiltIns))
     }
@@ -43,46 +56,51 @@ fun IrFile.transformConst(
         IrInterpreterCommonChecker(),
     )
 
-    val transformers = setOf(
-        IrConstExpressionTransformer(
-            interpreter, mode, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions
-        ),
-        IrConstDeclarationAnnotationTransformer(
-            interpreter, mode, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions
-        ),
-        IrConstTypeAnnotationTransformer(
-            interpreter, mode, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions
-        )
-    )
-
-    checkers.forEach { checker ->
-        transformers.forEach { it.transform(preprocessedFile, checker) }
+    synchronized(lock) {
+        checkers.forEach { checker ->
+            val data = IrConstTransformerData(
+                preprocessedFile, interpreter, checker, mode,
+                evaluatedConstTracker, inlineConstTracker,
+                onWarning, onError, suppressExceptions
+            )
+            transformers.forEach { it.transform(data) }
+        }
     }
 }
 
+data class IrConstTransformerData(
+    val irFile: IrFile,
+    val interpreter: IrInterpreter,
+    val checker: IrInterpreterChecker,
+    val mode: EvaluationMode,
+    val evaluatedConstTracker: EvaluatedConstTracker?,
+    val inlineConstTracker: InlineConstTracker?,
+    val onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
+    val onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
+    val suppressExceptions: Boolean,
+)
+
 // Note: We are using `IrElementTransformer` here instead of `IrElementTransformerVoid` to avoid conflicts with `IrTypeVisitorVoid`
 // that is used later in `IrConstTypeAnnotationTransformer`.
-internal abstract class IrConstTransformer(
-    protected val interpreter: IrInterpreter,
-    private val mode: EvaluationMode,
-    private val evaluatedConstTracker: EvaluatedConstTracker?,
-    private val inlineConstTracker: InlineConstTracker?,
-    private val onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
-    private val onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
-    private val suppressExceptions: Boolean,
-) : IrElementTransformer<Nothing?> {
+internal abstract class IrConstTransformer : IrElementTransformer<Nothing?> {
     protected lateinit var irFile: IrFile
-    private lateinit var checker: IrInterpreterChecker
+        private set
 
-    fun transform(irFile: IrFile, checker: IrInterpreterChecker) {
-        this.irFile = irFile
-        this.checker = checker
+    protected lateinit var interpreter: IrInterpreter
+        private set
+
+    private lateinit var data: IrConstTransformerData
+
+    fun transform(data: IrConstTransformerData) {
+        this.data = data
+        this.irFile = data.irFile
+        this.interpreter = data.interpreter
         irFile.accept(this, null)
     }
 
     private fun IrExpression.warningIfError(original: IrExpression): IrExpression {
         if (this is IrErrorExpression) {
-            onWarning(irFile, original, this)
+            data.onWarning(irFile, original, this)
             return original
         }
         return this
@@ -90,8 +108,8 @@ internal abstract class IrConstTransformer(
 
     private fun IrExpression.reportIfError(original: IrExpression): IrExpression {
         if (this is IrErrorExpression) {
-            onError(irFile, original, this)
-            return when (mode) {
+            data.onError(irFile, original, this)
+            return when (data.mode) {
                 // need to pass any const value to be able to get some bytecode and then report error
                 EvaluationMode.ONLY_INTRINSIC_CONST -> IrConstImpl.constNull(startOffset, endOffset, type)
                 else -> original
@@ -104,9 +122,9 @@ internal abstract class IrConstTransformer(
         configuration: IrInterpreterConfiguration = interpreter.environment.configuration
     ): Boolean {
         return try {
-            this.accept(checker, IrInterpreterCheckerData(mode, interpreter.irBuiltIns, configuration))
+            this.accept(data.checker, IrInterpreterCheckerData(data.mode, interpreter.irBuiltIns, configuration))
         } catch (e: Throwable) {
-            if (suppressExceptions) {
+            if (data.suppressExceptions) {
                 return false
             }
             throw AssertionError("Error occurred while optimizing an expression:\n${this.dump()}", e)
@@ -117,13 +135,13 @@ internal abstract class IrConstTransformer(
         val result = try {
             interpreter.interpret(this, irFile)
         } catch (e: Throwable) {
-            if (suppressExceptions) {
+            if (data.suppressExceptions) {
                 return this
             }
             throw AssertionError("Error occurred while optimizing an expression:\n${this.dump()}", e)
         }
 
-        evaluatedConstTracker?.save(
+        data.evaluatedConstTracker?.save(
             result.startOffset, result.endOffset, irFile.nameWithPackage,
             constant = if (result is IrErrorExpression) ErrorValue.create(result.description)
             else (result as IrConst<*>).toConstantValue()
@@ -136,7 +154,7 @@ internal abstract class IrConstTransformer(
                 else -> null
             }
 
-            if (field != null) inlineConstTracker.reportOnIr(irFile, field, result)
+            if (field != null) data.inlineConstTracker.reportOnIr(irFile, field, result)
         }
 
         return if (failAsError) result.reportIfError(this) else result.warningIfError(this)

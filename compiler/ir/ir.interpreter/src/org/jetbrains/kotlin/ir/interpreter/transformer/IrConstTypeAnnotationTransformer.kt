@@ -5,27 +5,13 @@
 
 package org.jetbrains.kotlin.ir.interpreter.transformer
 
-import org.jetbrains.kotlin.constant.EvaluatedConstTracker
-import org.jetbrains.kotlin.incremental.components.InlineConstTracker
 import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.declarations.IrFile
-import org.jetbrains.kotlin.ir.expressions.IrErrorExpression
-import org.jetbrains.kotlin.ir.interpreter.IrInterpreter
-import org.jetbrains.kotlin.ir.interpreter.checker.EvaluationMode
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.typeOrNull
 import org.jetbrains.kotlin.ir.visitors.IrTypeTransformerVoid
 
-internal class IrConstTypeAnnotationTransformer(
-    interpreter: IrInterpreter,
-    mode: EvaluationMode,
-    evaluatedConstTracker: EvaluatedConstTracker?,
-    inlineConstTracker: InlineConstTracker?,
-    onWarning: (IrFile, IrElement, IrErrorExpression) -> Unit,
-    onError: (IrFile, IrElement, IrErrorExpression) -> Unit,
-    suppressExceptions: Boolean,
-) : IrConstAnnotationTransformer(interpreter, mode, evaluatedConstTracker, inlineConstTracker, onWarning, onError, suppressExceptions),
+internal class IrConstTypeAnnotationTransformer : IrConstAnnotationTransformer(),
     IrTypeTransformerVoid<Nothing?> {
 
     override fun <Type : IrType?> transformType(container: IrElement, type: Type, data: Nothing?): Type {
