@@ -1,3 +1,5 @@
+// TARGET_BACKEND: JS
+
 // MODULE: InterfaceModule
 // FILE: MyInterface.kt
 interface MyInterface {

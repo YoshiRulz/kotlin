@@ -1,3 +1,7 @@
+// TARGET_BACKEND: JS
+// TARGET_BACKEND: WASM
+// TARGET_BACKEND: JVM
+
 // MODULE: InterfaceModule
 // FILE: MyInterface.kt
 interface MyInterface {
