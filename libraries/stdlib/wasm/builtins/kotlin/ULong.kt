@@ -321,27 +321,27 @@ public class ULong private constructor(private val value: ULong) : Comparable<UL
      */
     @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
-    public inline infix fun shr(bitCount: Int): ULong = this.toLong().shr(bitCount).toULong()
+    public inline infix fun shr(bitCount: Int): ULong = this.toLong().ushr(bitCount).toULong()
 
     /** Performs a bitwise AND operation between the two values. */
     @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
-    public inline infix fun and(other: ULong): ULong = (this.toInt() and other.toInt()).toULong()
+    public inline infix fun and(other: ULong): ULong = (this.toLong() and other.toLong()).toULong()
 
     /** Performs a bitwise OR operation between the two values. */
     @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
-    public inline infix fun or(other: ULong): ULong = (this.toInt() or other.toInt()).toULong()
+    public inline infix fun or(other: ULong): ULong = (this.toLong() or other.toLong()).toULong()
 
     /** Performs a bitwise XOR operation between the two values. */
     @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
-    public inline infix fun xor(other: ULong): ULong = (this.toInt() xor other.toInt()).toULong()
+    public inline infix fun xor(other: ULong): ULong = (this.toLong() xor other.toLong()).toULong()
 
     /** Inverts the bits in this value. */
     @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
-    public inline fun inv(): ULong = this.toInt().inv().toULong()
+    public inline fun inv(): ULong = this.toLong().inv().toULong()
 
     /**
      * Converts this [ULong] value to [Byte].
@@ -455,7 +455,9 @@ public class ULong private constructor(private val value: ULong) : Comparable<UL
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toDouble(): Double = wasm_f64_convert_i64_u(this.toLong())
 
-    public override fun toString(): String = ulongToString(this.toLong())
+    public override fun toString(): String = utoa64(this, 10)
+
+    public override fun hashCode(): Int = ((this shr 32) xor this).toInt()
 
     @kotlin.internal.IntrinsicConstEvaluation
     public override fun equals(other: Any?): Boolean =
@@ -480,8 +482,8 @@ public class ULong private constructor(private val value: ULong) : Comparable<UL
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
-@WasmNoOpCast
-public fun Byte.toULong(): ULong = implementedAsIntrinsic
+@kotlin.internal.InlineOnly
+public inline fun Byte.toULong(): ULong = toUInt().toULong()
 /**
  * Converts this [Short] value to [ULong].
  *
@@ -492,8 +494,8 @@ public fun Byte.toULong(): ULong = implementedAsIntrinsic
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
-@WasmNoOpCast
-public fun Short.toULong(): ULong = implementedAsIntrinsic
+@kotlin.internal.InlineOnly
+public inline fun Short.toULong(): ULong = toUInt().toULong()
 /**
  * Converts this [Int] value to [ULong].
  *
@@ -504,8 +506,8 @@ public fun Short.toULong(): ULong = implementedAsIntrinsic
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
-@WasmNoOpCast
-public fun Int.toULong(): ULong = implementedAsIntrinsic
+@kotlin.internal.InlineOnly
+public inline fun Int.toULong(): ULong = toUInt().toULong()
 /**
  * Converts this [Long] value to [ULong].
  *

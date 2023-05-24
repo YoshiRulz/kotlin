@@ -545,7 +545,6 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
     }
 
     internal open fun MethodBuilder.modifyGeneratedExtensionConversion(fromType: PrimitiveType) {}
-    internal open fun MethodBuilder.modifyGeneratedExtensionConversion(fromType: UnsignedType) {}
 
     private fun FileBuilder.generateExtensionConversions() {
         for (otherType in UnsignedType.values()) {
@@ -597,7 +596,7 @@ open class UnsignedTypeGenerator(val type: UnsignedType, val out: PrintWriter) :
                     type -> "$className(this)"
                     else -> "$className(this.to$thisSigned())"
                 }.addAsSingleLineBody()
-            }.modifyGeneratedExtensionConversion(otherType)
+            }.modifyGeneratedExtensionConversion(otherType.asSigned)
         }
 
         if (type == UnsignedType.UBYTE || type == UnsignedType.USHORT)

@@ -317,6 +317,8 @@ internal external fun wasm_i32_wrap_i64(a: Long): Int
 @WasmOp(WasmOp.I64_EXTEND_I32_S)
 internal external fun wasm_i64_extend_i32_s(a: Int): Long
 
+// TODO: remove it after the next bootstrap
+@Suppress("WRONG_JS_INTEROP_TYPE")
 @WasmOp(WasmOp.I64_EXTEND_I32_U)
 internal external fun wasm_i64_extend_i32_u(a: Int): ULong
 

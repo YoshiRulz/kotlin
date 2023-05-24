@@ -430,7 +430,9 @@ public class UByte private constructor(private val value: UByte) : Comparable<UB
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toDouble(): Double = wasm_f64_convert_i32_u(this.toInt())
 
-    public override fun toString(): String = toInt().toString()
+    public override fun toString(): String = toUInt().toString()
+
+    public override fun hashCode(): Int = this.toInt()
 
     @kotlin.internal.IntrinsicConstEvaluation
     public override fun equals(other: Any?): Boolean =
@@ -454,8 +456,8 @@ public class UByte private constructor(private val value: UByte) : Comparable<UB
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
-@WasmNoOpCast
-public fun Byte.toUByte(): UByte = implementedAsIntrinsic
+@kotlin.internal.InlineOnly
+public inline fun Byte.toUByte(): UByte = toUInt().toUByte()
 /**
  * Converts this [Short] value to [UByte].
  *
@@ -467,8 +469,7 @@ public fun Byte.toUByte(): UByte = implementedAsIntrinsic
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-@kotlin.internal.IntrinsicConstEvaluation
-public inline fun Short.toUByte(): UByte = this.toByte().toUByte()
+public inline fun Short.toUByte(): UByte = toUInt().toUByte()
 /**
  * Converts this [Int] value to [UByte].
  *
@@ -480,8 +481,7 @@ public inline fun Short.toUByte(): UByte = this.toByte().toUByte()
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-@kotlin.internal.IntrinsicConstEvaluation
-public inline fun Int.toUByte(): UByte = this.toByte().toUByte()
+public inline fun Int.toUByte(): UByte = toUInt().toUByte()
 /**
  * Converts this [Long] value to [UByte].
  *
@@ -493,5 +493,4 @@ public inline fun Int.toUByte(): UByte = this.toByte().toUByte()
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-@kotlin.internal.IntrinsicConstEvaluation
-public inline fun Long.toUByte(): UByte = this.toByte().toUByte()
+public inline fun Long.toUByte(): UByte = toULong().toUByte()

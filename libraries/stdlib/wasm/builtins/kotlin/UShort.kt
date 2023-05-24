@@ -431,7 +431,9 @@ public class UShort private constructor(private val value: UShort) : Comparable<
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toDouble(): Double = wasm_f64_convert_i32_u(this.toInt())
 
-    public override fun toString(): String = toInt().toString()
+    public override fun toString(): String = toUInt().toString()
+
+    public override fun hashCode(): Int = this.toInt()
 
     @kotlin.internal.IntrinsicConstEvaluation
     public override fun equals(other: Any?): Boolean =
@@ -456,8 +458,8 @@ public class UShort private constructor(private val value: UShort) : Comparable<
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
-@WasmNoOpCast
-public fun Byte.toUShort(): UShort = implementedAsIntrinsic
+@kotlin.internal.InlineOnly
+public inline fun Byte.toUShort(): UShort = toUInt().toUShort()
 /**
  * Converts this [Short] value to [UShort].
  *
@@ -467,8 +469,8 @@ public fun Byte.toUShort(): UShort = implementedAsIntrinsic
  */
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
-@WasmNoOpCast
-public fun Short.toUShort(): UShort = implementedAsIntrinsic
+@kotlin.internal.InlineOnly
+public inline fun Short.toUShort(): UShort = toUInt().toUShort()
 /**
  * Converts this [Int] value to [UShort].
  *
@@ -480,8 +482,7 @@ public fun Short.toUShort(): UShort = implementedAsIntrinsic
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-@kotlin.internal.IntrinsicConstEvaluation
-public inline fun Int.toUShort(): UShort = this.toShort().toUShort()
+public inline fun Int.toUShort(): UShort = toUInt().toUShort()
 /**
  * Converts this [Long] value to [UShort].
  *
@@ -493,5 +494,4 @@ public inline fun Int.toUShort(): UShort = this.toShort().toUShort()
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-@kotlin.internal.IntrinsicConstEvaluation
-public inline fun Long.toUShort(): UShort = this.toShort().toUShort()
+public inline fun Long.toUShort(): UShort = toULong().toUShort()

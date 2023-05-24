@@ -321,7 +321,7 @@ public class UInt private constructor(private val value: UInt) : Comparable<UInt
      */
     @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
-    public inline infix fun shr(bitCount: Int): UInt = this.toInt().shr(bitCount).toUInt()
+    public inline infix fun shr(bitCount: Int): UInt = this.toInt().ushr(bitCount).toUInt()
 
     /** Performs a bitwise AND operation between the two values. */
     @kotlin.internal.InlineOnly
@@ -452,7 +452,9 @@ public class UInt private constructor(private val value: UInt) : Comparable<UInt
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toDouble(): Double = wasm_f64_convert_i32_u(this.toInt())
 
-    public override fun toString(): String = toLong().toString()
+    public override fun toString(): String = utoa32(this, 10)
+
+    public override fun hashCode(): Int = this.toInt()
 
     @kotlin.internal.IntrinsicConstEvaluation
     public override fun equals(other: Any?): Boolean =
@@ -523,8 +525,7 @@ public fun Int.toUInt(): UInt = implementedAsIntrinsic
 @SinceKotlin("1.5")
 @WasExperimental(ExperimentalUnsignedTypes::class)
 @kotlin.internal.InlineOnly
-@kotlin.internal.IntrinsicConstEvaluation
-public inline fun Long.toUInt(): UInt = this.toInt().toUInt()
+public inline fun Long.toUInt(): UInt = toULong().toUInt()
 /**
  * Converts this [Float] value to [UInt].
  *

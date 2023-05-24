@@ -51,7 +51,8 @@ val commonMainSources by task<Sync> {
         "src/kotlin/UByte.kt",
         "src/kotlin/UShort.kt",
         "src/kotlin/UInt.kt",
-        "src/kotlin/ULong.kt"
+        "src/kotlin/ULong.kt",
+        "src/kotlin/UnsignedUtils.kt",
     )
 
     sources.forEach { path ->
