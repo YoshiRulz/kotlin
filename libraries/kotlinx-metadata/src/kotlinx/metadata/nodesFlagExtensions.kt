@@ -12,9 +12,10 @@ import kotlinx.metadata.internal.BooleanFlagDelegate
 import kotlinx.metadata.internal.EnumFlagDelegate
 import kotlinx.metadata.internal.classBooleanFlag
 import kotlinx.metadata.internal.constructorBooleanFlag
+import kotlin.contracts.ExperimentalContracts
 import org.jetbrains.kotlin.metadata.deserialization.Flags as ProtoFlags
 
-//todo: annotations, property acc
+//todo: annotations
 
 // --- CLASS ---
 
@@ -162,8 +163,6 @@ var KmProperty.visibility: Visibility by visibilityDelegate(KmProperty::flags)
 
 /**
  * Represents modality of a corresponding property.
- *
- * TODO it can't be sealed
  */
 var KmProperty.modality: Modality by modalityDelegate(KmProperty::flags)
 
@@ -219,23 +218,48 @@ var KmProperty.isDelegated: Boolean by propertyBooleanFlag(Flag(ProtoFlags.IS_DE
  */
 var KmProperty.isExpect: Boolean by propertyBooleanFlag(Flag(ProtoFlags.IS_EXPECT_PROPERTY))
 
+// --- PROPERTY ACCESSOR ---
+
+/**
+ * Represents visibility of a corresponding property accessor.
+ */
+var KmPropertyAccessorAttributes.visibility: Visibility by visibilityDelegate(KmPropertyAccessorAttributes::flags)
+
+/**
+ * Represents modality of a corresponding property accessor.
+ */
+var KmPropertyAccessorAttributes.modality: Modality by modalityDelegate(KmPropertyAccessorAttributes::flags)
+
+/**
+ * Signifies that the corresponding property accessor is not default, i.e. it has a body and/or annotations in the source code.
+ */
+var KmPropertyAccessorAttributes.isNotDefault: Boolean by propertyAccessorBooleanFlag(Flag(ProtoFlags.IS_NOT_DEFAULT))
+
+/**
+ * Signifies that the corresponding property accessor is `external`.
+ */
+val KmPropertyAccessorAttributes.isExternal: Boolean by propertyAccessorBooleanFlag(Flag(ProtoFlags.IS_EXTERNAL_ACCESSOR))
+
+/**
+ * Signifies that the corresponding property accessor is `inline`.
+ */
+val KmPropertyAccessorAttributes.isInline: Boolean by propertyAccessorBooleanFlag(Flag(ProtoFlags.IS_INLINE_ACCESSOR))
+
 // --- TYPE & TYPE_PARAM
+
 /**
  * Signifies that the corresponding type is marked as nullable, i.e. has a question mark at the end of its notation.
  */
-
 var KmType.isNullable: Boolean by typeBooleanFlag(Flag(0, 1, 1))
 
 /**
  * Signifies that the corresponding type is `suspend`.
  */
-
 var KmType.isSuspend: Boolean by typeBooleanFlag(Flag(ProtoFlags.SUSPEND_TYPE.offset + 1, ProtoFlags.SUSPEND_TYPE.bitWidth, 1))
 
 /**
  * Signifies that the corresponding type is [definitely non-null](https://kotlinlang.org/docs/whatsnew17.html#stable-definitely-non-nullable-types).
  */
-
 var KmType.isDefinitelyNonNull: Boolean by typeBooleanFlag(
     Flag(
         ProtoFlags.DEFINITELY_NOT_NULL_TYPE.offset + 1,
@@ -248,8 +272,14 @@ var KmType.isDefinitelyNonNull: Boolean by typeBooleanFlag(
 /**
  * Signifies that the corresponding type parameter is `reified`.
  */
-
 var KmTypeParameter.isReified: Boolean by BooleanFlagDelegate(KmTypeParameter::flags, Flag(0, 1, 1))
+
+// --- TYPE ALIAS ---
+
+/**
+ * Represents visibility of a corresponding type alias.
+ */
+var KmTypeAlias.visibility: Visibility by visibilityDelegate(KmTypeAlias::flags)
 
 
 // --- VALUE PARAMETER ---
@@ -272,3 +302,23 @@ var KmValueParameter.isCrossinline: Boolean by valueParameterBooleanFlag(Flag(Pr
  * Signifies that the corresponding value parameter is `noinline`.
  */
 var KmValueParameter.isNoinline: Boolean by valueParameterBooleanFlag(Flag(ProtoFlags.IS_NOINLINE))
+
+// --- EFFECT EXPRESSION ---
+
+/**
+ * Signifies that the corresponding effect expression should be negated to compute the proposition or the conclusion of an effect.
+ *
+ * Contracts are an internal feature of the standard Kotlin library, and their behavior and/or binary format
+ * may change in a subsequent release.
+ */
+@ExperimentalContracts
+var KmEffectExpression.isNegated: Boolean by BooleanFlagDelegate(KmEffectExpression::flags, Flag(ProtoFlags.IS_NEGATED))
+
+/**
+ * Signifies that the corresponding effect expression checks whether a value of some variable is `null`.
+ *
+ * Contracts are an internal feature of the standard Kotlin library, and their behavior and/or binary format
+ * may change in a subsequent release.
+ */
+@ExperimentalContracts
+var KmEffectExpression.isNullCheckPredicate: Boolean by BooleanFlagDelegate(KmEffectExpression::flags, Flag(ProtoFlags.IS_NULL_CHECK_PREDICATE))

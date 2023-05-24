@@ -101,12 +101,13 @@ private fun visitProperty(
     sb.appendLine()
     if (property.hasGetter) {
         sb.append("    ")
-        sb.appendFlags(property.getterFlags, PROPERTY_ACCESSOR_FLAGS_MAP)
+        sb.appendPropertyAccessorModifiers(property.getter)
         sb.appendLine("get")
     }
-    if (property.hasSetter) {
+    val setter = property.setter
+    if (setter != null) {
         sb.append("    ")
-        sb.appendFlags(property.setterFlags, PROPERTY_ACCESSOR_FLAGS_MAP)
+        sb.appendPropertyAccessorModifiers(setter)
         sb.append("set")
         property.setterParameter?.let {
             sb.append("(").append(printValueParameter(it)).append(")")
@@ -144,7 +145,7 @@ private fun visitTypeAlias(
         sb.append("  ").append("@").append(renderAnnotation(annotation)).appendLine()
     }
     sb.append("  ")
-    sb.appendFlags(typeAlias.flags, VISIBILITY_FLAGS_MAP)
+    sb.append(VISIBILITY_MAP[typeAlias.visibility])
     sb.append("typealias ").append(typeAlias.name)
     if (typeAlias.typeParameters.isNotEmpty()) {
         typeAlias.typeParameters.joinTo(sb, prefix = "<", postfix = ">") { printTypeParameter(it, settings) }
@@ -334,15 +335,6 @@ private fun printVersionRequirement(versionRequirement: KmVersionRequirement): S
     }
 }
 
-private fun StringBuilder.appendFlags(flags: Flags, map: Map<Flag, String>) {
-    for ((modifier, string) in map) {
-        if (modifier(flags)) {
-            append(string)
-            if (string.isNotEmpty()) append(" ")
-        }
-    }
-}
-
 private fun StringBuilder.appendDeclarationContainerExtensions(
     settings: KotlinpSettings,
     localDelegatedProperties: List<StringBuilder>,
@@ -423,7 +415,6 @@ private fun printEffect(
 
 @ExperimentalContracts
 private fun printEffectExpression(effectExpression: KmEffectExpression): String {
-    val flags: Flags = effectExpression.flags
     val parameterIndex: Int? = effectExpression.parameterIndex
     val constantValue: List<Any?>? = effectExpression.constantValue?.let { listOf(it.value) }
     val andArguments = effectExpression.andArguments.map(::printEffectExpression)
@@ -443,11 +434,11 @@ private fun printEffectExpression(effectExpression: KmEffectExpression): String 
         )
         if (effectExpression.isInstanceType != null) {
             append(" ")
-            if (Flag.EffectExpression.IS_NEGATED(flags)) append("!")
+            if (effectExpression.isNegated) append("!")
             append("is ${effectExpression.isInstanceType?.let(::printType)}")
         }
-        if (Flag.EffectExpression.IS_NULL_CHECK_PREDICATE(flags)) {
-            append(if (Flag.EffectExpression.IS_NEGATED(flags)) " != " else " == ")
+        if (effectExpression.isNullCheckPredicate) {
+            append(if (effectExpression.isNegated) " != " else " == ")
             append("null")
         }
 
@@ -735,22 +726,6 @@ private val MEMBER_KIND_MAP = mapOf(
     MemberKind.SYNTHESIZED to "/* synthesized */ ",
 )
 
-private val VISIBILITY_FLAGS_MAP = mapOf(
-    Flag.IS_INTERNAL to "internal",
-    Flag.IS_PRIVATE to "private",
-    Flag.IS_PRIVATE_TO_THIS to "private",
-    Flag.IS_PROTECTED to "protected",
-    Flag.IS_PUBLIC to "public",
-    Flag.IS_LOCAL to "local"
-)
-
-private val COMMON_FLAGS_MAP = VISIBILITY_FLAGS_MAP + mapOf(
-    Flag.IS_FINAL to "final",
-    Flag.IS_OPEN to "open",
-    Flag.IS_ABSTRACT to "abstract",
-    Flag.IS_SEALED to "sealed"
-)
-
 private fun StringBuilder.appendFlags(vararg modifiers: Pair<Boolean, String>) = modifiers.forEach { (condition, s) ->
     if (condition) {
         append(s)
@@ -809,12 +784,15 @@ private fun StringBuilder.appendPropertyModifiers(kmProperty: KmProperty) {
     )
 }
 
-// TODO!
-private val PROPERTY_ACCESSOR_FLAGS_MAP = COMMON_FLAGS_MAP + mapOf(
-    Flag.PropertyAccessor.IS_NOT_DEFAULT to "/* non-default */",
-    Flag.PropertyAccessor.IS_EXTERNAL to "external",
-    Flag.PropertyAccessor.IS_INLINE to "inline"
-)
+private fun StringBuilder.appendPropertyAccessorModifiers(accessorAttributes: KmPropertyAccessorAttributes) {
+    append(VISIBILITY_MAP[accessorAttributes.visibility])
+    append(MODALITY_MAP[accessorAttributes.modality])
+    appendFlags(
+        accessorAttributes.isNotDefault to "/* non-default */",
+        accessorAttributes.isExternal to "external",
+        accessorAttributes.isInline to "inline"
+    )
+}
 
 private fun StringBuilder.appendValueParameterModifiers(valueParameter: KmValueParameter) = appendFlags(
     valueParameter.isCrossinline to "crossinline",

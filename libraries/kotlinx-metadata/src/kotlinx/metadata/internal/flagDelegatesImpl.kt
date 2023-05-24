@@ -56,6 +56,8 @@ internal fun constructorBooleanFlag(flag: Flag) = BooleanFlagDelegate(KmConstruc
 
 internal fun propertyBooleanFlag(flag: Flag) = BooleanFlagDelegate(KmProperty::flags, flag)
 
+internal fun propertyAccessorBooleanFlag(flag: Flag) = BooleanFlagDelegate(KmPropertyAccessorAttributes::flags, flag)
+
 internal fun typeBooleanFlag(flag: Flag) = BooleanFlagDelegate(KmType::flags, flag)
 
 internal fun valueParameterBooleanFlag(flag: Flag) = BooleanFlagDelegate(KmValueParameter::flags, flag)

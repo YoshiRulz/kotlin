@@ -93,6 +93,9 @@ enum class Modality(kind: Int) {
 
     /**
      * A modality flag, signifying that the corresponding declaration is `sealed`.
+     *
+     * Pay attention that this modality is not applicable to class' members.
+     * Setting it as a value for member modality leads to an undefined behaviour.
      */
     SEALED(ProtoModality.SEALED_VALUE)
     ;
@@ -101,7 +104,7 @@ enum class Modality(kind: Int) {
 }
 
 /**
- * Represents nature of a corresponding class
+ * Represents the nature of a corresponding class
  */
 enum class ClassKind(kind: Int) {
     /**
@@ -165,7 +168,7 @@ enum class MemberKind(kind: Int) {
 
     /**
      * A member kind flag, signifying that the corresponding function exists in the containing class because it has been produced
-     * by interface delegation (delegation "by").
+     * by interface delegation.
      *
      * Do not confuse with property delegation.
      */
