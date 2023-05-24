@@ -511,9 +511,6 @@ public class KmPropertyAccessorAttributes internal constructor(internal var flag
     public constructor() : this(0)
 }
 
-private const val FLAGS_CTOR_DEPRECATED =
-    "Constructor with flags is deprecated, use constructor without flags and assign them or corresponding extension properties directly."
-
 /**
  * Represents a Kotlin property declaration.
  *
@@ -1279,3 +1276,6 @@ internal fun <T> T.addTo(collection: MutableCollection<T>): T {
     collection.add(this)
     return this
 }
+
+private const val FLAGS_CTOR_DEPRECATED =
+    "Constructor with flags is deprecated, use constructor without flags and assign them or corresponding extension properties directly."

@@ -15,7 +15,62 @@ import kotlinx.metadata.internal.constructorBooleanFlag
 import kotlin.contracts.ExperimentalContracts
 import org.jetbrains.kotlin.metadata.deserialization.Flags as ProtoFlags
 
-//todo: annotations
+// --- ANNOTATIONS ---
+
+/**
+ * Signifies that the corresponding class has at least one annotation.
+ *
+ * This flag is useful for reading Kotlin metadata on JVM efficiently. On JVM, most of the annotations are written not to the Kotlin
+ * metadata, but directly on the corresponding declarations in the class file. This flag can be used as an optimization to avoid
+ * reading annotations from the class file (which can be slow) in case when a class has no annotations.
+ */
+var KmClass.hasAnnotations by annotationsOn(KmClass::flags)
+
+/**
+ * Signifies that the corresponding constructor has at least one annotation.
+ *
+ * This flag is useful for reading Kotlin metadata on JVM efficiently. On JVM, most of the annotations are written not to the Kotlin
+ * metadata, but directly on the corresponding declarations in the class file. This flag can be used as an optimization to avoid
+ * reading annotations from the class file (which can be slow) in case when a constructor has no annotations.
+ */
+var KmConstructor.hasAnnotations by annotationsOn(KmConstructor::flags)
+
+/**
+ * Signifies that the corresponding function has at least one annotation.
+ *
+ * This flag is useful for reading Kotlin metadata on JVM efficiently. On JVM, most of the annotations are written not to the Kotlin
+ * metadata, but directly on the corresponding declarations in the class file. This flag can be used as an optimization to avoid
+ * reading annotations from the class file (which can be slow) in case when a function has no annotations.
+ */
+var KmFunction.hasAnnotations by annotationsOn(KmFunction::flags)
+
+/**
+ * Signifies that the corresponding property has at least one annotation.
+ *
+ * This flag is useful for reading Kotlin metadata on JVM efficiently. On JVM, most of the annotations are written not to the Kotlin
+ * metadata, but directly on the corresponding declarations in the class file. This flag can be used as an optimization to avoid
+ * reading annotations from the class file (which can be slow) in case when a property has no annotations.
+ */
+var KmProperty.hasAnnotations by annotationsOn(KmProperty::flags)
+
+/**
+ * Signifies that the corresponding value parameter has at least one annotation.
+ *
+ * This flag is useful for reading Kotlin metadata on JVM efficiently. On JVM, most of the annotations are written not to the Kotlin
+ * metadata, but directly on the corresponding declarations in the class file. This flag can be used as an optimization to avoid
+ * reading annotations from the class file (which can be slow) in case when a value parameter has no annotations.
+ */
+var KmValueParameter.hasAnnotations by annotationsOn(KmValueParameter::flags)
+
+/**
+ * Signifies that the corresponding type alias has at least one annotation.
+ *
+ * Type aliases store their annotation in metadata directly (accessible via [KmTypeAlias.annotations]).
+ * However, Kotlin compiler still writes this flag for them, and this extension is left for completeness.
+ */
+var KmTypeAlias.hasAnnotations by annotationsOn(KmTypeAlias::flags)
+
+// KmType and KmTypeParameter have annotations in it, and this flag for them is not written
 
 // --- CLASS ---
 
@@ -79,8 +134,9 @@ var KmClass.isFunInterface: Boolean by classBooleanFlag(Flag(ProtoFlags.IS_FUN_I
 var KmClass.hasEnumEntries: Boolean by classBooleanFlag(Flag(ProtoFlags.HAS_ENUM_ENTRIES))
 
 // --- CONSTRUCTOR ---
+
 /**
- * TODO
+ * Represents visibility of a corresponding constructor.
  */
 var KmConstructor.visibility: Visibility by visibilityDelegate(KmConstructor::flags)
 
@@ -96,7 +152,6 @@ var KmConstructor.hasNonStableParameterNames: Boolean by constructorBooleanFlag(
 
 // --- FUNCTION ---
 
-
 /**
  * Represents kind of a corresponding function
  */
@@ -109,8 +164,6 @@ var KmFunction.visibility: Visibility by visibilityDelegate(KmFunction::flags)
 
 /**
  * Represents modality of a corresponding function.
- *
- * TODO it can't be sealed
  */
 var KmFunction.modality: Modality by modalityDelegate(KmFunction::flags)
 
@@ -198,7 +251,7 @@ var KmProperty.isLateinit: Boolean by propertyBooleanFlag(Flag(ProtoFlags.IS_LAT
 
 /**
  * Signifies that the corresponding property has a constant value. On JVM, this flag allows an optimization similarly to
- * [F.HAS_ANNOTATIONS]: constant values of properties are written to the bytecode directly, and this flag can be used to avoid
+ * [KmProperty.hasAnnotations]: constant values of properties are written to the bytecode directly, and this flag can be used to avoid
  * reading the value from the bytecode in case there isn't one.
  */
 var KmProperty.hasConstant: Boolean by propertyBooleanFlag(Flag(ProtoFlags.HAS_CONSTANT))

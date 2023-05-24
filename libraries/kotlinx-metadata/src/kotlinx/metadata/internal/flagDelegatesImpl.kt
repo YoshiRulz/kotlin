@@ -62,4 +62,5 @@ internal fun typeBooleanFlag(flag: Flag) = BooleanFlagDelegate(KmType::flags, fl
 
 internal fun valueParameterBooleanFlag(flag: Flag) = BooleanFlagDelegate(KmValueParameter::flags, flag)
 
+internal fun <Node> annotationsOn(flags: KMutableProperty1<Node, Flags>) = BooleanFlagDelegate(flags, Flag(ProtoFlags.HAS_ANNOTATIONS))
 
