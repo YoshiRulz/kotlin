@@ -70,11 +70,11 @@ class FirKotlinScopeProvider(
                 decoratedDeclaredMemberScope,
             )
             if (klass is FirRegularClass && !klass.isExpect && (klass.isData || klass.isInline)) {
-                val key = AnySynthesizedScopeKey(klass.symbol.toLookupTag())
-                scopeSession.getOrBuild(klass, key) {
+                val lookupTag = klass.symbol.toLookupTag()
+                scopeSession.getOrBuild(lookupTag, AnySynthesizedScopeKey(lookupTag)) {
                     FirClassAnySynthesizedMemberScope(
-                        useSiteSession, useSiteMemberScope, key,
-                        klass.symbol.toLookupTag(), klass.moduleData, klass.defaultType(), klass.source
+                        useSiteSession, useSiteMemberScope, lookupTag,
+                        klass.moduleData, klass.defaultType(), klass.source
                     )
                 }
             } else {
@@ -120,7 +120,7 @@ data class ConeSubstitutionScopeKey(
 
 data class AnySynthesizedScopeKey(
     val lookupTag: ConeClassLikeLookupTag
-) : ScopeSessionKey<FirRegularClass, FirClassAnySynthesizedMemberScope>()
+) : ScopeSessionKey<ConeClassLikeLookupTag, FirClassAnySynthesizedMemberScope>()
 
 fun FirClass.unsubstitutedScope(
     useSiteSession: FirSession,

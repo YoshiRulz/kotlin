@@ -25,7 +25,6 @@ import org.jetbrains.kotlin.fir.declarations.builder.FirSimpleFunctionBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.buildSimpleFunction
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameter
 import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedDeclarationStatusImpl
-import org.jetbrains.kotlin.fir.resolve.ScopeSessionKey
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.scopes.FirTypeScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
@@ -45,13 +44,12 @@ import org.jetbrains.kotlin.utils.addToStdlib.shouldNotBeCalled
 class FirClassAnySynthesizedMemberScope(
     session: FirSession,
     private val useSiteMemberScope: FirClassUseSiteMemberScope,
-    key: ScopeSessionKey<*, *>,
     private val lookupTag: ConeClassLikeLookupTag,
     private val baseModuleData: FirModuleData,
     private val dispatchReceiverType: ConeClassLikeType,
     classSource: KtSourceElement?,
 ) : FirTypeScope() {
-    private val synthesizedCache = session.synthesizedStorage.synthesizedCacheByScope.getValue(key, null)
+    private val synthesizedCache = session.synthesizedStorage.synthesizedCacheByScope.getValue(lookupTag, null)
 
     private val synthesizedOverrides = mutableMapOf<FirNamedFunctionSymbol, FirNamedFunctionSymbol>()
 
@@ -189,7 +187,7 @@ class FirClassAnySynthesizedMemberScope(
 class FirSynthesizedStorage(val session: FirSession) : FirSessionComponent {
     private val cachesFactory = session.firCachesFactory
 
-    val synthesizedCacheByScope: FirCache<ScopeSessionKey<*, *>, SynthesizedCache, Nothing?> =
+    val synthesizedCacheByScope: FirCache<ConeClassLikeLookupTag, SynthesizedCache, Nothing?> =
         cachesFactory.createCache { _ -> SynthesizedCache(session.firCachesFactory) }
 
     class SynthesizedCache(cachesFactory: FirCachesFactory) {
