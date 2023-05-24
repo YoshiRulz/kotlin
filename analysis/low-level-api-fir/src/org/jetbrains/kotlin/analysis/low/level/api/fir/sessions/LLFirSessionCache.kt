@@ -5,20 +5,14 @@
 
 package org.jetbrains.kotlin.analysis.low.level.api.fir.sessions
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
-import com.intellij.psi.util.CachedValue
-import com.intellij.psi.util.CachedValueProvider
-import com.intellij.psi.util.CachedValuesManager
 import com.intellij.util.containers.CollectionFactory
-import org.jetbrains.kotlin.analysis.low.level.api.fir.project.structure.*
-import org.jetbrains.kotlin.analysis.low.level.api.fir.providers.*
 import org.jetbrains.kotlin.analysis.low.level.api.fir.util.checkCanceled
 import org.jetbrains.kotlin.analysis.project.structure.*
 import org.jetbrains.kotlin.fir.FirModuleDataImpl
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.PrivateSessionConstructor
-import org.jetbrains.kotlin.fir.extensions.*
-import org.jetbrains.kotlin.fir.resolve.providers.*
 import org.jetbrains.kotlin.fir.session.*
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.JsPlatform
@@ -28,6 +22,8 @@ import org.jetbrains.kotlin.platform.konan.NativePlatform
 import org.jetbrains.kotlin.resolve.jvm.platform.JvmPlatformAnalyzerServices
 import java.util.concurrent.ConcurrentMap
 
+private typealias SessionStorage = ConcurrentMap<KtModule, LLFirSession>
+
 internal class LLFirSessionCache(private val project: Project) {
     companion object {
         fun getInstance(project: Project): LLFirSessionCache {
@@ -35,8 +31,11 @@ internal class LLFirSessionCache(private val project: Project) {
         }
     }
 
-    private val sourceCache: ConcurrentMap<KtModule, CachedValue<LLFirSession>> = CollectionFactory.createConcurrentSoftValueMap()
-    private val binaryCache: ConcurrentMap<KtModule, CachedValue<LLFirSession>> = CollectionFactory.createConcurrentSoftValueMap()
+    private val sessionInvalidationService: LLFirSessionInvalidationService
+        get() = LLFirSessionInvalidationService.getInstance(project)
+
+    private val sourceCache: SessionStorage = CollectionFactory.createConcurrentSoftValueMap()
+    private val binaryCache: SessionStorage = CollectionFactory.createConcurrentSoftValueMap()
 
     /**
      * Returns the existing session if found, or creates a new session and caches it.
@@ -62,17 +61,54 @@ internal class LLFirSessionCache(private val project: Project) {
 
     private fun <T : KtModule> getCachedSession(
         module: T,
-        storage: ConcurrentMap<KtModule, CachedValue<LLFirSession>>,
+        storage: SessionStorage,
         factory: (T) -> LLFirSession
     ): LLFirSession {
         checkCanceled()
 
-        return storage.computeIfAbsent(module) {
-            CachedValuesManager.getManager(project).createCachedValue {
-                val session = factory(module)
-                CachedValueProvider.Result(session, session.modificationTracker)
-            }
-        }.value
+        return storage.computeIfAbsent(module) { factory(module) }.also { session ->
+            require(session.isValid) { "A session acquired via `getSession` should always be valid. Module: $module" }
+        }
+    }
+
+    /**
+     * Removes the session(s) associated with [module] after it has been invalidated.
+     *
+     * [removeSession] must be called in a write action.
+     */
+    fun removeSession(module: KtModule) {
+        ApplicationManager.getApplication().assertWriteAccessAllowed()
+
+        removeSessionFrom(module, sourceCache)
+        if (module is KtBinaryModule) {
+            removeSessionFrom(module, binaryCache)
+        }
+    }
+
+    private fun removeSessionFrom(module: KtModule, storage: SessionStorage) {
+        val session = storage.remove(module)
+        if (session != null) {
+            session.isValid = false
+        }
+    }
+
+    /**
+     * Removes all sessions after global invalidation. If [includeBinarySessions] is `false`, only source sessions will be removed.
+     *
+     * [removeAllSessions] must be called in a write action.
+     */
+    fun removeAllSessions(includeBinarySessions: Boolean) {
+        ApplicationManager.getApplication().assertWriteAccessAllowed()
+
+        removeAllSessionsFrom(sourceCache)
+        if (includeBinarySessions) removeAllSessionsFrom(binaryCache)
+    }
+
+    private fun removeAllSessionsFrom(storage: SessionStorage) {
+        // Because `removeAllSessionsFrom` is executed in a write action, the order of setting `isValid` and clearing `storage` is not
+        // important.
+        storage.values.forEach { it.isValid = false }
+        storage.clear()
     }
 
     private fun createSession(module: KtModule): LLFirSession {

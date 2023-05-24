@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.analysis.low.level.api.fir.state
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.ModificationTracker
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import org.jetbrains.kotlin.analysis.low.level.api.fir.LLFirModuleResolveComponents
@@ -54,7 +55,7 @@ internal abstract class LLFirResolvableResolveSession(
 
     private val useSiteFirSessionCached = CachedValuesManager.getManager(project).createCachedValue {
         val session = useSiteSessionFactory(useSiteKtModule)
-        CachedValueProvider.Result.create(session, session.modificationTracker)
+        CachedValueProvider.Result.create(session, session.createValidityTracker())
     }
 
     final override val useSiteFirSession: LLFirSession

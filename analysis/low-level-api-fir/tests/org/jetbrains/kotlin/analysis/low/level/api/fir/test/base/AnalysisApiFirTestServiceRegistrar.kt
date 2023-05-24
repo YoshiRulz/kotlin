@@ -24,6 +24,7 @@ import org.jetbrains.kotlin.analysis.low.level.api.fir.services.PackagePartProvi
 import org.jetbrains.kotlin.analysis.low.level.api.fir.stubBased.deserialization.JvmStubBasedDeserializedSymbolProviderFactory
 import org.jetbrains.kotlin.analysis.low.level.api.fir.sessions.LLFirSessionCache
 import org.jetbrains.kotlin.analysis.low.level.api.fir.sessions.LLFirSessionConfigurator
+import org.jetbrains.kotlin.analysis.low.level.api.fir.sessions.LLFirSessionInvalidationService
 import org.jetbrains.kotlin.analysis.project.structure.KtCompilerPluginsProvider
 import org.jetbrains.kotlin.analysis.providers.PackagePartProviderFactory
 import org.jetbrains.kotlin.analysis.test.framework.test.configurators.AnalysisApiTestServiceRegistrar
@@ -56,6 +57,9 @@ object AnalysisApiFirTestServiceRegistrar : AnalysisApiTestServiceRegistrar() {
             registerService(LLFirGlobalResolveComponents::class.java)
             registerService(LLFirBuiltinsSessionFactory::class.java)
             registerService(PackagePartProviderFactory::class.java, PackagePartProviderTestImpl(testServices))
+
+            registerService(LLFirSessionInvalidationService::class.java)
+            LLFirSessionInvalidationService.getInstance(this).subscribeToModificationEvents()
 
             registerService(KotlinAsJavaSupport::class.java, SymbolKotlinAsJavaSupport(project))
             registerService(KtCompilerPluginsProvider::class.java, NoOpKtCompilerPluginsProvider)

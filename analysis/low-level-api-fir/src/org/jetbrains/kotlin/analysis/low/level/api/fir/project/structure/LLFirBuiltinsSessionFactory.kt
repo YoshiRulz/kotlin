@@ -63,7 +63,7 @@ class LLFirBuiltinsSessionFactory(private val project: Project) {
     private fun createBuiltinsAndCloneableSession(platform: TargetPlatform): LLFirBuiltinsAndCloneableSession {
         val builtinsModule = KtBuiltinsModule(platform, platform.getAnalyzerServices(), project)
 
-        val session = LLFirBuiltinsAndCloneableSession(builtinsModule, ModificationTracker.NEVER_CHANGED, builtInTypes)
+        val session = LLFirBuiltinsAndCloneableSession(builtinsModule, builtInTypes)
         val moduleData = LLFirModuleData(builtinsModule).apply { bindSession(session) }
 
         return session.apply {

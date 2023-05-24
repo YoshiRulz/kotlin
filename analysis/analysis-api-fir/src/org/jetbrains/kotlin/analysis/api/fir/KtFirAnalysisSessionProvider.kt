@@ -49,7 +49,7 @@ class KtFirAnalysisSessionProvider(project: Project) : KtAnalysisSessionProvider
 
                 CachedValueProvider.Result(
                     KtFirAnalysisSession.createAnalysisSessionByFirResolveSession(firResolveSession, validityToken),
-                    firResolveSession.useSiteFirSession.modificationTracker,
+                    firResolveSession.useSiteFirSession.createValidityTracker(),
                     ProjectRootModificationTracker.getInstance(project),
                     project.createProjectWideOutOfBlockModificationTracker()
                 )

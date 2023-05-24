@@ -55,6 +55,7 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import org.jetbrains.kotlin.analysis.api.standalone.base.project.structure.KtStaticProjectStructureProvider
+import org.jetbrains.kotlin.analysis.low.level.api.fir.sessions.LLFirSessionInvalidationService
 
 public class StandaloneAnalysisAPISessionBuilder(
     applicationDisposable: Disposable,
@@ -158,6 +159,10 @@ public class StandaloneAnalysisAPISessionBuilder(
             registerService(LLFirBuiltinsSessionFactory::class.java, LLFirBuiltinsSessionFactory(this))
             RegisterComponentService.registerLLFirSessionCache(this)
             RegisterComponentService.registerLLFirGlobalResolveComponents(this)
+
+            val sessionInvalidationService = LLFirSessionInvalidationService(this)
+            registerService(LLFirSessionInvalidationService::class.java, sessionInvalidationService)
+            sessionInvalidationService.subscribeToModificationEvents()
 
             registerService(KotlinReferenceProvidersService::class.java, HLApiReferenceProviderService::class.java)
             registerService(KotlinReferenceProviderContributor::class.java, KotlinFirReferenceContributor::class.java)
