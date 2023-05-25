@@ -8,13 +8,8 @@ package org.jetbrains.kotlin.gradle.plugin.statistics
 import org.gradle.api.Project
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.logging.Logging
-import org.jetbrains.kotlin.gradle.plugin.internal.configurationTimePropertiesAccessor
 import org.jetbrains.kotlin.gradle.plugin.internal.isProjectIsolationEnabled
-import org.jetbrains.kotlin.gradle.plugin.internal.usedAtConfigurationTime
-import org.jetbrains.kotlin.gradle.utils.API
-import org.jetbrains.kotlin.gradle.utils.COMPILE
-import org.jetbrains.kotlin.gradle.utils.IMPLEMENTATION
-import org.jetbrains.kotlin.gradle.utils.RUNTIME
+import org.jetbrains.kotlin.gradle.utils.*
 import org.jetbrains.kotlin.statistics.BuildSessionLogger
 import org.jetbrains.kotlin.statistics.metrics.BooleanMetrics
 import org.jetbrains.kotlin.statistics.metrics.NumericalMetrics
@@ -99,12 +94,7 @@ class KotlinBuildStatHandler {
             return configurationTimeMetrics
         }
 
-        configurationTimeMetrics.put(
-            BooleanMetrics.KOTLIN_OFFICIAL_CODESTYLE,
-            gradle.rootProject.providers.gradleProperty("kotlin.code.style")
-                .usedAtConfigurationTime(project.configurationTimePropertiesAccessor).orNull == "official"
-        )
-        gradle.taskGraph.whenReady() { taskExecutionGraph ->
+        gradle.taskGraph.whenReady { taskExecutionGraph ->
             val executedTaskNames = taskExecutionGraph.allTasks.map { it.name }.distinct()
             configurationTimeMetrics.put(BooleanMetrics.MAVEN_PUBLISH_EXECUTED, executedTaskNames.contains("install"))
         }// constants are saved in IDEA plugin and could not be accessed directly
