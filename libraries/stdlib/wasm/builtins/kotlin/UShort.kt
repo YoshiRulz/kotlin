@@ -346,7 +346,7 @@ public class UShort private constructor(private val value: UShort) : Comparable<
      */
     @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
-    public inline fun toShort(): Short = this.toInt().reinterpretAsShort()
+    public inline fun toShort(): Short = this.toInt().toShort()
 
     /**
      * Converts this [UShort] value to [Int].

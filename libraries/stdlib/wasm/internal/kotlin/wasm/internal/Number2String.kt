@@ -110,10 +110,10 @@ private fun utoaDecSimple64(buffer: WasmCharArray, numInput: ULong, offsetInput:
     var offset = offsetInput
     do {
         val t = num / 10U
-        val r = (num % 10U).toInt()
+        val r = num % 10U
         num = t
         offset--
-        buffer.set(offset, digitToChar(r))
+        buffer.set(offset, digitToChar(r.toInt()))
     } while (num > 0U)
 }
 
@@ -194,7 +194,7 @@ private fun decimalCount64High(value: ULong): Int {
         if (value < 100000000000000000UL) {
             return 16 + (value >= 10000000000000000UL).toInt()
         } else {
-            return 18 + (value >= 1000000000000000000UL).toInt()
+            return 18 + (value >= 10000000000000000000UL).toInt() + (value >= 1000000000000000000UL).toInt()
         }
     }
 }

@@ -154,8 +154,7 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
 
         when (type) {
             UnsignedType.UBYTE, UnsignedType.USHORT -> when (returnType) {
-                PrimitiveType.BYTE.capitalized -> "this.toInt().toByte()"
-                PrimitiveType.SHORT.capitalized -> "this.toInt().reinterpretAsShort()"
+                PrimitiveType.BYTE.capitalized, PrimitiveType.SHORT.capitalized -> "this.toInt().to${returnType}()"
                 PrimitiveType.INT.capitalized -> "this.toUInt().reinterpretAsInt()"
                 PrimitiveType.LONG.capitalized -> "this.toInt().toLong()"
                 else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
@@ -164,7 +163,7 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
                 PrimitiveType.BYTE.capitalized -> "((this shl 24) shr 24).toInt().reinterpretAsByte()"
                 PrimitiveType.SHORT.capitalized -> "((this shl 16) shr 16).toInt().reinterpretAsShort()"
                 PrimitiveType.INT.capitalized -> "reinterpretAsInt()"
-                PrimitiveType.LONG.capitalized -> "wasm_i64_extend_i32_s(this.toInt())".also { isInline = false }
+                PrimitiveType.LONG.capitalized -> "wasm_i64_extend_i32_u(this.toInt()).toLong()".also { isInline = false }
                 else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
             }
             UnsignedType.ULONG -> when (returnType) {

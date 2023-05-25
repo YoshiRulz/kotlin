@@ -390,7 +390,7 @@ public class UInt private constructor(private val value: UInt) : Comparable<UInt
      * whereas the most significant 32 bits are filled with zeros.
      */
     @kotlin.internal.IntrinsicConstEvaluation
-    public fun toLong(): Long = wasm_i64_extend_i32_s(this.toInt())
+    public fun toLong(): Long = wasm_i64_extend_i32_u(this.toInt()).toLong()
 
     /**
      * Converts this [UInt] value to [UByte].

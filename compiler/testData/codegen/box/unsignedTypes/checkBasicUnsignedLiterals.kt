@@ -9,7 +9,7 @@ fun box(): String {
 
     val max = 0u.dec().toLong()
     val expected = Int.MAX_VALUE * 2L + 1
-    if (max != expected) return "fail"
+    if (max != expected) return "fail: $expected is expected but $max was gotten"
 
     return "OK"
 }

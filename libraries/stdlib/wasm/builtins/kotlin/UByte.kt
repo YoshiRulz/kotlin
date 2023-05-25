@@ -345,7 +345,7 @@ public class UByte private constructor(private val value: UByte) : Comparable<UB
      */
     @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
-    public inline fun toShort(): Short = this.toInt().reinterpretAsShort()
+    public inline fun toShort(): Short = this.toInt().toShort()
 
     /**
      * Converts this [UByte] value to [Int].
