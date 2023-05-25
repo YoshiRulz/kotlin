@@ -9,6 +9,7 @@ import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.declarations.utils.expandedConeType
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.builder.buildResolvedQualifier
 import org.jetbrains.kotlin.fir.extensions.*
@@ -16,6 +17,7 @@ import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.impl.FirSimpleNamedReference
 import org.jetbrains.kotlin.fir.resolve.ResolutionMode
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
+import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.transformers.FirSpecificTypeResolverTransformer
 import org.jetbrains.kotlin.fir.resolve.transformers.ScopeClassDeclaration
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.FirAbstractBodyResolveTransformerDispatcher
@@ -264,7 +266,12 @@ abstract class AbstractFirSpecificAnnotationResolveTransformer(
     }
 
     private fun FirResolvedTypeRef.requiredToSave(): Boolean {
-        val classId = type.classId ?: return false
+        val classId = coneTypeSafe<ConeClassLikeType>()?.fullyExpandedType(session) {
+            // We don't lazily resolve the typealias.
+            // Therefore, we only expand pre-resolved typealiases, typically from binary dependencies.
+            it.expandedConeType
+        }?.classId ?: return false
+
         return when {
             classId in REQUIRED_ANNOTATIONS -> true
             classId.asSingleFqName() in annotationsFromPlugins -> true

@@ -6,10 +6,9 @@
 package org.jetbrains.kotlin.parcelize.test.runners;
 
 import com.intellij.testFramework.TestDataPath;
-import org.jetbrains.kotlin.test.util.KtTestUtil;
 import org.jetbrains.kotlin.test.TargetBackend;
 import org.jetbrains.kotlin.test.TestMetadata;
-import org.junit.jupiter.api.Nested;
+import org.jetbrains.kotlin.test.util.KtTestUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -485,6 +484,12 @@ public class ParcelizeFirLightTreeBoxTestGenerated extends AbstractParcelizeFirL
     @TestMetadata("typeParameters.kt")
     public void testTypeParameters() throws Exception {
         runTest("plugins/parcelize/parcelize-compiler/testData/box/typeParameters.kt");
+    }
+
+    @Test
+    @TestMetadata("typealiasedPluginAnnotation.kt")
+    public void testTypealiasedPluginAnnotation() throws Exception {
+        runTest("plugins/parcelize/parcelize-compiler/testData/box/typealiasedPluginAnnotation.kt");
     }
 
     @Test

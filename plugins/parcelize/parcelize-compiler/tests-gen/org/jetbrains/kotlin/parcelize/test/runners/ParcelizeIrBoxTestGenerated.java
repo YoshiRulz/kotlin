@@ -488,6 +488,12 @@ public class ParcelizeIrBoxTestGenerated extends AbstractParcelizeIrBoxTest {
     }
 
     @Test
+    @TestMetadata("typealiasedPluginAnnotation.kt")
+    public void testTypealiasedPluginAnnotation() throws Exception {
+        runTest("plugins/parcelize/parcelize-compiler/testData/box/typealiasedPluginAnnotation.kt");
+    }
+
+    @Test
     @TestMetadata("unsignedArrays.kt")
     public void testUnsignedArrays() throws Exception {
         runTest("plugins/parcelize/parcelize-compiler/testData/box/unsignedArrays.kt");
