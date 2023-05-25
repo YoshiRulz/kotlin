@@ -18,6 +18,8 @@ import org.gradle.tooling.events.task.TaskFinishEvent
 import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.gradle.plugin.BuildEventsListenerRegistryHolder
 import org.jetbrains.kotlin.gradle.plugin.StatisticsBuildFlowManager
+import org.jetbrains.kotlin.gradle.plugin.internal.configurationTimePropertiesAccessor
+import org.jetbrains.kotlin.gradle.plugin.internal.usedAtConfigurationTime
 import org.jetbrains.kotlin.gradle.utils.isConfigurationCacheAvailable
 import org.jetbrains.kotlin.statistics.metrics.BooleanMetrics
 import org.jetbrains.kotlin.statistics.metrics.IStatisticsValuesConsumer
@@ -61,9 +63,11 @@ internal abstract class BuildFlowService : BuildService<BuildFlowService.Paramet
                         it.recordProjectsEvaluated(project.gradle)
                     }
                 }
+                val officialCodeStyle = project.rootProject.providers.gradleProperty("kotlin.code.style")
+                        .usedAtConfigurationTime(project.configurationTimePropertiesAccessor).orNull == "official"
 
                 spec.parameters.configurationMetrics.set(project.provider {
-                    KotlinBuildStatsService.getInstance()?.collectStartMetrics(project)
+                    KotlinBuildStatsService.getInstance()?.collectStartMetrics(project)?.also { it.put(BooleanMetrics.KOTLIN_OFFICIAL_CODESTYLE, officialCodeStyle) }
                 })
                 spec.parameters.fusStatisticsAvailable.set(fusStatisticsAvailable)
             }.also { buildService ->
