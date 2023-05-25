@@ -337,17 +337,5 @@ class WasmPrimitivesGenerator(writer: PrintWriter) : BasePrimitivesGenerator(wri
             annotations += "WasmOp(WasmOp.${thisKind.prefixUppercase}_${methodName.toWasmOperator()})"
             "implementedAsIntrinsic".addAsSingleLineBody(bodyOnNewLine = true)
         }
-
-        private val PrimitiveType.prefixUppercase: String
-            get() = when (this) {
-                PrimitiveType.BYTE, PrimitiveType.SHORT, PrimitiveType.INT -> "I32"
-                PrimitiveType.LONG -> "I64"
-                PrimitiveType.FLOAT -> "F32"
-                PrimitiveType.DOUBLE -> "F64"
-                else -> ""
-            }
-
-        private val PrimitiveType.prefixLowercase: String
-            get() = prefixUppercase.lowercase()
     }
 }

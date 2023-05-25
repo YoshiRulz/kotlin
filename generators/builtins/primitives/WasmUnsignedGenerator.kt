@@ -323,21 +323,6 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
         "implementedAsIntrinsic".addAsSingleLineBody()
     }
 
-    private val UnsignedType.prefixUppercase: String
-        get() = when (this) {
-            UnsignedType.UBYTE, UnsignedType.USHORT, UnsignedType.UINT -> "U32"
-            UnsignedType.ULONG -> "U64"
-        }
-
-    private val PrimitiveType.prefixUppercase: String
-        get() = when (this) {
-            PrimitiveType.BYTE, PrimitiveType.SHORT, PrimitiveType.INT -> "I32"
-            PrimitiveType.LONG -> "I64"
-            PrimitiveType.FLOAT -> "F32"
-            PrimitiveType.DOUBLE -> "F64"
-            else -> error("Unexpected primitive type")
-        }
-
     private val UnsignedType.asWasmType: UnsignedType
         get() = when (this) {
             UnsignedType.UBYTE, UnsignedType.USHORT, UnsignedType.UINT -> UnsignedType.UINT
@@ -353,10 +338,4 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
     private fun MethodBuilder.asIntrinsicConstEvaluation() {
         annotations += "kotlin.internal.IntrinsicConstEvaluation"
     }
-
-    private val UnsignedType.prefixLowercase: String
-        get() = prefixUppercase.lowercase()
-
-    private val PrimitiveType.prefixLowercase: String
-        get() = prefixUppercase.lowercase()
 }

@@ -20,6 +20,27 @@ internal fun UnsignedType.castToIfNecessary(otherType: UnsignedType): String {
     return ""
 }
 
+internal val UnsignedType.prefixUppercase: String
+    get() = when (this) {
+        UnsignedType.UBYTE, UnsignedType.USHORT, UnsignedType.UINT -> "U32"
+        UnsignedType.ULONG -> "U64"
+    }
+
+internal val PrimitiveType.prefixUppercase: String
+    get() = when (this) {
+        PrimitiveType.BYTE, PrimitiveType.SHORT, PrimitiveType.INT -> "I32"
+        PrimitiveType.LONG -> "I64"
+        PrimitiveType.FLOAT -> "F32"
+        PrimitiveType.DOUBLE -> "F64"
+        else -> error("Unexpected primitive type")
+    }
+
+internal val UnsignedType.prefixLowercase: String
+    get() = prefixUppercase.lowercase()
+
+internal val PrimitiveType.prefixLowercase: String
+    get() = prefixUppercase.lowercase()
+
 internal fun PrimitiveType.castToIfNecessary(otherType: PrimitiveType): String {
     if (this !in PrimitiveType.onlyNumeric || otherType !in PrimitiveType.onlyNumeric) {
         throw IllegalArgumentException("Cannot cast to non-numeric type")
