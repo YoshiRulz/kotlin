@@ -97,6 +97,10 @@ object FirDiagnosticRenderers {
         "$prefix '$name'"
     }
 
+    val RENDER_ENUM_ENTRY = Renderer { firEnumEntry: FirEnumEntrySymbol ->
+        "enum entry '${firEnumEntry.name}'"
+    }
+
     val RENDER_TYPE = Renderer { t: ConeKotlinType ->
         // TODO: need a way to tune granuality, e.g., without parameter names in functional types.
         t.renderReadableWithFqNames()

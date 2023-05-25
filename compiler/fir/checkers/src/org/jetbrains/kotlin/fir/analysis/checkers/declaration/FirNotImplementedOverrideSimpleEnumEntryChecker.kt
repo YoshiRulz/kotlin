@@ -10,22 +10,19 @@ import org.jetbrains.kotlin.diagnostics.reportOn
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.unsubstitutedScope
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors.ABSTRACT_MEMBER_NOT_IMPLEMENTED_BY_ENUM_ENTRY
+import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirEnumEntry
-import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.utils.isAbstract
 import org.jetbrains.kotlin.fir.scopes.processAllCallables
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
-import org.jetbrains.kotlin.utils.addToStdlib.lastIsInstanceOrNull
 
-object FirNotImplementedOverrideSimpleEnumEntryChecker : FirEnumEntryChecker() {
-    override fun check(declaration: FirEnumEntry, context: CheckerContext, reporter: DiagnosticReporter) {
-        val source = declaration.source ?: return
-
+object FirNotImplementedOverrideSimpleEnumEntryChecker : FirClassChecker() {
+    override fun check(declaration: FirClass, context: CheckerContext, reporter: DiagnosticReporter) {
         // Enum entries with an initializer are handled by FirNotImplementedOverrideChecker since they contain an AnonymousObject.
-        if (declaration.initializer != null) return
+        val enumEntries = declaration.declarations.filterIsInstance<FirEnumEntry>().filter { it.initializer == null && it.source != null }
+        if (enumEntries.isEmpty()) return
 
-        val containingEnum = context.containingDeclarations.lastIsInstanceOrNull<FirRegularClass>() ?: return
-        val enumScope = containingEnum.unsubstitutedScope(context)
+        val enumScope = declaration.unsubstitutedScope(context)
 
         val notImplementedSymbols = mutableListOf<FirCallableSymbol<*>>()
         enumScope.processAllCallables { symbol ->
@@ -34,9 +31,9 @@ object FirNotImplementedOverrideSimpleEnumEntryChecker : FirEnumEntryChecker() {
             }
         }
 
-        if (notImplementedSymbols.isNotEmpty()) {
-            val notImplemented = notImplementedSymbols.first()
-            reporter.reportOn(source, ABSTRACT_MEMBER_NOT_IMPLEMENTED_BY_ENUM_ENTRY, declaration.symbol, notImplemented, context)
+        val notImplemented = notImplementedSymbols.firstOrNull() ?: return
+        for (enumEntry in enumEntries) {
+            reporter.reportOn(enumEntry.source, ABSTRACT_MEMBER_NOT_IMPLEMENTED_BY_ENUM_ENTRY, enumEntry.symbol, notImplemented, context)
         }
     }
 }
