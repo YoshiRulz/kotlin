@@ -61,7 +61,7 @@ private fun Executor.service(project: Project) = object: ExecutorService {
         val request = ExecuteRequest(
                 executableAbsolutePath = execSpec.executable,
                 args = execSpec.args,
-                timeout = 5.toDuration(DurationUnit.MINUTES),
+                timeout = 15.toDuration(DurationUnit.MINUTES),
         ).apply {
             execSpec.standardInput?.let {
                 stdin = it
