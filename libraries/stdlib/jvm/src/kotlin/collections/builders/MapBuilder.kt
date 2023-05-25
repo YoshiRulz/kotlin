@@ -25,6 +25,18 @@ internal class MapBuilder<K, V> private constructor(
 ) : MutableMap<K, V>, Serializable {
     private var hashShift: Int = computeShift(hashSize)
 
+    /**
+     * The number of times this map is structurally modified.
+     *
+     * A modification is considered to be structural if it changes the map size,
+     * or otherwise changes it in a way that iterations in progress may return incorrect results.
+     *
+     * This value can be used by iterators of the [keys], [values] and [entries] views
+     * to provide fail-fast behavoir when a concurrent modification is detected during iteration.
+     * [ConcurrentModificationException] will be thrown in this case.
+     */
+    private var modCount: Int = 0
+
     override var size: Int = 0
         private set
 
@@ -112,6 +124,7 @@ internal class MapBuilder<K, V> private constructor(
         valuesArray?.resetRange(0, length)
         size = 0
         length = 0
+        modCount += 1
     }
 
     override val keys: MutableSet<K> get() {
@@ -238,6 +251,7 @@ internal class MapBuilder<K, V> private constructor(
     }
 
     private fun rehash(newHashSize: Int) {
+        modCount += 1
         if (length > size) compact()
         if (newHashSize != hashSize) {
             hashArray = IntArray(newHashSize)
@@ -309,6 +323,7 @@ internal class MapBuilder<K, V> private constructor(
                     presenceArray[putIndex] = hash
                     hashArray[hash] = putIndex + 1
                     size++
+                    modCount += 1
                     if (probeDistance > maxProbeDistance) maxProbeDistance = probeDistance
                     return putIndex
                 }
@@ -337,6 +352,7 @@ internal class MapBuilder<K, V> private constructor(
         removeHashAt(presenceArray[index])
         presenceArray[index] = TOMBSTONE
         size--
+        modCount += 1
     }
 
     private fun removeHashAt(removedHash: Int) {
@@ -478,6 +494,7 @@ internal class MapBuilder<K, V> private constructor(
     ) {
         internal var index = 0
         internal var lastIndex: Int = -1
+        private var expectedModCount: Int = map.modCount
 
         init {
             initNext()
@@ -491,15 +508,23 @@ internal class MapBuilder<K, V> private constructor(
         fun hasNext(): Boolean = index < map.length
 
         fun remove() {
+            checkForComodification()
             check(lastIndex != -1) { "Call next() before removing element from the iterator." }
             map.checkIsMutable()
             map.removeKeyAt(lastIndex)
             lastIndex = -1
+            expectedModCount = map.modCount
+        }
+
+        internal fun checkForComodification() {
+            if (map.modCount != expectedModCount)
+                throw ConcurrentModificationException()
         }
     }
 
     internal class KeysItr<K, V>(map: MapBuilder<K, V>) : Itr<K, V>(map), MutableIterator<K> {
         override fun next(): K {
+            checkForComodification()
             if (index >= map.length) throw NoSuchElementException()
             lastIndex = index++
             val result = map.keysArray[lastIndex]
@@ -511,6 +536,7 @@ internal class MapBuilder<K, V> private constructor(
 
     internal class ValuesItr<K, V>(map: MapBuilder<K, V>) : Itr<K, V>(map), MutableIterator<V> {
         override fun next(): V {
+            checkForComodification()
             if (index >= map.length) throw NoSuchElementException()
             lastIndex = index++
             val result = map.valuesArray!![lastIndex]
@@ -522,6 +548,7 @@ internal class MapBuilder<K, V> private constructor(
     internal class EntriesItr<K, V>(map: MapBuilder<K, V>) : Itr<K, V>(map),
         MutableIterator<MutableMap.MutableEntry<K, V>> {
         override fun next(): EntryRef<K, V> {
+            checkForComodification()
             if (index >= map.length) throw NoSuchElementException()
             lastIndex = index++
             val result = EntryRef(map, lastIndex)

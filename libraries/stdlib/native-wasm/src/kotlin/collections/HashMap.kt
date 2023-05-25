@@ -10,14 +10,32 @@ import kotlin.native.FreezingIsDeprecated
 
 @OptIn(FreezingIsDeprecated::class)
 actual class HashMap<K, V> private constructor(
-        private var keysArray: Array<K>,
-        private var valuesArray: Array<V>?, // allocated only when actually used, always null in pure HashSet
-        private var presenceArray: IntArray,
-        private var hashArray: IntArray,
-        private var maxProbeDistance: Int,
-        private var length: Int
+    // keys in insert order
+    private var keysArray: Array<K>,
+    // values in insert order, allocated only when actually used, always null in pure HashSet
+    private var valuesArray: Array<V>?,
+    // hash of a key by its index, -1 if a key at that index was removed
+    private var presenceArray: IntArray,
+    // (index + 1) of a key by its hash, 0 if there is no key with that hash, -1 if collision chain continues to the hash-1
+    private var hashArray: IntArray,
+    // max length of a collision chain
+    private var maxProbeDistance: Int,
+    // index of the next key to be inserted
+    private var length: Int
 ) : MutableMap<K, V> {
     private var hashShift: Int = computeShift(hashSize)
+
+    /**
+     * The number of times this map is structurally modified.
+     *
+     * A modification is considered to be structural if it changes the map size,
+     * or otherwise changes it in a way that iterations in progress may return incorrect results.
+     *
+     * This value can be used by iterators of the [keys], [values] and [entries] views
+     * to provide fail-fast behavoir when a concurrent modification is detected during iteration.
+     * [ConcurrentModificationException] will be thrown in this case.
+     */
+    private var modCount: Int = 0
 
     private var _size: Int = 0
     override actual val size: Int
@@ -107,6 +125,7 @@ actual class HashMap<K, V> private constructor(
         valuesArray?.resetRange(0, length)
         _size = 0
         length = 0
+        modCount += 1
     }
 
     override actual val keys: MutableSet<K> get() {
@@ -236,6 +255,7 @@ actual class HashMap<K, V> private constructor(
     }
 
     private fun rehash(newHashSize: Int) {
+        modCount += 1
         if (length > _size) compact()
         if (newHashSize != hashSize) {
             hashArray = IntArray(newHashSize)
@@ -307,6 +327,7 @@ actual class HashMap<K, V> private constructor(
                     presenceArray[putIndex] = hash
                     hashArray[hash] = putIndex + 1
                     _size++
+                    modCount += 1
                     if (probeDistance > maxProbeDistance) maxProbeDistance = probeDistance
                     return putIndex
                 }
@@ -335,6 +356,7 @@ actual class HashMap<K, V> private constructor(
         removeHashAt(presenceArray[index])
         presenceArray[index] = TOMBSTONE
         _size--
+        modCount += 1
     }
 
     private fun removeHashAt(removedHash: Int) {
@@ -502,6 +524,7 @@ actual class HashMap<K, V> private constructor(
     ) {
         internal var index = 0
         internal var lastIndex: Int = -1
+        private var expectedModCount: Int = map.modCount
 
         init {
             initNext()
@@ -515,14 +538,23 @@ actual class HashMap<K, V> private constructor(
         fun hasNext(): Boolean = index < map.length
 
         fun remove() {
+            checkForComodification()
+            check(lastIndex != -1) { "Call next() before removing element from the iterator." }
             map.checkIsMutable()
             map.removeKeyAt(lastIndex)
             lastIndex = -1
+            expectedModCount = map.modCount
+        }
+
+        internal fun checkForComodification() {
+            if (map.modCount != expectedModCount)
+                throw ConcurrentModificationException()
         }
     }
 
     internal class KeysItr<K, V>(map: HashMap<K, V>) : Itr<K, V>(map), MutableIterator<K> {
         override fun next(): K {
+            checkForComodification()
             if (index >= map.length) throw NoSuchElementException()
             lastIndex = index++
             val result = map.keysArray[lastIndex]
@@ -534,6 +566,7 @@ actual class HashMap<K, V> private constructor(
 
     internal class ValuesItr<K, V>(map: HashMap<K, V>) : Itr<K, V>(map), MutableIterator<V> {
         override fun next(): V {
+            checkForComodification()
             if (index >= map.length) throw NoSuchElementException()
             lastIndex = index++
             val result = map.valuesArray!![lastIndex]
@@ -545,6 +578,7 @@ actual class HashMap<K, V> private constructor(
     internal class EntriesItr<K, V>(map: HashMap<K, V>) : Itr<K, V>(map),
             MutableIterator<MutableMap.MutableEntry<K, V>> {
         override fun next(): EntryRef<K, V> {
+            checkForComodification()
             if (index >= map.length) throw NoSuchElementException()
             lastIndex = index++
             val result = EntryRef(map, lastIndex)
