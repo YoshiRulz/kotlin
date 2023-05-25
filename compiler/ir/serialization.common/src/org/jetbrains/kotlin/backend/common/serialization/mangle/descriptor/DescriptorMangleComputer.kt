@@ -50,22 +50,28 @@ open class DescriptorMangleComputer(builder: StringBuilder, mode: MangleMode) :
     private val CallableDescriptor.isRealStatic: Boolean
         get() = dispatchReceiverParameter == null && containingDeclaration !is PackageFragmentDescriptor
 
-    override fun DeclarationDescriptor.asTypeParameterContainer() = this
+    override fun DeclarationDescriptor.asTypeParameterContainer(): DeclarationDescriptor =
+        this
 
-    override fun getContextReceiverTypes(function: FunctionDescriptor) =
-        function.contextReceiverParameters.asSequence().map { it.type }
+    override fun getContextReceiverTypes(function: FunctionDescriptor): List<KotlinType> =
+        function.contextReceiverParameters.map { it.type }
 
-    override fun getExtensionReceiverParameterType(function: FunctionDescriptor) = function.extensionReceiverParameter?.type
+    override fun getExtensionReceiverParameterType(function: FunctionDescriptor): KotlinType? =
+        function.extensionReceiverParameter?.type
 
-    override fun getValueParameters(function: FunctionDescriptor) = function.valueParameters.asSequence()
+    override fun getValueParameters(function: FunctionDescriptor): List<ValueParameterDescriptor> =
+        function.valueParameters
 
-    override fun getReturnType(function: FunctionDescriptor) = function.returnType
+    override fun getReturnType(function: FunctionDescriptor): KotlinType? =
+        function.returnType
 
-    override fun getTypeParametersWithIndices(function: FunctionDescriptor, container: DeclarationDescriptor) =
+    override fun getTypeParametersWithIndices(
+        function: FunctionDescriptor,
+        container: DeclarationDescriptor,
+    ): List<IndexedValue<TypeParameterDescriptor>> =
         (container as? CallableDescriptor)
             ?.typeParameters
             .orEmpty()
-            .asSequence()
             .filter { it.containingDeclaration == container }
             .map { IndexedValue(it.index, it) }
 
@@ -77,7 +83,8 @@ open class DescriptorMangleComputer(builder: StringBuilder, mode: MangleMode) :
 
     final override fun isVararg(valueParameter: ValueParameterDescriptor) = valueParameter.varargElementType != null
 
-    final override fun getValueParameterType(valueParameter: ValueParameterDescriptor) = valueParameter.type
+    final override fun getValueParameterType(valueParameter: ValueParameterDescriptor): KotlinType =
+        valueParameter.type
 
     @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
     final override fun mangleType(tBuilder: StringBuilder, wrappedType: KotlinType, declarationSiteSession: Nothing?) {

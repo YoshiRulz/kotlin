@@ -50,7 +50,8 @@ open class IrMangleComputer(
         acceptVoid(Visitor())
     }
 
-    override fun IrDeclaration.asTypeParameterContainer() = this
+    override fun IrDeclaration.asTypeParameterContainer(): IrDeclaration =
+        this
 
     override fun IrDeclaration.visitParentForFunctionMangling() {
         val declarationParent = parent
@@ -61,19 +62,33 @@ open class IrMangleComputer(
         realParent.acceptVoid(Visitor())
     }
 
-    override fun getContextReceiverTypes(function: IrFunction) =
-        function.valueParameters.asSequence().take(function.contextReceiverParametersCount).filterNot { it.isHidden }.map { it.type }
+    override fun getContextReceiverTypes(function: IrFunction): List<IrType> =
+        function
+            .valueParameters
+            .asSequence()
+            .take(function.contextReceiverParametersCount)
+            .filterNot { it.isHidden }
+            .map { it.type }
+            .toList()
 
     override fun getExtensionReceiverParameterType(function: IrFunction) =
-        function.extensionReceiverParameter?.takeUnless { it.isHidden }?.type
+        function
+            .extensionReceiverParameter
+            ?.takeUnless { it.isHidden }
+            ?.type
 
-    override fun getValueParameters(function: IrFunction) =
-        function.valueParameters.drop(function.contextReceiverParametersCount).filterNot { it.isHidden }.asSequence()
+    override fun getValueParameters(function: IrFunction): List<IrValueParameter> =
+        function
+            .valueParameters
+            .asSequence()
+            .drop(function.contextReceiverParametersCount)
+            .filterNot { it.isHidden }
+            .toList()
 
     override fun getReturnType(function: IrFunction) = function.returnType
 
-    override fun getTypeParametersWithIndices(function: IrFunction, container: IrDeclaration) =
-        function.typeParameters.asSequence().map { IndexedValue(it.index, it.symbol) }
+    override fun getTypeParametersWithIndices(function: IrFunction, container: IrDeclaration): List<IndexedValue<IrTypeParameterSymbol>> =
+        function.typeParameters.map { IndexedValue(it.index, it.symbol) }
 
     override fun isUnit(type: IrType) = type.isUnit()
 

@@ -77,24 +77,33 @@ open class FirMangleComputer(
         accept(visitor, null)
     }
 
-    override fun FirDeclaration.asTypeParameterContainer() = this as? FirMemberDeclaration
+    override fun FirDeclaration.asTypeParameterContainer(): FirMemberDeclaration? =
+        this as? FirMemberDeclaration
 
-    override fun getContextReceiverTypes(function: FirFunction) =
+    override fun getContextReceiverTypes(function: FirFunction): List<ConeKotlinType> =
         when (function) {
             is FirPropertyAccessor -> function.propertySymbol.fir.contextReceivers
             else -> function.contextReceivers
-        }.asSequence().map { it.typeRef.coneType }
+        }.map { it.typeRef.coneType }
 
-    override fun getExtensionReceiverParameterType(function: FirFunction) =
+    override fun getExtensionReceiverParameterType(function: FirFunction): ConeKotlinType? =
         function.receiverParameter?.typeRef?.coneType
             ?: (function as? FirPropertyAccessor)?.propertySymbol?.fir?.receiverParameter?.typeRef?.coneType
 
-    override fun getValueParameters(function: FirFunction) = function.valueParameters.asSequence()
+    override fun getValueParameters(function: FirFunction): List<FirValueParameter> =
+        function.valueParameters
 
-    override fun getReturnType(function: FirFunction) = function.returnTypeRef.coneType
+    override fun getReturnType(function: FirFunction): ConeKotlinType = function.returnTypeRef.coneType
 
-    override fun getTypeParametersWithIndices(function: FirFunction, container: FirDeclaration) =
-        (container as? FirTypeParametersOwner)?.typeParameters.orEmpty().asSequence().map { it.symbol.toLookupTag() }.withIndex()
+    override fun getTypeParametersWithIndices(
+        function: FirFunction,
+        container: FirDeclaration,
+    ): Iterable<IndexedValue<ConeTypeParameterLookupTag>> =
+        (container as? FirTypeParametersOwner)
+            ?.typeParameters
+            .orEmpty()
+            .map { it.symbol.toLookupTag() }
+            .withIndex()
 
     override fun isUnit(type: ConeKotlinType) = type.isUnit
 
@@ -109,7 +118,8 @@ open class FirMangleComputer(
 
     override fun isVararg(valueParameter: FirValueParameter) = valueParameter.isVararg
 
-    override fun getValueParameterType(valueParameter: FirValueParameter) = valueParameter.returnTypeRef.coneType
+    override fun getValueParameterType(valueParameter: FirValueParameter): ConeKotlinType =
+        valueParameter.returnTypeRef.coneType
 
     override fun getIndexOfTypeParameter(typeParameter: ConeTypeParameterLookupTag, container: FirMemberDeclaration) =
         container.typeParameters.indexOf(typeParameter.symbol.fir)

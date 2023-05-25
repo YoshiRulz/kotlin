@@ -109,11 +109,11 @@ abstract class BaseKotlinMangleComputer<Declaration, Type, TypeParameter, ValueP
         builder.appendName(name)
     }
 
-    protected abstract fun getContextReceiverTypes(function: FunctionDeclaration): Sequence<Type>
+    protected abstract fun getContextReceiverTypes(function: FunctionDeclaration): List<Type>
 
     protected abstract fun getExtensionReceiverParameterType(function: FunctionDeclaration): Type?
 
-    protected abstract fun getValueParameters(function: FunctionDeclaration): Sequence<ValueParameter>
+    protected abstract fun getValueParameters(function: FunctionDeclaration): List<ValueParameter>
 
     protected abstract fun getReturnType(function: FunctionDeclaration): Type?
 
@@ -121,8 +121,8 @@ abstract class BaseKotlinMangleComputer<Declaration, Type, TypeParameter, ValueP
 
     protected abstract fun getTypeParametersWithIndices(
         function: FunctionDeclaration,
-        container: Declaration
-    ): Sequence<IndexedValue<TypeParameter>>
+        container: Declaration,
+    ): Iterable<IndexedValue<TypeParameter>>
 
     protected open fun FunctionDeclaration.platformSpecificFunctionMarks(): List<String> = emptyList()
 
@@ -179,12 +179,12 @@ abstract class BaseKotlinMangleComputer<Declaration, Type, TypeParameter, ValueP
             mangleType(builder, it, session)
         }
 
-        getValueParameters(this).asIterable().collectForMangler(builder, MangleConstant.VALUE_PARAMETERS) {
+        getValueParameters(this).collectForMangler(builder, MangleConstant.VALUE_PARAMETERS) {
             appendSignature(specialValueParamPrefix(it))
             mangleValueParameter(this, it, session)
         }
 
-        getTypeParametersWithIndices(this, typeParameterContainer).asIterable().collectForMangler(builder, MangleConstant.TYPE_PARAMETERS) {
+        getTypeParametersWithIndices(this, typeParameterContainer).collectForMangler(builder, MangleConstant.TYPE_PARAMETERS) {
             mangleTypeParameter(this, it.value, it.index, session)
         }
 
