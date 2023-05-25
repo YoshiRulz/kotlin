@@ -40,34 +40,23 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
     }
 
     override fun ClassBuilder.modifyGeneratedClass() {
+        isValue = false
         annotations += listOf(
             "SinceKotlin(\"1.5\")",
             "WasExperimental(ExperimentalUnsignedTypes::class)",
             "WasmAutoboxed"
         )
 
-        isValue = false
-
-        constructor {
-            visibility = "private"
-            param {
-                name = "private val value"
-                type = this@WasmSingleUnsignedGenerator.type.capitalized
-            }
-        }
-
+        generateUnsignedNumberConstructor()
         generateHashCode()
         generateEquals()
         generateCustomEquals()
 
         when (type) {
-            UnsignedType.UBYTE, UnsignedType.USHORT ->
-                generateReinterpret(UnsignedType.UINT.capitalized)
-            UnsignedType.UINT -> {
-                setOf(UnsignedType.UBYTE.capitalized, UnsignedType.USHORT.capitalized, PrimitiveType.INT.capitalized)
-                    .forEach { generateReinterpret(it) }
-            }
             UnsignedType.ULONG -> generateReinterpret(PrimitiveType.LONG.capitalized)
+            UnsignedType.UBYTE, UnsignedType.USHORT -> generateReinterpret(UnsignedType.UINT.capitalized)
+            UnsignedType.UINT -> setOf(UnsignedType.UBYTE.capitalized, UnsignedType.USHORT.capitalized, PrimitiveType.INT.capitalized)
+                .forEach { generateReinterpret(it) }
         }
     }
 
@@ -78,34 +67,103 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
         }
     }
 
+    private fun ClassBuilder.generateUnsignedNumberConstructor() {
+        constructor {
+            visibility = "private"
+            param {
+                name = "private val value"
+                type = this@WasmSingleUnsignedGenerator.type.capitalized
+            }
+        }
+    }
+
+    override fun MethodBuilder.modifyGeneratedCompareTo(otherType: UnsignedType) {
+        asIntrinsicConstEvaluation()
+
+        if (otherType == type) {
+            when (type) {
+                UnsignedType.UBYTE -> "wasm_u32_compareTo(this.toInt(), $parameterName.toInt())"
+                UnsignedType.USHORT -> "this.toInt().compareTo($parameterName.toInt())"
+                UnsignedType.UINT, UnsignedType.ULONG -> "wasm_${type.prefixLowercase}_compareTo(this.to${type.asSigned.capitalized}(), $parameterName.to${type.asSigned.capitalized}())"
+            }
+        } else {
+            "this${type.castToIfNecessary(otherType)}.compareTo($parameterName${otherType.castToIfNecessary(type)})"
+        }.addAsSingleLineBody(bodyOnNewLine = true)
+    }
+
     override fun MethodBuilder.modifyGeneratedBinaryOperation() {
-        annotations += "kotlin.internal.IntrinsicConstEvaluation"
+        asIntrinsicConstEvaluation()
 
         if (type.capitalized == parameterType && parameterType == returnType) {
             when (methodName) {
                 "plus", "minus", "times" ->
                     "this.to${type.asSigned.capitalized}().$methodName(other.to${type.asSigned.capitalized}()).to${type.capitalized}()".addAsSingleLineBody()
-                "div" -> {
-                    isInline = false
-                    annotations += "WasmOp(WasmOp.${type.asSigned.prefixUppercase}_DIV_U)"
-                    "implementedAsIntrinsic".addAsSingleLineBody()
-                }
-                "rem" -> {
-                    isInline = false
-                    annotations += "WasmOp(WasmOp.${type.asSigned.prefixUppercase}_REM_U)"
-                    "implementedAsIntrinsic".addAsSingleLineBody()
-                }
+                "div" -> asIntrinsic("${type.asSigned.prefixUppercase}_DIV_U")
+                "rem" -> asIntrinsic("${type.asSigned.prefixUppercase}_REM_U")
             }
         }
     }
 
     override fun MethodBuilder.modifyGeneratedFloorDivModOperator() {
-        annotations += "kotlin.internal.IntrinsicConstEvaluation"
+        asIntrinsicConstEvaluation()
+    }
+
+    override fun MethodBuilder.modifyGeneratedUnaryOperation() {
+        val cast = if (type in UnsignedType.UINT..UnsignedType.ULONG) "" else ".to${type.capitalized}()"
+
+        when (methodName) {
+            "inc" -> "this.plus(1u)$cast".addAsSingleLineBody()
+            "dec" -> "this.minus(1u)$cast".addAsSingleLineBody()
+        }
+    }
+
+
+    override fun MethodBuilder.modifyGeneratedRangeTo() {
+        removeInlining()
+    }
+
+    override fun MethodBuilder.modifyGeneratedBitwiseOperators(operatorName: String) {
+        asIntrinsicConstEvaluation()
+
+        val typeToCast = type.asWasmType.asSigned
+
+        when (methodName) {
+            "inv" -> "this.to${typeToCast.capitalized}().inv().to${type.capitalized}()"
+            else -> "(this.to${typeToCast.capitalized}() $methodName other.to${typeToCast.capitalized}()).to${type.capitalized}()"
+        }.addAsSingleLineBody()
+    }
+
+    override fun MethodBuilder.modifyGeneratedConversions(unsignedType: UnsignedType) {
+        asIntrinsicConstEvaluation()
+
+        if (type == unsignedType) return
+
+        when (type) {
+            UnsignedType.UBYTE, UnsignedType.USHORT -> when (returnType) {
+                UnsignedType.UBYTE.capitalized -> "this.toUInt().toUByte()"
+                UnsignedType.USHORT.capitalized -> "this.toUInt().reinterpretAsUShort()"
+                UnsignedType.UINT.capitalized -> "reinterpretAsUInt()"
+                UnsignedType.ULONG.capitalized -> "this.toUInt().toULong()"
+                else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
+            }
+            UnsignedType.UINT -> when (returnType) {
+                UnsignedType.UBYTE.capitalized -> "((this shl 24) shr 24).reinterpretAsUByte()"
+                UnsignedType.USHORT.capitalized -> "((this shl 16) shr 16).reinterpretAsUShort()"
+                UnsignedType.ULONG.capitalized -> "wasm_i64_extend_i32_u(this.toInt())".also { removeInlining() }
+                else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
+            }
+            UnsignedType.ULONG -> when (returnType) {
+                UnsignedType.UBYTE.capitalized, UnsignedType.USHORT.capitalized -> "this.toUInt().to${returnType}()"
+                UnsignedType.UINT.capitalized -> "wasm_i32_wrap_i64(this.toLong()).toUInt()".also { removeInlining() }
+                else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
+            }
+        }.addAsSingleLineBody()
     }
 
     override fun MethodBuilder.modifyGeneratedFloatingConversions() {
-        annotations += "kotlin.internal.IntrinsicConstEvaluation"
-        modifySignature { isInline = false }
+        asIntrinsicConstEvaluation()
+        removeInlining()
+
         when (type) {
             UnsignedType.UBYTE, UnsignedType.USHORT, UnsignedType.UINT -> when (returnType) {
                 // byte to byte conversion impossible here due to earlier check on type equality
@@ -121,36 +179,8 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
         }.addAsSingleLineBody()
     }
 
-    override fun MethodBuilder.modifyGeneratedConversions(unsignedType: UnsignedType) {
-        annotations += "kotlin.internal.IntrinsicConstEvaluation"
-
-        if (type == unsignedType) return
-
-        when (type) {
-            UnsignedType.UBYTE, UnsignedType.USHORT -> when (returnType) {
-                UnsignedType.UBYTE.capitalized -> "this.toUInt().toUByte()"
-                UnsignedType.USHORT.capitalized -> "this.toUInt().reinterpretAsUShort()"
-                UnsignedType.UINT.capitalized -> "reinterpretAsUInt()"
-                UnsignedType.ULONG.capitalized -> "this.toUInt().toULong()"
-                else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
-            }
-            UnsignedType.UINT -> when (returnType) {
-                UnsignedType.UBYTE.capitalized -> "((this shl 24) shr 24).reinterpretAsUByte()"
-                UnsignedType.USHORT.capitalized -> "((this shl 16) shr 16).reinterpretAsUShort()"
-                UnsignedType.ULONG.capitalized -> "wasm_i64_extend_i32_u(this.toInt())"
-                    .also { isInline = false }
-                else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
-            }
-            UnsignedType.ULONG -> when (returnType) {
-                UnsignedType.UBYTE.capitalized, UnsignedType.USHORT.capitalized -> "this.toUInt().to${returnType}()"
-                UnsignedType.UINT.capitalized -> "wasm_i32_wrap_i64(this.toLong()).toUInt()".also { isInline = false }
-                else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
-            }
-        }.addAsSingleLineBody()
-    }
-
     override fun MethodBuilder.modifyGeneratedConversions(signedType: PrimitiveType) {
-        annotations += "kotlin.internal.IntrinsicConstEvaluation"
+        asIntrinsicConstEvaluation()
 
         when (type) {
             UnsignedType.UBYTE, UnsignedType.USHORT -> when (returnType) {
@@ -163,28 +193,14 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
                 PrimitiveType.BYTE.capitalized -> "((this shl 24) shr 24).toInt().reinterpretAsByte()"
                 PrimitiveType.SHORT.capitalized -> "((this shl 16) shr 16).toInt().reinterpretAsShort()"
                 PrimitiveType.INT.capitalized -> "reinterpretAsInt()"
-                PrimitiveType.LONG.capitalized -> "wasm_i64_extend_i32_u(this.toInt()).toLong()".also { isInline = false }
+                PrimitiveType.LONG.capitalized -> "wasm_i64_extend_i32_u(this.toInt()).toLong()".also { removeInlining() }
                 else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
             }
             UnsignedType.ULONG -> when (returnType) {
                 PrimitiveType.BYTE.capitalized, PrimitiveType.SHORT.capitalized -> "this.toInt().to${returnType}()"
-                PrimitiveType.INT.capitalized -> "wasm_i32_wrap_i64(this.toLong())".also { isInline = false }
+                PrimitiveType.INT.capitalized -> "wasm_i32_wrap_i64(this.toLong())".also { removeInlining() }
                 PrimitiveType.LONG.capitalized -> "reinterpretAsLong()"
                 else -> throw IllegalArgumentException("Unsupported type $returnType for generation conversion method from type $type")
-            }
-        }.addAsSingleLineBody()
-    }
-
-    override fun MethodBuilder.modifyGeneratedBitwiseOperators(operatorName: String) {
-        annotations += "kotlin.internal.IntrinsicConstEvaluation"
-        val typeToCast = when (type) {
-            UnsignedType.UBYTE, UnsignedType.USHORT, UnsignedType.UINT -> PrimitiveType.INT
-            UnsignedType.ULONG -> PrimitiveType.LONG
-        }
-        when (methodName) {
-            "inv" -> "this.to${typeToCast.capitalized}().inv().to${type.capitalized}()"
-            else -> {
-                "(this.to${typeToCast.capitalized}() $methodName other.to${typeToCast.capitalized}()).to${type.capitalized}()"
             }
         }.addAsSingleLineBody()
     }
@@ -203,34 +219,12 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
         }
     }
 
-    override fun MethodBuilder.modifyGeneratedUnaryOperation() {
-        val cast = if (type == UnsignedType.UINT || type == UnsignedType.ULONG) "" else ".to${type.capitalized}()"
-
-        when (methodName) {
-            "inc" -> "this.plus(1u)$cast".addAsSingleLineBody()
-            "dec" -> "this.minus(1u)$cast".addAsSingleLineBody()
+    override fun MethodBuilder.modifyGeneratedToStringHashCode() {
+        when (type) {
+            UnsignedType.UBYTE, UnsignedType.USHORT -> "toUInt().toString()".addAsSingleLineBody()
+            UnsignedType.UINT -> "utoa32(this, 10)".addAsSingleLineBody()
+            UnsignedType.ULONG -> "utoa64(this, 10)".addAsSingleLineBody()
         }
-    }
-
-    override fun MethodBuilder.modifyGeneratedRangeTo() {
-        annotations.clear()
-        modifySignature { isInline = false }
-    }
-
-    override fun MethodBuilder.modifyGeneratedCompareTo(otherType: UnsignedType) {
-        annotations += "kotlin.internal.IntrinsicConstEvaluation"
-
-        if (otherType == type) {
-            val body = when (type) {
-                UnsignedType.UBYTE -> "wasm_u32_compareTo(this.toInt(), $parameterName.toInt())"
-                UnsignedType.USHORT -> "this.toInt().compareTo($parameterName.toInt())"
-                UnsignedType.UINT, UnsignedType.ULONG -> "wasm_${type.prefixLowercase}_compareTo(this.to${type.asSigned.capitalized}(), $parameterName.to${type.asSigned.capitalized}())"
-            }
-            body.addAsSingleLineBody(bodyOnNewLine = true)
-            return
-        }
-
-        "this${type.castToIfNecessary(otherType)}.compareTo($parameterName${otherType.castToIfNecessary(type)})".addAsSingleLineBody(bodyOnNewLine = true)
     }
 
     private fun ClassBuilder.generateHashCode() {
@@ -248,43 +242,9 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
         }
     }
 
-    override fun MethodBuilder.modifyGeneratedExtensionConversion(fromType: PrimitiveType) {
-        when (fromType) {
-            PrimitiveType.FLOAT, PrimitiveType.DOUBLE -> {
-                isInline = false
-                "wasm_${type.asSigned.prefixLowercase}_trunc_sat_${fromType.prefixLowercase}_u(this).to${type.capitalized}()"
-            }
-            PrimitiveType.BYTE, PrimitiveType.SHORT, PrimitiveType.INT -> when (type) {
-                UnsignedType.UINT -> {
-                    isInline = false
-                    annotations += "WasmNoOpCast"
-                    "implementedAsIntrinsic"
-                }
-                else -> "toUInt().to${type.capitalized}()"
-            }
-            PrimitiveType.LONG -> when (type) {
-                UnsignedType.ULONG -> {
-                    isInline = false
-                    annotations += "WasmNoOpCast"
-                    "implementedAsIntrinsic"
-                }
-                else -> "toULong().to${type.capitalized}()"
-            }
-            else -> error("Unexpected primitive type")
-        }.addAsSingleLineBody()
-    }
-
-    override fun MethodBuilder.modifyGeneratedToStringHashCode() {
-        when (type) {
-            UnsignedType.UBYTE, UnsignedType.USHORT -> "toUInt().toString()".addAsSingleLineBody()
-            UnsignedType.UINT -> "utoa32(this, 10)".addAsSingleLineBody()
-            UnsignedType.ULONG -> "utoa64(this, 10)".addAsSingleLineBody()
-        }
-    }
-
     private fun ClassBuilder.generateEquals() {
         method {
-            annotations += "kotlin.internal.IntrinsicConstEvaluation"
+            asIntrinsicConstEvaluation()
 
             signature {
                 isOverride = true
@@ -308,11 +268,6 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
 
     private fun ClassBuilder.generateCustomEquals() {
         method {
-            annotations += listOf(
-                "kotlin.internal.IntrinsicConstEvaluation",
-                "WasmOp(WasmOp.${type.asSigned.prefixUppercase}_EQ)"
-            )
-
             signature {
                 methodName = "equals"
                 parameter {
@@ -322,34 +277,51 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
                 returnType = PrimitiveType.BOOLEAN.capitalized
             }
 
-            "implementedAsIntrinsic".addAsSingleLineBody()
+            asIntrinsicConstEvaluation()
+            asIntrinsic("${type.asSigned.prefixUppercase}_EQ")
+        }
+    }
+
+    override fun MethodBuilder.modifyGeneratedExtensionConversion(fromType: PrimitiveType) {
+        when (fromType) {
+            PrimitiveType.FLOAT, PrimitiveType.DOUBLE -> {
+                removeInlining()
+                "wasm_${type.asSigned.prefixLowercase}_trunc_sat_${fromType.prefixLowercase}_u(this).to${type.capitalized}()".addAsSingleLineBody()
+            }
+            PrimitiveType.BYTE, PrimitiveType.SHORT, PrimitiveType.INT -> when (type) {
+                UnsignedType.UINT -> implementAsIntrinsic()
+                else -> "toUInt().to${type.capitalized}()".addAsSingleLineBody()
+            }
+            PrimitiveType.LONG -> when (type) {
+                UnsignedType.ULONG -> implementAsIntrinsic()
+                else -> "toULong().to${type.capitalized}()".addAsSingleLineBody()
+            }
+            else -> error("Unexpected primitive type")
         }
     }
 
     private fun ClassBuilder.generateReinterpret(type: String) {
         method {
-            annotations += "WasmNoOpCast"
             annotations += "PublishedApi"
             signature {
                 visibility = MethodVisibility.INTERNAL
                 methodName = "reinterpretAs$type"
                 returnType = type
             }
-            "implementedAsIntrinsic".addAsSingleLineBody(bodyOnNewLine = true)
+            implementAsIntrinsic()
         }
     }
 
-    private var MethodBuilder.isInline: Boolean
-        get() = inline
-        set(shouldInline: Boolean) {
-            modifySignature { isInline = shouldInline }
-            val inlineOnlyAnnotation = "kotlin.internal.InlineOnly"
-            if (shouldInline) {
-                annotations.add(inlineOnlyAnnotation)
-            } else {
-                annotations.remove(inlineOnlyAnnotation)
-            }
-        }
+    private fun MethodBuilder.removeInlining() {
+        modifySignature { isInline = false }
+        annotations.remove("kotlin.internal.InlineOnly")
+    }
+
+    private fun MethodBuilder.implementAsIntrinsic() {
+        removeInlining()
+        annotations += "WasmNoOpCast"
+        "implementedAsIntrinsic".addAsSingleLineBody()
+    }
 
     private val UnsignedType.prefixUppercase: String
         get() = when (this) {
@@ -365,6 +337,22 @@ private class WasmSingleUnsignedGenerator(type: UnsignedType, out: PrintWriter) 
             PrimitiveType.DOUBLE -> "F64"
             else -> error("Unexpected primitive type")
         }
+
+    private val UnsignedType.asWasmType: UnsignedType
+        get() = when (this) {
+            UnsignedType.UBYTE, UnsignedType.USHORT, UnsignedType.UINT -> UnsignedType.UINT
+            UnsignedType.ULONG -> UnsignedType.ULONG
+        }
+
+    private fun MethodBuilder.asIntrinsic(wasmOperation: String) {
+        removeInlining()
+        annotations += "WasmOp(WasmOp.$wasmOperation)"
+        "implementedAsIntrinsic".addAsSingleLineBody()
+    }
+
+    private fun MethodBuilder.asIntrinsicConstEvaluation() {
+        annotations += "kotlin.internal.IntrinsicConstEvaluation"
+    }
 
     private val UnsignedType.prefixLowercase: String
         get() = prefixUppercase.lowercase()

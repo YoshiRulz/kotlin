@@ -439,7 +439,6 @@ public class UInt private constructor(private val value: UInt) : Comparable<UInt
      * In case when this `UInt` value is exactly between two `Float`s,
      * the one with zero at least significant bit of mantissa is selected.
      */
-    @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toFloat(): Float = wasm_f32_convert_i32_u(this.toInt())
 
@@ -448,7 +447,6 @@ public class UInt private constructor(private val value: UInt) : Comparable<UInt
      *
      * The resulting `Double` value represents the same numerical value as this `UInt`.
      */
-    @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toDouble(): Double = wasm_f64_convert_i32_u(this.toInt())
 
@@ -464,20 +462,17 @@ public class UInt private constructor(private val value: UInt) : Comparable<UInt
     @WasmOp(WasmOp.I32_EQ)
     public fun equals(other: UInt): Boolean = implementedAsIntrinsic
 
-    @WasmNoOpCast
     @PublishedApi
-    internal fun reinterpretAsUByte(): UByte =
-        implementedAsIntrinsic
+    @WasmNoOpCast
+    internal fun reinterpretAsUByte(): UByte = implementedAsIntrinsic
 
-    @WasmNoOpCast
     @PublishedApi
-    internal fun reinterpretAsUShort(): UShort =
-        implementedAsIntrinsic
+    @WasmNoOpCast
+    internal fun reinterpretAsUShort(): UShort = implementedAsIntrinsic
 
-    @WasmNoOpCast
     @PublishedApi
-    internal fun reinterpretAsInt(): Int =
-        implementedAsIntrinsic
+    @WasmNoOpCast
+    internal fun reinterpretAsInt(): Int = implementedAsIntrinsic
 }
 /**
  * Converts this [Byte] value to [UInt].

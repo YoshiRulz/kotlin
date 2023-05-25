@@ -440,7 +440,6 @@ public class ULong private constructor(private val value: ULong) : Comparable<UL
      * In case when this `ULong` value is exactly between two `Float`s,
      * the one with zero at least significant bit of mantissa is selected.
      */
-    @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toFloat(): Float = wasm_f32_convert_i64_u(this.toLong())
 
@@ -451,7 +450,6 @@ public class ULong private constructor(private val value: ULong) : Comparable<UL
      * In case when this `ULong` value is exactly between two `Double`s,
      * the one with zero at least significant bit of mantissa is selected.
      */
-    @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toDouble(): Double = wasm_f64_convert_i64_u(this.toLong())
 
@@ -467,10 +465,9 @@ public class ULong private constructor(private val value: ULong) : Comparable<UL
     @WasmOp(WasmOp.I64_EQ)
     public fun equals(other: ULong): Boolean = implementedAsIntrinsic
 
-    @WasmNoOpCast
     @PublishedApi
-    internal fun reinterpretAsLong(): Long =
-        implementedAsIntrinsic
+    @WasmNoOpCast
+    internal fun reinterpretAsLong(): Long = implementedAsIntrinsic
 }
 /**
  * Converts this [Byte] value to [ULong].

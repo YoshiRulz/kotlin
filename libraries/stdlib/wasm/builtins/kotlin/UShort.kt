@@ -418,7 +418,6 @@ public class UShort private constructor(private val value: UShort) : Comparable<
      *
      * The resulting `Float` value represents the same numerical value as this `UShort`.
      */
-    @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toFloat(): Float = wasm_f32_convert_i32_u(this.toInt())
 
@@ -427,7 +426,6 @@ public class UShort private constructor(private val value: UShort) : Comparable<
      *
      * The resulting `Double` value represents the same numerical value as this `UShort`.
      */
-    @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toDouble(): Double = wasm_f64_convert_i32_u(this.toInt())
 
@@ -443,10 +441,9 @@ public class UShort private constructor(private val value: UShort) : Comparable<
     @WasmOp(WasmOp.I32_EQ)
     public fun equals(other: UShort): Boolean = implementedAsIntrinsic
 
-    @WasmNoOpCast
     @PublishedApi
-    internal fun reinterpretAsUInt(): UInt =
-        implementedAsIntrinsic
+    @WasmNoOpCast
+    internal fun reinterpretAsUInt(): UInt = implementedAsIntrinsic
 }
 /**
  * Converts this [Byte] value to [UShort].

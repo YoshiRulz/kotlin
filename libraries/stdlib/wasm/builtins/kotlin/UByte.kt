@@ -417,7 +417,6 @@ public class UByte private constructor(private val value: UByte) : Comparable<UB
      *
      * The resulting `Float` value represents the same numerical value as this `UByte`.
      */
-    @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toFloat(): Float = wasm_f32_convert_i32_u(this.toInt())
 
@@ -426,7 +425,6 @@ public class UByte private constructor(private val value: UByte) : Comparable<UB
      *
      * The resulting `Double` value represents the same numerical value as this `UByte`.
      */
-    @kotlin.internal.InlineOnly
     @kotlin.internal.IntrinsicConstEvaluation
     public fun toDouble(): Double = wasm_f64_convert_i32_u(this.toInt())
 
@@ -442,10 +440,9 @@ public class UByte private constructor(private val value: UByte) : Comparable<UB
     @WasmOp(WasmOp.I32_EQ)
     public fun equals(other: UByte): Boolean = implementedAsIntrinsic
 
-    @WasmNoOpCast
     @PublishedApi
-    internal fun reinterpretAsUInt(): UInt =
-        implementedAsIntrinsic
+    @WasmNoOpCast
+    internal fun reinterpretAsUInt(): UInt = implementedAsIntrinsic
 }
 /**
  * Converts this [Byte] value to [UByte].
